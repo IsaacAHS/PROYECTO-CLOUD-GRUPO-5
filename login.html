@@ -1,0 +1,389 @@
+<!DOCTYPE HTML>
+<html lang="es">
+<head>
+	<title>Iniciar Sesión</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<link rel="stylesheet" href="assets/css/fontawesome-all.min.css" />
+	<style>
+		/* ─── Page reset para pantalla de login ─── */
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			background-color: #f5f6f7;
+		}
+
+		/* ─── Contenedor centrado ─── */
+		.login-wrapper {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 100vh;
+			padding: 2em 1em;
+			box-sizing: border-box;
+		}
+
+		/* ─── Tarjeta de login ─── */
+		.login-card {
+			background: #ffffff;
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			border-radius: 0.375em;
+			border-top: solid 5px #f56a6a;
+			padding: 3em 2.5em 2.5em 2.5em;
+			width: 100%;
+			max-width: 420px;
+			box-shadow: 0 2px 18px rgba(61, 68, 73, 0.08);
+		}
+
+		/* ─── Encabezado ─── */
+		.login-header {
+			text-align: center;
+			margin-bottom: 2em;
+		}
+
+		.login-header .brand-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 3em;
+			height: 3em;
+			background: #f56a6a;
+			border-radius: 50%;
+			margin-bottom: 0.75em;
+		}
+
+		.login-header .brand-icon i {
+			color: #ffffff;
+			font-size: 1.25em;
+		}
+
+		.login-header h2 {
+			font-family: 'Roboto Slab', serif;
+			font-weight: 700;
+			color: #3d4449;
+			font-size: 1.75em;
+			margin: 0 0 0.3em 0;
+			letter-spacing: 0.075em;
+			text-transform: uppercase;
+		}
+
+		.login-header p {
+			color: #9fa3a6;
+			font-size: 0.9em;
+			margin: 0;
+		}
+
+		/* ─── Formulario ─── */
+		.login-form .field-group {
+			margin-bottom: 1.25em;
+		}
+
+		.login-form label {
+			display: block;
+			color: #3d4449;
+			font-size: 0.9em;
+			font-weight: 600;
+			margin-bottom: 0.5em;
+			font-family: 'Open Sans', sans-serif;
+		}
+
+		/* ─── Inputs con icono ─── */
+		.input-icon-wrap {
+			position: relative;
+		}
+
+		.input-icon-wrap i {
+			position: absolute;
+			left: 1em;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #9fa3a6;
+			font-size: 0.9em;
+			pointer-events: none;
+			transition: color 0.2s ease-in-out;
+		}
+
+		.input-icon-wrap input {
+			padding-left: 2.75em !important;
+		}
+
+		.input-icon-wrap input:focus + i,
+		.input-icon-wrap input:focus ~ i {
+			color: #f56a6a;
+		}
+
+		/* Truco para que el ícono cambie de color al hacer focus */
+		.input-icon-wrap input:focus ~ i {
+			color: #f56a6a;
+		}
+
+		/* reordenamos el DOM para usar ~ (hermano siguiente) */
+		.input-icon-wrap .icon-inside {
+			position: absolute;
+			left: 1em;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #9fa3a6;
+			font-size: 0.9em;
+			pointer-events: none;
+			transition: color 0.2s ease-in-out;
+		}
+
+		.input-icon-wrap input:focus {
+			border-color: #f56a6a;
+			box-shadow: 0 0 0 1px #f56a6a;
+			outline: 0;
+		}
+
+		/* ─── Fila recordar + olvidé ─── */
+		.login-meta {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 1.75em;
+			flex-wrap: wrap;
+			gap: 0.5em;
+		}
+
+		.login-meta .remember-me {
+			display: flex;
+			align-items: center;
+			gap: 0.5em;
+			cursor: pointer;
+		}
+
+		/* Checkbox personalizado */
+		.login-meta input[type="checkbox"] {
+			appearance: none;
+			-webkit-appearance: none;
+			width: 1.25em;
+			height: 1.25em;
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			border-radius: 0.25em;
+			background: #ffffff;
+			cursor: pointer;
+			position: relative;
+			transition: background 0.2s, border-color 0.2s;
+			flex-shrink: 0;
+			margin: 0;
+		}
+
+		.login-meta input[type="checkbox"]:checked {
+			background: #3d4449;
+			border-color: #3d4449;
+		}
+
+		.login-meta input[type="checkbox"]:checked::after {
+			content: '';
+			position: absolute;
+			left: 0.28em;
+			top: 0.05em;
+			width: 0.35em;
+			height: 0.65em;
+			border: solid #ffffff 2px;
+			border-left: none;
+			border-top: none;
+			transform: rotate(45deg);
+		}
+
+		.login-meta input[type="checkbox"]:focus {
+			outline: none;
+			border-color: #f56a6a;
+			box-shadow: 0 0 0 1px #f56a6a;
+		}
+
+		.login-meta .remember-label {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.85em;
+			color: #7f888f;
+			cursor: pointer;
+			user-select: none;
+		}
+
+		.login-meta .forgot-link {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.85em;
+			color: #f56a6a;
+			text-decoration: none;
+			transition: color 0.2s ease-in-out;
+		}
+
+		.login-meta .forgot-link:hover {
+			color: #f67878;
+			text-decoration: underline;
+		}
+
+		/* ─── Botón submit ─── */
+		.btn-login {
+			display: block;
+			width: 100%;
+			height: 3.5em;
+			background: #f56a6a;
+			color: #ffffff;
+			border: none;
+			border-radius: 0.375em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.8em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			cursor: pointer;
+			transition: background-color 0.2s ease-in-out;
+			box-shadow: none;
+			outline: none;
+		}
+
+		.btn-login:hover {
+			background: #f67878;
+		}
+
+		.btn-login:active {
+			background: #f45c5c;
+		}
+
+		.btn-login i {
+			margin-right: 0.5em;
+		}
+
+		/* ─── Divisor ─── */
+		.login-divider {
+			display: flex;
+			align-items: center;
+			gap: 1em;
+			margin: 1.75em 0;
+		}
+
+		.login-divider hr {
+			flex: 1;
+			border: none;
+			border-top: solid 1px rgba(210, 215, 217, 0.75);
+			margin: 0;
+		}
+
+		.login-divider span {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.8em;
+			color: #9fa3a6;
+			white-space: nowrap;
+		}
+
+		/* ─── Link de registro ─── */
+		.login-footer-text {
+			text-align: center;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.85em;
+			color: #7f888f;
+			margin-top: 1.5em;
+			margin-bottom: 0;
+		}
+
+		.login-footer-text a {
+			color: #f56a6a;
+			text-decoration: none;
+			font-weight: 600;
+			transition: color 0.2s ease-in-out;
+		}
+
+		.login-footer-text a:hover {
+			color: #f67878;
+			text-decoration: underline;
+		}
+
+		/* ─── Responsive ─── */
+		@media (max-width: 480px) {
+			.login-card {
+				padding: 2.5em 1.5em 2em 1.5em;
+			}
+
+			.login-meta {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+		}
+	</style>
+</head>
+<body>
+
+	<div class="login-wrapper">
+		<div class="login-card">
+
+			<!-- Encabezado -->
+			<div class="login-header">
+				<div class="brand-icon">
+					<i class="fas fa-cloud"></i>
+				</div>
+				<h2>Bienvenido</h2>
+				<p>Ingresa tus credenciales para continuar</p>
+			</div>
+
+			<!-- Formulario -->
+			<form class="login-form" method="post" action="#">
+
+				<!-- Email -->
+				<div class="field-group">
+					<label for="email">Correo electrónico</label>
+					<div class="input-icon-wrap">
+						<input
+							type="email"
+							id="email"
+							name="email"
+							placeholder="tu@correo.com"
+							autocomplete="email"
+							required
+						/>
+						<span class="icon-inside"><i class="fas fa-envelope"></i></span>
+					</div>
+				</div>
+
+				<!-- Contraseña -->
+				<div class="field-group">
+					<label for="password">Contraseña</label>
+					<div class="input-icon-wrap">
+						<input
+							type="password"
+							id="password"
+							name="password"
+							placeholder="••••••••"
+							autocomplete="current-password"
+							required
+						/>
+						<span class="icon-inside"><i class="fas fa-lock"></i></span>
+					</div>
+				</div>
+
+				<!-- Recordar + Olvidé -->
+				<div class="login-meta">
+					<label class="remember-me">
+						<input type="checkbox" id="remember" name="remember" />
+						<span class="remember-label">Recordarme</span>
+					</label>
+					<a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+				</div>
+
+				<!-- Botón -->
+				<button type="submit" class="btn-login">
+					<i class="fas fa-sign-in-alt"></i>
+					Iniciar Sesión
+				</button>
+
+			</form>
+
+			<!-- Divisor -->
+			<div class="login-divider">
+				<hr />
+				<span>¿No tienes cuenta?</span>
+				<hr />
+			</div>
+
+			<!-- Pie -->
+			<p class="login-footer-text">
+				<a href="#">Crear una cuenta nueva</a>
+			</p>
+
+		</div>
+	</div>
+
+</body>
+</html>
