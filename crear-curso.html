@@ -1,0 +1,987 @@
+<!DOCTYPE HTML>
+<html lang="es">
+<head>
+	<title>Crear Nuevo Curso</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<link rel="stylesheet" href="assets/css/fontawesome-all.min.css" />
+	<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
+	<style>
+
+		/* ─── Reset y base ─── */
+		*, *::before, *::after { box-sizing: border-box; }
+
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			background-color: #f5f6f7;
+			font-family: 'Open Sans', sans-serif;
+			color: #7f888f;
+			font-size: 13pt;
+			line-height: 1.65;
+		}
+
+		/* ─── Layout ─── */
+		.app-layout {
+			display: flex;
+			min-height: 100vh;
+		}
+
+		/* ══════════════════════════════
+		   SIDEBAR (idéntico a cursos.html)
+		══════════════════════════════ */
+		.sidebar {
+			width: 260px;
+			min-width: 260px;
+			background: #ffffff;
+			border-right: solid 1px rgba(210, 215, 217, 0.75);
+			display: flex;
+			flex-direction: column;
+			position: sticky;
+			top: 0;
+			height: 100vh;
+			overflow-y: auto;
+		}
+
+		.sidebar-brand {
+			padding: 2em 1.75em 1.5em;
+			border-bottom: solid 4px #f56a6a;
+		}
+
+		.sidebar-brand h1 {
+			font-family: 'Roboto Slab', serif;
+			font-weight: 700;
+			font-size: 1.1em;
+			color: #3d4449;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			margin: 0 0 0.2em 0;
+			line-height: 1.3;
+		}
+
+		.sidebar-brand span {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.75em;
+			color: #9fa3a6;
+			display: block;
+		}
+
+		.sidebar-section-label {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.65em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: #9fa3a6;
+			padding: 1.5em 1.75em 0.5em;
+		}
+
+		.sidebar-nav {
+			list-style: none;
+			margin: 0;
+			padding: 0 0 1em 0;
+			flex: 1;
+		}
+
+		.sidebar-nav li a {
+			display: flex;
+			align-items: center;
+			gap: 0.75em;
+			padding: 0.75em 1.75em;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.9em;
+			font-weight: 600;
+			color: #7f888f;
+			text-decoration: none;
+			border-left: solid 3px transparent;
+			transition: color 0.2s ease-in-out, background 0.2s ease-in-out, border-color 0.2s ease-in-out;
+		}
+
+		.sidebar-nav li a i {
+			width: 1.25em;
+			text-align: center;
+			font-size: 0.95em;
+			color: #9fa3a6;
+			transition: color 0.2s ease-in-out;
+		}
+
+		.sidebar-nav li a:hover {
+			color: #3d4449;
+			background: rgba(245, 106, 106, 0.05);
+			border-left-color: rgba(245, 106, 106, 0.4);
+		}
+
+		.sidebar-nav li a:hover i { color: #f56a6a; }
+
+		.sidebar-nav li.active a {
+			color: #f56a6a;
+			background: rgba(245, 106, 106, 0.07);
+			border-left-color: #f56a6a;
+		}
+
+		.sidebar-nav li.active a i { color: #f56a6a; }
+
+		.sidebar-footer {
+			padding: 1.25em 1.75em;
+			border-top: solid 1px rgba(210, 215, 217, 0.75);
+			font-size: 0.75em;
+			color: #9fa3a6;
+			font-family: 'Open Sans', sans-serif;
+		}
+
+		/* ══════════════════════════════
+		   MAIN CONTENT
+		══════════════════════════════ */
+		.main-content {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+		}
+
+		/* Topbar */
+		.topbar {
+			background: #ffffff;
+			border-bottom: solid 1px rgba(210, 215, 217, 0.75);
+			padding: 1em 2.5em;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1em;
+		}
+
+		.topbar-breadcrumb {
+			display: flex;
+			align-items: center;
+			gap: 0.6em;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.82em;
+		}
+
+		.topbar-breadcrumb a {
+			color: #9fa3a6;
+			text-decoration: none;
+			transition: color 0.2s;
+		}
+
+		.topbar-breadcrumb a:hover { color: #f56a6a; }
+
+		.topbar-breadcrumb .sep { color: rgba(210, 215, 217, 0.9); }
+
+		.topbar-breadcrumb .current {
+			color: #3d4449;
+			font-weight: 600;
+		}
+
+		.topbar-user {
+			font-size: 0.82em;
+			color: #9fa3a6;
+			font-family: 'Open Sans', sans-serif;
+		}
+
+		.topbar-user i { color: #f56a6a; margin-right: 0.4em; }
+
+		/* Cuerpo de página */
+		.page-body {
+			padding: 2.5em;
+			flex: 1;
+		}
+
+		/* ─── Título de sección ─── */
+		.page-heading {
+			margin-bottom: 2em;
+		}
+
+		.page-heading .label {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.68em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.12em;
+			color: #f56a6a;
+			display: block;
+			margin-bottom: 0.4em;
+		}
+
+		.page-heading h2 {
+			font-family: 'Roboto Slab', serif;
+			font-weight: 700;
+			font-size: 1.6em;
+			color: #3d4449;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			margin: 0;
+			line-height: 1.2;
+		}
+
+		/* ─── Tarjeta de formulario ─── */
+		.form-card {
+			background: #ffffff;
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			border-radius: 0.375em;
+			border-top: solid 4px #f56a6a;
+			padding: 2.5em;
+			max-width: 820px;
+		}
+
+		/* ─── Grupos de campo ─── */
+		.field-group {
+			margin-bottom: 1.75em;
+		}
+
+		.field-group label {
+			display: block;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.88em;
+			font-weight: 600;
+			color: #3d4449;
+			margin-bottom: 0.5em;
+		}
+
+		.field-group label .required {
+			color: #f56a6a;
+			margin-left: 0.2em;
+		}
+
+		/* Inputs de texto */
+		.field-group input[type="text"],
+		.field-group input[type="number"] {
+			display: block;
+			width: 100%;
+			height: 2.75em;
+			padding: 0 1em;
+			background: #ffffff;
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			border-radius: 0.375em;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.9em;
+			color: #3d4449;
+			outline: none;
+			transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+		}
+
+		.field-group input[type="text"]::placeholder,
+		.field-group input[type="number"]::placeholder {
+			color: #9fa3a6;
+		}
+
+		.field-group input[type="text"]:focus,
+		.field-group input[type="number"]:focus {
+			border-color: #f56a6a;
+			box-shadow: 0 0 0 1px #f56a6a;
+		}
+
+		/* ─── Fila con input + botón lateral ─── */
+		.field-inline {
+			display: flex;
+			gap: 0.75em;
+			align-items: stretch;
+		}
+
+		.field-inline input {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.btn-importar {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.45em;
+			height: 2.75em;
+			padding: 0 1.4em;
+			background: transparent;
+			color: #f56a6a;
+			border: solid 2px #f56a6a;
+			border-radius: 0.375em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.72em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.07em;
+			cursor: pointer;
+			white-space: nowrap;
+			transition: background 0.2s ease-in-out, color 0.2s ease-in-out;
+		}
+
+		.btn-importar:hover {
+			background: rgba(245, 106, 106, 0.07);
+		}
+
+		.btn-importar:active {
+			background: rgba(245, 106, 106, 0.16);
+		}
+
+		/* ─── Divisor entre campos ─── */
+		.field-divider {
+			border: none;
+			border-top: solid 1px rgba(210, 215, 217, 0.6);
+			margin: 2em 0;
+		}
+
+		/* ══════════════════════════════
+		   SECCIÓN ALUMNOS
+		══════════════════════════════ */
+		.alumnos-label {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.88em;
+			font-weight: 600;
+			color: #3d4449;
+			margin-bottom: 0.5em;
+			display: block;
+		}
+
+		.alumnos-layout {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 1.25em;
+		}
+
+		/* Panel de lista */
+		.alumnos-panel {
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			border-radius: 0.375em;
+			overflow: hidden;
+		}
+
+		.alumnos-panel-header {
+			background: #f5f6f7;
+			padding: 0.7em 1.1em;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			border-bottom: solid 1px rgba(210, 215, 217, 0.6);
+		}
+
+		.alumnos-panel-header span {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.72em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: #3d4449;
+		}
+
+		.alumnos-panel-header .count-badge {
+			background: #f56a6a;
+			color: #ffffff;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.78em;
+			font-weight: 700;
+			border-radius: 1em;
+			padding: 0.15em 0.6em;
+			min-width: 1.5em;
+			text-align: center;
+			display: none;
+		}
+
+		.alumnos-panel-header .count-badge.visible { display: inline-block; }
+
+		/* Buscador */
+		.alumnos-search {
+			padding: 0.75em 1em;
+			border-bottom: solid 1px rgba(210, 215, 217, 0.5);
+			position: relative;
+		}
+
+		.alumnos-search i {
+			position: absolute;
+			left: 1.85em;
+			top: 50%;
+			transform: translateY(-50%);
+			color: #9fa3a6;
+			font-size: 0.8em;
+			pointer-events: none;
+		}
+
+		.alumnos-search input {
+			width: 100%;
+			height: 2.2em;
+			padding: 0 0.9em 0 2.2em;
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			border-radius: 0.375em;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.82em;
+			color: #3d4449;
+			outline: none;
+			transition: border-color 0.2s, box-shadow 0.2s;
+		}
+
+		.alumnos-search input::placeholder { color: #9fa3a6; }
+
+		.alumnos-search input:focus {
+			border-color: #f56a6a;
+			box-shadow: 0 0 0 1px #f56a6a;
+		}
+
+		/* Lista scrollable */
+		.alumnos-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			max-height: 260px;
+			overflow-y: auto;
+		}
+
+		.alumnos-list li {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0.7em 1.1em;
+			border-bottom: solid 1px rgba(210, 215, 217, 0.4);
+			cursor: pointer;
+			transition: background 0.15s ease-in-out;
+			gap: 0.75em;
+		}
+
+		.alumnos-list li:last-child { border-bottom: none; }
+
+		/* ── Lista disponible ── */
+		#lista-disponible li:hover {
+			background: rgba(245, 106, 106, 0.05);
+		}
+
+		#lista-disponible li .alumno-info {
+			display: flex;
+			align-items: center;
+			gap: 0.65em;
+			min-width: 0;
+		}
+
+		#lista-disponible li .alumno-avatar {
+			width: 2em;
+			height: 2em;
+			border-radius: 50%;
+			background: rgba(245, 106, 106, 0.12);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.7em;
+			font-weight: 700;
+			color: #f56a6a;
+			text-transform: uppercase;
+		}
+
+		#lista-disponible li .alumno-nombre {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.85em;
+			color: #3d4449;
+			font-weight: 600;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		#lista-disponible li .alumno-codigo {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.75em;
+			color: #9fa3a6;
+		}
+
+		#lista-disponible li .btn-add-alumno {
+			flex-shrink: 0;
+			width: 1.8em;
+			height: 1.8em;
+			border-radius: 50%;
+			background: transparent;
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			color: #9fa3a6;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 0.75em;
+			cursor: pointer;
+			transition: background 0.2s, border-color 0.2s, color 0.2s;
+		}
+
+		#lista-disponible li:hover .btn-add-alumno {
+			background: #f56a6a;
+			border-color: #f56a6a;
+			color: #ffffff;
+		}
+
+		/* Li oculto por búsqueda */
+		#lista-disponible li.hidden { display: none; }
+
+		/* Li ya agregado */
+		#lista-disponible li.added {
+			opacity: 0.38;
+			pointer-events: none;
+		}
+
+		/* ── Lista seleccionados ── */
+		#lista-seleccionados li {
+			background: transparent;
+			cursor: default;
+		}
+
+		#lista-seleccionados li .alumno-info {
+			display: flex;
+			align-items: center;
+			gap: 0.65em;
+			min-width: 0;
+		}
+
+		#lista-seleccionados li .alumno-avatar {
+			width: 2em;
+			height: 2em;
+			border-radius: 50%;
+			background: rgba(61, 68, 73, 0.08);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.7em;
+			font-weight: 700;
+			color: #3d4449;
+			text-transform: uppercase;
+		}
+
+		#lista-seleccionados li .alumno-nombre {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.85em;
+			color: #3d4449;
+			font-weight: 600;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		#lista-seleccionados li .btn-remove-alumno {
+			flex-shrink: 0;
+			width: 1.8em;
+			height: 1.8em;
+			border-radius: 50%;
+			background: transparent;
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			color: #9fa3a6;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 0.75em;
+			cursor: pointer;
+			transition: background 0.2s, border-color 0.2s, color 0.2s;
+		}
+
+		#lista-seleccionados li .btn-remove-alumno:hover {
+			background: rgba(245, 106, 106, 0.1);
+			border-color: #f56a6a;
+			color: #f56a6a;
+		}
+
+		/* Estado vacío seleccionados */
+		.seleccionados-empty {
+			text-align: center;
+			padding: 3em 1em;
+			color: #9fa3a6;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.82em;
+		}
+
+		.seleccionados-empty i {
+			display: block;
+			font-size: 2em;
+			margin-bottom: 0.5em;
+			color: rgba(210, 215, 217, 0.9);
+		}
+
+		/* Scrollbar sutil */
+		.alumnos-list::-webkit-scrollbar { width: 5px; }
+		.alumnos-list::-webkit-scrollbar-track { background: transparent; }
+		.alumnos-list::-webkit-scrollbar-thumb {
+			background: rgba(210, 215, 217, 0.8);
+			border-radius: 3px;
+		}
+
+		/* ─── Footer del form (botón Siguiente) ─── */
+		.form-footer {
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			margin-top: 2.5em;
+			padding-top: 1.75em;
+			border-top: solid 1px rgba(210, 215, 217, 0.6);
+			gap: 1em;
+		}
+
+		.btn-cancelar {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.45em;
+			height: 3.5em;
+			padding: 0 2em;
+			background: transparent;
+			color: #9fa3a6;
+			border: solid 1px rgba(210, 215, 217, 0.75);
+			border-radius: 0.375em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.78em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			cursor: pointer;
+			text-decoration: none;
+			transition: background 0.2s, color 0.2s, border-color 0.2s;
+		}
+
+		.btn-cancelar:hover {
+			background: rgba(61, 68, 73, 0.05);
+			border-color: #7f888f;
+			color: #3d4449;
+		}
+
+		.btn-siguiente {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5em;
+			height: 3.5em;
+			padding: 0 2.25em;
+			background: #f56a6a;
+			color: #ffffff;
+			border: none;
+			border-radius: 0.375em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.78em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			cursor: pointer;
+			transition: background 0.2s ease-in-out;
+		}
+
+		.btn-siguiente:hover { background: #f67878; }
+		.btn-siguiente:active { background: #f45c5c; }
+
+		/* ─── Responsive ─── */
+		@media (max-width: 900px) {
+			.sidebar { width: 220px; min-width: 220px; }
+			.page-body { padding: 1.5em; }
+			.form-card { padding: 1.75em; }
+		}
+
+		@media (max-width: 700px) {
+			.alumnos-layout { grid-template-columns: 1fr; }
+		}
+
+		@media (max-width: 680px) {
+			.app-layout { flex-direction: column; }
+			.sidebar { width: 100%; min-width: unset; height: auto; position: static; }
+			.topbar { padding: 1em 1.5em; }
+			.page-body { padding: 1.25em; }
+		}
+
+	</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+	<!-- ════════════ SIDEBAR ════════════ -->
+	<aside class="sidebar">
+		<div class="sidebar-brand">
+			<h1>Cloud Group 5</h1>
+			<span>Panel de administración</span>
+		</div>
+
+		<div class="sidebar-section-label">Menú principal</div>
+
+		<ul class="sidebar-nav">
+			<li class="active">
+				<a href="cursos.html">
+					<i class="fas fa-book-open"></i>
+					Cursos
+				</a>
+			</li>
+			<li>
+				<a href="#">
+					<i class="fas fa-chart-bar"></i>
+					Dashboards
+				</a>
+			</li>
+			<li>
+				<a href="#">
+					<i class="fas fa-users-cog"></i>
+					Gestión de usuarios
+				</a>
+			</li>
+		</ul>
+
+		<div class="sidebar-footer">
+			&copy; 2026 Cloud Grupo 5
+		</div>
+	</aside>
+
+	<!-- ════════════ CONTENIDO PRINCIPAL ════════════ -->
+	<div class="main-content">
+
+		<!-- Topbar -->
+		<header class="topbar">
+			<nav class="topbar-breadcrumb">
+				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
+				<span class="sep"><i class="fas fa-chevron-right" style="font-size:0.7em"></i></span>
+				<span class="current">Crear Nuevo Curso</span>
+			</nav>
+			<div class="topbar-user">
+				<i class="fas fa-user-circle"></i>
+				Administrador
+			</div>
+		</header>
+
+		<!-- Cuerpo -->
+		<div class="page-body">
+
+			<!-- Título -->
+			<div class="page-heading">
+				<span class="label">Admin</span>
+				<h2>Crear Nuevo Curso</h2>
+			</div>
+
+			<!-- Tarjeta formulario -->
+			<div class="form-card">
+				<form id="form-nuevo-curso" novalidate>
+
+					<!-- Nombre del curso -->
+					<div class="field-group">
+						<label for="nombre-curso">
+							Nombre del Curso <span class="required">*</span>
+						</label>
+						<input
+							type="text"
+							id="nombre-curso"
+							name="nombre_curso"
+							placeholder="Ej. Ingeniería de Redes Cloud"
+						/>
+					</div>
+
+					<!-- ID del Curso -->
+					<div class="field-group">
+						<label for="id-curso">
+							ID del Curso <span class="required">*</span>
+						</label>
+						<input
+							type="text"
+							id="id-curso"
+							name="id_curso"
+							placeholder="Ej. TEL141"
+						/>
+					</div>
+
+					<!-- Número de Slices + Importar datos -->
+					<div class="field-group">
+						<label for="num-slices">
+							Número de Slices <span class="required">*</span>
+						</label>
+						<div class="field-inline">
+							<input
+								type="number"
+								id="num-slices"
+								name="num_slices"
+								placeholder="Ej. 5"
+								min="1"
+							/>
+							<button type="button" class="btn-importar" onclick="importarDatos()">
+								<i class="fas fa-file-import"></i>
+								Importar datos
+							</button>
+						</div>
+					</div>
+
+					<hr class="field-divider" />
+
+					<!-- Alumnos -->
+					<div class="field-group" style="margin-bottom:0">
+						<label class="alumnos-label">
+							Alumnos <span class="required">*</span>
+							<span style="font-size:0.85em;font-weight:400;color:#9fa3a6;margin-left:0.5em;">
+								— Haz clic en un alumno para añadirlo al curso
+							</span>
+						</label>
+
+						<div class="alumnos-layout">
+
+							<!-- Panel izquierdo: disponibles -->
+							<div class="alumnos-panel">
+								<div class="alumnos-panel-header">
+									<span>Alumnos disponibles</span>
+								</div>
+								<div class="alumnos-search">
+									<i class="fas fa-search"></i>
+									<input
+										type="text"
+										id="buscador-alumnos"
+										placeholder="Buscar alumno..."
+										oninput="filtrarAlumnos(this.value)"
+										autocomplete="off"
+									/>
+								</div>
+								<ul class="alumnos-list" id="lista-disponible">
+									<!-- generado por JS -->
+								</ul>
+							</div>
+
+							<!-- Panel derecho: seleccionados -->
+							<div class="alumnos-panel">
+								<div class="alumnos-panel-header">
+									<span>Alumnos añadidos</span>
+									<span class="count-badge" id="badge-count">0</span>
+								</div>
+								<ul class="alumnos-list" id="lista-seleccionados">
+									<li id="empty-msg" class="seleccionados-empty" style="border:none;cursor:default;">
+										<i class="fas fa-user-plus"></i>
+										Ningún alumno añadido aún
+									</li>
+								</ul>
+							</div>
+
+						</div>
+					</div>
+
+					<!-- Botones de acción -->
+					<div class="form-footer">
+						<a href="cursos.html" class="btn-cancelar">
+							<i class="fas fa-times"></i>
+							Cancelar
+						</a>
+						<button type="submit" class="btn-siguiente">
+							Siguiente
+							<i class="fas fa-arrow-right"></i>
+						</button>
+					</div>
+
+				</form>
+			</div>
+
+		</div>
+	</div>
+
+</div>
+
+<script>
+	/* ──────────────────────────────────────
+	   Datos de alumnos de ejemplo
+	────────────────────────────────────── */
+	const ALUMNOS = [
+		{ id: "20200001", nombre: "Alejandro Torres" },
+		{ id: "20200002", nombre: "Valeria Quispe" },
+		{ id: "20200003", nombre: "Diego Ramírez" },
+		{ id: "20200004", nombre: "Sofía Mendoza" },
+		{ id: "20200005", nombre: "Andrés Castillo" },
+		{ id: "20200006", nombre: "Camila Flores" },
+		{ id: "20200007", nombre: "Óscar Herrera" },
+		{ id: "20200008", nombre: "Lucía Vargas" },
+		{ id: "20200009", nombre: "Martín Salazar" },
+		{ id: "20200010", nombre: "Gabriela Reyes" },
+		{ id: "20200011", nombre: "Felipe Paredes" },
+		{ id: "20200012", nombre: "Natalia Cruz" },
+		{ id: "20200013", nombre: "Rodrigo Soto" },
+		{ id: "20200014", nombre: "Isabella Morales" },
+		{ id: "20200015", nombre: "Sebastián Jiménez" },
+	];
+
+	const seleccionados = new Set();
+
+	/* Inicializa lista disponible */
+	function initLista() {
+		const lista = document.getElementById('lista-disponible');
+		lista.innerHTML = '';
+		ALUMNOS.forEach(a => {
+			const li = document.createElement('li');
+			li.id = 'disp-' + a.id;
+			li.dataset.nombre = a.nombre.toLowerCase();
+			li.innerHTML = `
+				<div class="alumno-info">
+					<div class="alumno-avatar">${iniciales(a.nombre)}</div>
+					<div>
+						<div class="alumno-nombre">${a.nombre}</div>
+						<div class="alumno-codigo">${a.id}</div>
+					</div>
+				</div>
+				<button type="button" class="btn-add-alumno" title="Añadir alumno">
+					<i class="fas fa-plus"></i>
+				</button>
+			`;
+			li.addEventListener('click', () => agregarAlumno(a));
+			lista.appendChild(li);
+		});
+	}
+
+	/* Iniciales para avatar */
+	function iniciales(nombre) {
+		return nombre.split(' ').slice(0, 2).map(p => p[0]).join('');
+	}
+
+	/* Añadir alumno */
+	function agregarAlumno(a) {
+		if (seleccionados.has(a.id)) return;
+		seleccionados.add(a.id);
+
+		/* Marcar como añadido en disponibles */
+		document.getElementById('disp-' + a.id).classList.add('added');
+
+		/* Ocultar estado vacío */
+		document.getElementById('empty-msg').style.display = 'none';
+
+		/* Agregar a lista seleccionados */
+		const lista = document.getElementById('lista-seleccionados');
+		const li = document.createElement('li');
+		li.id = 'sel-' + a.id;
+		li.innerHTML = `
+			<div class="alumno-info">
+				<div class="alumno-avatar">${iniciales(a.nombre)}</div>
+				<div class="alumno-nombre">${a.nombre}</div>
+			</div>
+			<button type="button" class="btn-remove-alumno" title="Quitar alumno">
+				<i class="fas fa-times"></i>
+			</button>
+		`;
+		li.querySelector('.btn-remove-alumno').addEventListener('click', (e) => {
+			e.stopPropagation();
+			quitarAlumno(a);
+		});
+		lista.appendChild(li);
+		actualizarBadge();
+	}
+
+	/* Quitar alumno */
+	function quitarAlumno(a) {
+		seleccionados.delete(a.id);
+		document.getElementById('disp-' + a.id).classList.remove('added');
+		const sel = document.getElementById('sel-' + a.id);
+		if (sel) sel.remove();
+		if (seleccionados.size === 0) {
+			document.getElementById('empty-msg').style.display = '';
+		}
+		actualizarBadge();
+	}
+
+	/* Actualizar badge contador */
+	function actualizarBadge() {
+		const badge = document.getElementById('badge-count');
+		badge.textContent = seleccionados.size;
+		badge.classList.toggle('visible', seleccionados.size > 0);
+	}
+
+	/* Filtrar buscador */
+	function filtrarAlumnos(query) {
+		const q = query.toLowerCase().trim();
+		document.querySelectorAll('#lista-disponible li').forEach(li => {
+			const match = li.dataset.nombre && li.dataset.nombre.includes(q);
+			li.classList.toggle('hidden', !match);
+		});
+	}
+
+	/* Placeholder para Importar datos */
+	function importarDatos() {
+		alert('Función de importación de datos próximamente disponible.');
+	}
+
+	/* Arrancar */
+	initLista();
+</script>
+
+</body>
+</html>
