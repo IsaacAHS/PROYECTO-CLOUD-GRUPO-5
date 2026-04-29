@@ -1,0 +1,503 @@
+<!DOCTYPE HTML>
+<html lang="es">
+<head>
+	<title>Slices del Curso</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<link rel="stylesheet" href="assets/css/fontawesome-all.min.css" />
+	<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
+	<style>
+
+		*, *::before, *::after { box-sizing: border-box; }
+
+		html, body {
+			height: 100%;
+			margin: 0; padding: 0;
+			background-color: #f5f6f7;
+			font-family: 'Open Sans', sans-serif;
+			color: #7f888f;
+			font-size: 13pt;
+			line-height: 1.65;
+		}
+
+		.app-layout { display: flex; min-height: 100vh; }
+
+		/* ══ SIDEBAR ══ */
+		.sidebar {
+			width: 260px;
+			min-width: 260px;
+			background: #fff;
+			border-right: solid 1px rgba(210,215,217,0.75);
+			display: flex;
+			flex-direction: column;
+			position: sticky;
+			top: 0;
+			height: 100vh;
+			overflow-y: auto;
+		}
+
+		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; }
+
+		.sidebar-brand h1 {
+			font-family: 'Roboto Slab', serif;
+			font-weight: 700;
+			font-size: 1.1em;
+			color: #3d4449;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			margin: 0 0 0.2em;
+		}
+
+		.sidebar-brand span { font-size: 0.75em; color: #9fa3a6; display: block; }
+
+		.sidebar-section-label {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.65em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: #9fa3a6;
+			padding: 1.5em 1.75em 0.5em;
+		}
+
+		.sidebar-nav { list-style: none; margin: 0; padding: 0 0 1em; flex: 1; }
+
+		.sidebar-nav li a {
+			display: flex;
+			align-items: center;
+			gap: 0.75em;
+			padding: 0.75em 1.75em;
+			font-size: 0.9em;
+			font-weight: 600;
+			color: #7f888f;
+			text-decoration: none;
+			border-left: solid 3px transparent;
+			transition: color 0.2s, background 0.2s, border-color 0.2s;
+		}
+
+		.sidebar-nav li a i { width: 1.25em; text-align: center; font-size: 0.95em; color: #9fa3a6; transition: color 0.2s; }
+		.sidebar-nav li a:hover { color: #3d4449; background: rgba(245,106,106,0.05); border-left-color: rgba(245,106,106,0.4); }
+		.sidebar-nav li a:hover i { color: #f56a6a; }
+		.sidebar-nav li.active a { color: #f56a6a; background: rgba(245,106,106,0.07); border-left-color: #f56a6a; }
+		.sidebar-nav li.active a i { color: #f56a6a; }
+
+		.sidebar-footer { padding: 1.25em 1.75em; border-top: solid 1px rgba(210,215,217,0.75); font-size: 0.75em; color: #9fa3a6; }
+
+		/* ══ MAIN CONTENT ══ */
+		.main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+		/* Topbar */
+		.topbar {
+			background: #fff;
+			border-bottom: solid 1px rgba(210,215,217,0.75);
+			padding: 1em 2.5em;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1em;
+		}
+
+		.topbar-breadcrumb { display: flex; align-items: center; gap: 0.6em; font-size: 0.82em; }
+		.topbar-breadcrumb a { color: #9fa3a6; text-decoration: none; transition: color 0.2s; }
+		.topbar-breadcrumb a:hover { color: #f56a6a; }
+		.topbar-breadcrumb .sep { color: rgba(210,215,217,0.9); font-size: 0.8em; }
+		.topbar-breadcrumb .current { color: #3d4449; font-weight: 600; }
+
+		.topbar-user { font-size: 0.82em; color: #9fa3a6; }
+		.topbar-user i { color: #f56a6a; margin-right: 0.4em; }
+
+		.page-body { padding: 2.5em; flex: 1; }
+
+		/* Section header */
+		.section-header {
+			display: flex;
+			align-items: flex-end;
+			justify-content: space-between;
+			margin-bottom: 1.75em;
+			flex-wrap: wrap;
+			gap: 1em;
+		}
+
+		.section-header-left .course-badge {
+			display: inline-block;
+			background: rgba(245,106,106,0.1);
+			color: #f56a6a;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.7em;
+			font-weight: 700;
+			padding: 0.2em 0.65em;
+			border-radius: 0.25em;
+			letter-spacing: 0.05em;
+			margin-bottom: 0.5em;
+		}
+
+		.section-header-left h2 {
+			font-family: 'Roboto Slab', serif;
+			font-weight: 700;
+			font-size: 1.5em;
+			color: #3d4449;
+			margin: 0 0 0.2em;
+			letter-spacing: 0.02em;
+		}
+
+		.section-header-left p { margin: 0; font-size: 0.88em; color: #9fa3a6; }
+
+		.btn-crear {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5em;
+			height: 3.5em;
+			padding: 0 2em;
+			background: #f56a6a;
+			color: #fff;
+			border: none;
+			border-radius: 0.375em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.78em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			cursor: pointer;
+			text-decoration: none;
+			transition: background 0.2s;
+			white-space: nowrap;
+		}
+		.btn-crear:hover { background: #f67878; color: #fff; }
+		.btn-crear:active { background: #f45c5c; }
+
+		/* Table card */
+		.table-card {
+			background: #fff;
+			border: solid 1px rgba(210,215,217,0.75);
+			border-radius: 0.375em;
+			overflow: hidden;
+		}
+
+		/* Slices table */
+		.slices-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.9em;
+		}
+
+		.slices-table thead tr {
+			background: #f5f6f7;
+			border-bottom: solid 2px rgba(210,215,217,0.75);
+		}
+
+		.slices-table thead th {
+			font-family: 'Roboto Slab', serif;
+			font-weight: 700;
+			font-size: 0.78em;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			color: #3d4449;
+			padding: 1em 1.5em;
+			text-align: left;
+			white-space: nowrap;
+		}
+
+		.slices-table thead th.col-center { text-align: center; }
+
+		.slices-table tbody tr {
+			border-bottom: solid 1px rgba(210,215,217,0.5);
+			transition: background 0.15s;
+		}
+		.slices-table tbody tr:last-child { border-bottom: none; }
+		.slices-table tbody tr:hover { background: rgba(245,106,106,0.03); }
+
+		.slices-table tbody td {
+			padding: 1.05em 1.5em;
+			color: #7f888f;
+			vertical-align: middle;
+		}
+
+		.slices-table tbody td.col-center { text-align: center; }
+
+		/* Status dot */
+		.status-dot {
+			display: inline-block;
+			width: 8px; height: 8px;
+			border-radius: 50%;
+			margin-right: 0.6em;
+			vertical-align: middle;
+			flex-shrink: 0;
+		}
+		.status-dot.running {
+			background: #44b078;
+			box-shadow: 0 0 0 3px rgba(68,176,120,0.2);
+		}
+		.status-dot.stopped { background: #f5a623; }
+		.status-dot.off     { background: #c0c4c8; }
+
+		.slice-name { font-weight: 600; color: #3d4449; }
+
+		/* Timer */
+		.timer {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.92em;
+			letter-spacing: 0.06em;
+			color: #3d4449;
+		}
+		.timer.paused { color: #f5a623; }
+		.timer.off     { color: #9fa3a6; }
+
+		/* Control buttons */
+		.ctrl-btns {
+			display: inline-flex;
+			gap: 0.35em;
+			align-items: center;
+		}
+
+		.btn-ctrl {
+			width: 2.3em; height: 2.3em;
+			border-radius: 0.35em;
+			border: solid 1px rgba(210,215,217,0.75);
+			background: transparent;
+			color: #9fa3a6;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 0.8em;
+			cursor: pointer;
+			transition: background 0.18s, border-color 0.18s, color 0.18s;
+		}
+
+		.btn-ctrl:hover { opacity: 0.85; }
+
+		.btn-ctrl.btn-play       { color: #9fa3a6; }
+		.btn-ctrl.btn-play:hover,
+		.btn-ctrl.btn-play.on    { background: rgba(68,176,120,0.12); border-color: #44b078; color: #44b078; }
+
+		.btn-ctrl.btn-stop:hover,
+		.btn-ctrl.btn-stop.on    { background: rgba(245,166,35,0.12); border-color: #f5a623; color: #f5a623; }
+
+		.btn-ctrl.btn-power:hover,
+		.btn-ctrl.btn-power.on   { background: rgba(245,106,106,0.12); border-color: #f56a6a; color: #f56a6a; }
+
+		/* Eye button */
+		.btn-action {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 2.4em; height: 2.4em;
+			border-radius: 0.375em;
+			border: solid 1px rgba(210,215,217,0.75);
+			background: transparent;
+			cursor: pointer;
+			text-decoration: none;
+			transition: background 0.2s, border-color 0.2s, color 0.2s;
+		}
+		.btn-action i { font-size: 0.85em; }
+
+		.btn-view { color: #7f888f; }
+		.btn-view:hover { background: rgba(74,159,213,0.09); border-color: #4a9fd5; color: #4a9fd5; }
+
+		/* Responsive */
+		@media (max-width: 900px) {
+			.sidebar { width: 220px; min-width: 220px; }
+			.page-body { padding: 1.5em; }
+		}
+		@media (max-width: 680px) {
+			.app-layout { flex-direction: column; }
+			.sidebar { width: 100%; min-width: unset; height: auto; position: static; }
+			.topbar { padding: 1em 1.5em; }
+			.page-body { padding: 1.25em; }
+		}
+
+	</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+	<!-- ════ SIDEBAR ════ -->
+	<aside class="sidebar">
+		<div class="sidebar-brand">
+			<h1>Cloud Group 5</h1>
+			<span>Panel de administración</span>
+		</div>
+		<div class="sidebar-section-label">Menú principal</div>
+		<ul class="sidebar-nav">
+			<li class="active">
+				<a href="cursos.html">
+					<i class="fas fa-book-open"></i>
+					Cursos
+				</a>
+			</li>
+			<li>
+				<a href="#">
+					<i class="fas fa-chart-bar"></i>
+					Dashboards
+				</a>
+			</li>
+			<li>
+				<a href="#">
+					<i class="fas fa-users-cog"></i>
+					Gestión de usuarios
+				</a>
+			</li>
+		</ul>
+		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
+	</aside>
+
+	<!-- ════ MAIN CONTENT ════ -->
+	<div class="main-content">
+
+		<header class="topbar">
+			<nav class="topbar-breadcrumb">
+				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
+				<span class="sep"><i class="fas fa-chevron-right"></i></span>
+				<span class="current" id="bc-curso">Curso</span>
+			</nav>
+			<div class="topbar-user">
+				<i class="fas fa-user-circle"></i>
+				Administrador
+			</div>
+		</header>
+
+		<div class="page-body">
+
+			<div class="section-header">
+				<div class="section-header-left">
+					<span class="course-badge" id="badge-id">—</span>
+					<h2 id="page-title">Slices</h2>
+					<p id="page-subtitle">Administra los slices de este curso.</p>
+				</div>
+				<a href="configurar-slice.html" class="btn-crear">
+					<i class="fas fa-plus"></i>
+					Crear Nuevo Slice
+				</a>
+			</div>
+
+			<div class="table-card">
+				<table class="slices-table">
+					<thead>
+						<tr>
+							<th id="col-slices">Slices</th>
+							<th>Tiempo de vida</th>
+							<th class="col-center">Prender / Apagar</th>
+							<th class="col-center">Ver</th>
+						</tr>
+					</thead>
+					<tbody id="slices-tbody"></tbody>
+				</table>
+			</div>
+
+		</div>
+	</div>
+
+</div>
+
+<script>
+/* ── URL params ── */
+const params    = new URLSearchParams(window.location.search);
+const courseId  = params.get('id')     || 'TEL000';
+const courseNom = decodeURIComponent(params.get('nombre') || 'Curso');
+
+/* ── Populate headings ── */
+document.title = `Slices — ${courseNom}`;
+document.getElementById('bc-curso').textContent   = courseNom;
+document.getElementById('badge-id').textContent   = courseId;
+document.getElementById('page-title').textContent = `Slices — ${courseNom}`;
+document.getElementById('col-slices').textContent = `Slices — ${courseNom}`;
+
+/* ── Demo slice data ── */
+const NUM_SLICES = 5;
+const INIT_STATES = ['running', 'running', 'stopped', 'off', 'running'];
+const INIT_TIMES  = [5412, 2873, 1440, 0, 9001]; // seconds
+
+const slices = Array.from({ length: NUM_SLICES }, (_, i) => ({
+	id:    i + 1,
+	name: `Slice ${i + 1}`,
+	state: INIT_STATES[i],
+	secs:  INIT_TIMES[i]
+}));
+
+/* ── Format time ── */
+function fmt(s) {
+	const h = Math.floor(s / 3600);
+	const m = Math.floor((s % 3600) / 60);
+	const sec = s % 60;
+	return [h, m, sec].map(n => String(n).padStart(2, '0')).join(':');
+}
+
+/* ── Render table ── */
+function renderTable() {
+	const tbody = document.getElementById('slices-tbody');
+	tbody.innerHTML = slices.map(s => `
+		<tr id="tr-${s.id}">
+			<td>
+				<span class="status-dot ${s.state}" id="dot-${s.id}"></span>
+				<span class="slice-name">${s.name}</span>
+			</td>
+			<td>
+				<span class="timer ${s.state === 'stopped' ? 'paused' : s.state === 'off' ? 'off' : ''}"
+				      id="timer-${s.id}">${s.state === 'off' ? '00:00:00' : fmt(s.secs)}</span>
+			</td>
+			<td class="col-center">
+				<div class="ctrl-btns">
+					<button class="btn-ctrl btn-play ${s.state === 'running' ? 'on' : ''}"
+					        onclick="ctrlSlice(${s.id},'play')" title="Iniciar">
+						<i class="fas fa-play"></i>
+					</button>
+					<button class="btn-ctrl btn-stop ${s.state === 'stopped' ? 'on' : ''}"
+					        onclick="ctrlSlice(${s.id},'stop')" title="Detener">
+						<i class="fas fa-stop"></i>
+					</button>
+					<button class="btn-ctrl btn-power ${s.state === 'off' ? 'on' : ''}"
+					        onclick="ctrlSlice(${s.id},'off')" title="Apagar">
+						<i class="fas fa-power-off"></i>
+					</button>
+				</div>
+			</td>
+			<td class="col-center">
+				<a href="ver-slice.html?slice=${s.id}&curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}"
+				   class="btn-action btn-view" title="Ver slice">
+					<i class="fas fa-eye"></i>
+				</a>
+			</td>
+		</tr>
+	`).join('');
+}
+
+/* ── State change ── */
+function ctrlSlice(id, action) {
+	const s = slices.find(x => x.id === id);
+	if (!s) return;
+
+	s.state = action === 'play' ? 'running' : action === 'stop' ? 'stopped' : 'off';
+	if (s.state === 'off') s.secs = 0;
+
+	const row = document.getElementById('tr-' + id);
+
+	row.querySelector('.btn-play').classList.toggle('on',  s.state === 'running');
+	row.querySelector('.btn-stop').classList.toggle('on',  s.state === 'stopped');
+	row.querySelector('.btn-power').classList.toggle('on', s.state === 'off');
+
+	const dot   = document.getElementById('dot-' + id);
+	dot.className = `status-dot ${s.state}`;
+
+	const timer = document.getElementById('timer-' + id);
+	timer.className = `timer${s.state === 'stopped' ? ' paused' : s.state === 'off' ? ' off' : ''}`;
+	if (s.state === 'off') timer.textContent = '00:00:00';
+}
+
+/* ── Countdown ── */
+function tick() {
+	slices.forEach(s => {
+		if (s.state !== 'running' || s.secs <= 0) return;
+		s.secs--;
+		const el = document.getElementById('timer-' + s.id);
+		if (el) el.textContent = fmt(s.secs);
+	});
+}
+
+renderTable();
+setInterval(tick, 1000);
+</script>
+
+</body>
+</html>
