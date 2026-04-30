@@ -792,17 +792,6 @@
 							</select>
 						</div>
 
-						<div class="field">
-							<label>Cluster <span class="req">*</span></label>
-							<select id="cluster">
-								<option value="">— Seleccionar cluster —</option>
-								<option value="cluster-01">Cluster 01</option>
-								<option value="cluster-02">Cluster 02</option>
-								<option value="cluster-03">Cluster 03</option>
-								<option value="cluster-04">Cluster 04</option>
-							</select>
-						</div>
-
 						<div class="field" style="margin-bottom:0.5em">
 							<label>Tipo de topología <span class="req">*</span></label>
 							<div class="topo-grid">
@@ -838,27 +827,15 @@
 						</p>
 
 						<div class="field">
-							<label>CPU <span class="req">*</span></label>
-							<select id="cpu">
-								<option value="">— Seleccionar —</option>
-								<option value="1">1 vCPU</option>
-								<option value="2">2 vCPUs</option>
-								<option value="4">4 vCPUs</option>
-								<option value="8">8 vCPUs</option>
-								<option value="16">16 vCPUs</option>
-							</select>
-						</div>
-
-						<div class="field">
-							<label>RAM <span class="req">*</span></label>
-							<select id="ram">
-								<option value="">— Seleccionar —</option>
-								<option value="1">1 GB</option>
-								<option value="2">2 GB</option>
-								<option value="4">4 GB</option>
-								<option value="8">8 GB</option>
-								<option value="16">16 GB</option>
-								<option value="32">32 GB</option>
+							<label>Flavor <span class="req">*</span></label>
+							<select id="flavor">
+								<option value="">— Seleccionar flavor —</option>
+								<option value="m1.tiny">m1.tiny — 1 vCPU / 512 MB RAM</option>
+								<option value="m1.small">m1.small — 1 vCPU / 2 GB RAM</option>
+								<option value="m1.medium">m1.medium — 2 vCPUs / 4 GB RAM</option>
+								<option value="m1.large">m1.large — 4 vCPUs / 8 GB RAM</option>
+								<option value="m1.xlarge">m1.xlarge — 8 vCPUs / 16 GB RAM</option>
+								<option value="m1.2xlarge">m1.2xlarge — 16 vCPUs / 32 GB RAM</option>
 							</select>
 						</div>
 
@@ -1353,7 +1330,7 @@ function lanzarSlice() {
 	const sel = getSelectedTopos();
 	if (!sel.length) { alert('Selecciona al menos un tipo de topología.'); return; }
 
-	const missing = ['zona','cluster','cpu','ram','imagen','llaves']
+	const missing = ['zona','flavor','imagen','llaves']
 		.filter(id => !document.getElementById(id).value);
 	if (missing.length) { alert('Completa todos los campos obligatorios antes de lanzar.'); return; }
 
