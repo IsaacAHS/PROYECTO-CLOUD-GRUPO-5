@@ -900,6 +900,33 @@ function importarDatos() {
 })();
 
 initLista();
+
+/* ── Edit mode ── */
+(function() {
+	const p = new URLSearchParams(window.location.search);
+	const isEdit  = p.get('edit') === '1';
+	const editId  = p.get('id')     || '';
+	const editNom = decodeURIComponent(p.get('nombre') || '');
+	if (!isEdit) return;
+
+	/* Update headings */
+	document.title = `Editar Curso — ${editId}`;
+	document.querySelector('.page-heading .label').textContent = 'Administración';
+	document.querySelector('.page-heading h2').textContent = 'Editar Curso';
+	document.querySelector('.topbar-breadcrumb .current').textContent = 'Editar Curso';
+
+	/* Pre-fill fields */
+	document.getElementById('nombre-curso').value = editNom;
+	document.getElementById('id-curso').value     = editId;
+
+	/* Change button label */
+	const btnCrear = document.querySelector('.btn-crear-final');
+	if (btnCrear) { btnCrear.innerHTML = '<i class="fas fa-save"></i> Guardar cambios'; }
+
+	/* Cancel goes back to cursos.html */
+	const btnCancel = document.querySelector('.btn-cancelar');
+	if (btnCancel) btnCancel.href = 'cursos.html';
+})();
 </script>
 
 </body>
