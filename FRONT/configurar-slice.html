@@ -1492,10 +1492,15 @@ document.addEventListener('keydown', e => {
 	}
 });
 
-document.getElementById('sidebarToggle').addEventListener('click', () => {
-	document.getElementById('sidebar').classList.toggle('collapsed');
-	setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
-});
+(function() {
+	const sidebar = document.getElementById('sidebar');
+	if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
+	document.getElementById('sidebarToggle').addEventListener('click', () => {
+		sidebar.classList.toggle('collapsed');
+		localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+	});
+})();
 
 window.addEventListener('resize', () => {
 	if (nodes.length) drawEdges();

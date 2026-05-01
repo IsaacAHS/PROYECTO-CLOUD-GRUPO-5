@@ -33,7 +33,7 @@
 			flex-shrink: 0;
 			transition: width 0.28s ease, min-width 0.28s ease, border-color 0.28s ease;
 		}
-		.sidebar.collapsed { width: 0; min-width: 0; border-right-color: transparent; }
+		.sidebar.collapsed { width: 0; min-width: 0; border-right-color: transparent; overflow: hidden; }
 
 		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; white-space: nowrap; }
 		.sidebar-brand h1 {
@@ -699,10 +699,15 @@ document.getElementById('page-title').textContent    = sliceName;
 document.getElementById('edit-link').href = `configurar-slice.html?slice=${sliceId}&curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}`;
 
 /* ── Sidebar toggle ── */
-document.getElementById('sidebarToggle').addEventListener('click', () => {
-	document.getElementById('sidebar').classList.toggle('collapsed');
-	setTimeout(() => { if (getSelectedTopos().length) renderTopology(); }, 300);
-});
+(function() {
+	const sidebar = document.getElementById('sidebar');
+	if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
+	document.getElementById('sidebarToggle').addEventListener('click', () => {
+		sidebar.classList.toggle('collapsed');
+		localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+		setTimeout(() => { if (getSelectedTopos().length) renderTopology(); }, 300);
+	});
+})();
 
 /* ════════════════════
    TOPOLOGY (same as configurar-slice)

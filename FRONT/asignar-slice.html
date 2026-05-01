@@ -102,7 +102,7 @@
 		.topbar {
 			background: #fff;
 			border-bottom: solid 1px rgba(210,215,217,0.75);
-			padding: 1em 2.5em;
+			padding: 0.9em 1.75em;
 			display: flex;
 			align-items: center;
 			gap: 0.75em;
@@ -446,9 +446,14 @@ function lanzarSlices() {
 	window.location.href = 'slices.html';
 }
 
-document.getElementById('sidebarToggle').addEventListener('click', () => {
-	document.getElementById('sidebar').classList.toggle('collapsed');
-});
+(function() {
+	const sidebar = document.getElementById('sidebar');
+	if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
+	document.getElementById('sidebarToggle').addEventListener('click', () => {
+		sidebar.classList.toggle('collapsed');
+		localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+	});
+})();
 
 renderCursos();
 </script>
