@@ -1580,14 +1580,39 @@ const TOPO_COLORS_CUSTOM = Object.assign({}, TOPO_COLORS, { custom: 'rgba(120,12
 	if (isEdit) {
 		const DEMO_SLICES = {
 			'1': { zona: 'us-east-1a', topos: [{ type: 'lineal', count: 4 }] },
-			'2': { zona: 'us-east-1b', topos: [{ type: 'arbol', count: 5 }] },
-			'3': { zona: 'us-west-2a', topos: [{ type: 'arbol', count: 7 }, { type: 'lineal', count: 3 }] },
+			'2': { zona: 'us-east-1b', topos: [{ type: 'arbol',  count: 5 }] },
+			'3': { zona: 'us-west-2a', topos: [{ type: 'arbol',  count: 7 }, { type: 'lineal', count: 3 }] },
 			'4': { zona: 'eu-west-1a', topos: [{ type: 'lineal', count: 6 }] },
 		};
+		const DEMO_NODE_CFGS = [
+			{ flavor: 'm1.small',  disco: '20',  imagen: 'ubuntu-22',   llaves: 'key-dev',   secChips: ['22','80'],        rules: [] },
+			{ flavor: 'm1.medium', disco: '50',  imagen: 'ubuntu-22',   llaves: 'key-prod',  secChips: ['22','443'],       rules: [] },
+			{ flavor: 'm1.large',  disco: '100', imagen: 'debian-12',   llaves: 'key-admin', secChips: ['443','icmp'],     rules: [{ proto: 'TCP', port: '8080' }] },
+			{ flavor: 'm1.xlarge', disco: '200', imagen: 'centos-9',    llaves: 'key-prod',  secChips: ['22','80','443'],  rules: [] },
+			{ flavor: 'm1.medium', disco: '50',  imagen: 'ubuntu-20',   llaves: 'key-dev',   secChips: ['22'],             rules: [] },
+			{ flavor: 'm1.small',  disco: '20',  imagen: 'fedora-38',   llaves: 'key-testing',secChips: ['80','443'],      rules: [] },
+			{ flavor: 'm1.large',  disco: '100', imagen: 'windows-2022',llaves: 'key-admin', secChips: ['443'],            rules: [{ proto: 'TCP', port: '3389' }] },
+		];
 		const demo = DEMO_SLICES[sliceId];
 		if (demo) {
 			document.getElementById('zona').value = demo.zona;
 			demo.topos.forEach(t => addTopoEntry(t.type, t.count));
+			/* fill each node's VM config with rotating demo values */
+			let cfgIdx = 0;
+			Object.keys(nodeConfigs).forEach(id => {
+				const src = DEMO_NODE_CFGS[cfgIdx % DEMO_NODE_CFGS.length];
+				cfgIdx++;
+				nodeConfigs[id] = {
+					flavor: src.flavor,
+					disco: src.disco,
+					imagen: src.imagen,
+					imagenMode: 'select',
+					imagenFile: null,
+					llaves: src.llaves,
+					secChips: new Set(src.secChips),
+					rules: src.rules.map(r => ({ ...r, id: ++ruleSeq })),
+				};
+			});
 		}
 	}
 })();
