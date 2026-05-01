@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html lang="es">
 <head>
-	<title>Cursos</title>
+	<title>Slices</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" href="assets/css/main.css" />
@@ -27,8 +27,8 @@
 		.sidebar {
 			width: 260px;
 			min-width: 260px;
-			background: #ffffff;
-			border-right: solid 1px rgba(210, 215, 217, 0.75);
+			background: #fff;
+			border-right: solid 1px rgba(210,215,217,0.75);
 			display: flex;
 			flex-direction: column;
 			position: sticky;
@@ -56,11 +56,10 @@
 			color: #3d4449;
 			text-transform: uppercase;
 			letter-spacing: 0.075em;
-			margin: 0 0 0.2em 0;
-			line-height: 1.3;
+			margin: 0 0 0.2em;
 		}
 
-		.sidebar-brand span { font-family: 'Open Sans', sans-serif; font-size: 0.75em; color: #9fa3a6; display: block; }
+		.sidebar-brand span { font-size: 0.75em; color: #9fa3a6; display: block; }
 
 		.sidebar-section-label {
 			font-family: 'Roboto Slab', serif;
@@ -73,14 +72,13 @@
 			white-space: nowrap;
 		}
 
-		.sidebar-nav { list-style: none; margin: 0; padding: 0 0 1em 0; flex: 1; }
+		.sidebar-nav { list-style: none; margin: 0; padding: 0 0 1em; flex: 1; }
 
 		.sidebar-nav li a {
 			display: flex;
 			align-items: center;
 			gap: 0.75em;
 			padding: 0.75em 1.75em;
-			font-family: 'Open Sans', sans-serif;
 			font-size: 0.9em;
 			font-weight: 600;
 			color: #7f888f;
@@ -96,21 +94,14 @@
 		.sidebar-nav li.active a { color: #f56a6a; background: rgba(245,106,106,0.07); border-left-color: #f56a6a; }
 		.sidebar-nav li.active a i { color: #f56a6a; }
 
-		.sidebar-footer {
-			padding: 1.25em 1.75em;
-			border-top: solid 1px rgba(210, 215, 217, 0.75);
-			font-size: 0.75em;
-			color: #9fa3a6;
-			font-family: 'Open Sans', sans-serif;
-			white-space: nowrap;
-		}
+		.sidebar-footer { padding: 1.25em 1.75em; border-top: solid 1px rgba(210,215,217,0.75); font-size: 0.75em; color: #9fa3a6; white-space: nowrap; }
 
 		/* ══ MAIN CONTENT ══ */
 		.main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
 		.topbar {
-			background: #ffffff;
-			border-bottom: solid 1px rgba(210, 215, 217, 0.75);
+			background: #fff;
+			border-bottom: solid 1px rgba(210,215,217,0.75);
 			padding: 1em 2.5em;
 			display: flex;
 			align-items: center;
@@ -141,7 +132,7 @@
 			flex: 1;
 		}
 
-		.topbar-user { font-size: 0.82em; color: #9fa3a6; font-family: 'Open Sans', sans-serif; white-space: nowrap; }
+		.topbar-user { font-size: 0.82em; color: #9fa3a6; white-space: nowrap; }
 		.topbar-user i { color: #f56a6a; margin-right: 0.4em; }
 
 		.page-body { padding: 2.5em; flex: 1; }
@@ -160,7 +151,7 @@
 			font-weight: 700;
 			font-size: 1.5em;
 			color: #3d4449;
-			margin: 0 0 0.2em 0;
+			margin: 0 0 0.2em;
 			letter-spacing: 0.03em;
 		}
 
@@ -173,7 +164,7 @@
 			height: 3.5em;
 			padding: 0 2em;
 			background: #f56a6a;
-			color: #ffffff;
+			color: #fff;
 			border: none;
 			border-radius: 0.375em;
 			font-family: 'Roboto Slab', serif;
@@ -186,26 +177,26 @@
 			transition: background 0.2s;
 			white-space: nowrap;
 		}
-		.btn-crear:hover { background: #f67878; color: #ffffff; }
+		.btn-crear:hover { background: #f67878; color: #fff; }
 		.btn-crear:active { background: #f45c5c; }
 
 		.table-card {
-			background: #ffffff;
-			border: solid 1px rgba(210, 215, 217, 0.75);
+			background: #fff;
+			border: solid 1px rgba(210,215,217,0.75);
 			border-radius: 0.375em;
 			overflow: hidden;
 		}
 
-		.cursos-table {
+		.slices-table {
 			width: 100%;
 			border-collapse: collapse;
 			font-family: 'Open Sans', sans-serif;
 			font-size: 0.9em;
 		}
 
-		.cursos-table thead tr { background: #f5f6f7; border-bottom: solid 2px rgba(210,215,217,0.75); }
+		.slices-table thead tr { background: #f5f6f7; border-bottom: solid 2px rgba(210,215,217,0.75); }
 
-		.cursos-table thead th {
+		.slices-table thead th {
 			font-family: 'Roboto Slab', serif;
 			font-weight: 700;
 			font-size: 0.78em;
@@ -217,35 +208,32 @@
 			white-space: nowrap;
 		}
 
-		.cursos-table thead th.col-action { text-align: center; width: 100px; }
+		.slices-table thead th.col-center { text-align: center; width: 100px; }
 
-		.cursos-table tbody tr {
+		.slices-table tbody tr {
 			border-bottom: solid 1px rgba(210,215,217,0.5);
 			transition: background 0.15s;
 		}
-		.cursos-table tbody tr:last-child { border-bottom: none; }
-		.cursos-table tbody tr:hover { background: rgba(245,106,106,0.03); }
+		.slices-table tbody tr:last-child { border-bottom: none; }
+		.slices-table tbody tr:hover { background: rgba(245,106,106,0.03); }
 
-		.cursos-table tbody td { padding: 1.1em 1.5em; color: #7f888f; vertical-align: middle; }
+		.slices-table tbody td { padding: 1.05em 1.5em; color: #7f888f; vertical-align: middle; }
+		.slices-table tbody td.col-center { text-align: center; }
 
-		.curso-code {
+		.slice-name { font-weight: 600; color: #3d4449; }
+
+		.badge-unassigned {
 			display: inline-block;
-			background: rgba(245,106,106,0.1);
-			color: #f56a6a;
+			background: rgba(74,159,213,0.1);
+			color: #4a9fd5;
 			font-family: 'Roboto Slab', serif;
-			font-size: 0.75em;
+			font-size: 0.68em;
 			font-weight: 700;
-			padding: 0.25em 0.65em;
+			padding: 0.18em 0.55em;
 			border-radius: 0.25em;
-			margin-right: 0.75em;
-			white-space: nowrap;
 			letter-spacing: 0.04em;
+			margin-left: 0.6em;
 		}
-
-		.curso-nombre { color: #3d4449; font-weight: 600; text-decoration: none; transition: color 0.2s; }
-		.curso-nombre:hover { color: #f56a6a; }
-
-		.cursos-table td.col-action { text-align: center; }
 
 		.btn-action {
 			display: inline-flex;
@@ -256,16 +244,21 @@
 			border: solid 1px rgba(210,215,217,0.75);
 			background: transparent;
 			cursor: pointer;
-			transition: background 0.2s, border-color 0.2s, color 0.2s;
 			text-decoration: none;
+			transition: background 0.2s, border-color 0.2s, color 0.2s;
 		}
 		.btn-action i { font-size: 0.85em; }
 
 		.btn-edit { color: #7f888f; }
 		.btn-edit:hover { background: rgba(61,68,73,0.06); border-color: #3d4449; color: #3d4449; }
 
-		.btn-delete { color: #9fa3a6; }
-		.btn-delete:hover { background: rgba(245,106,106,0.08); border-color: #f56a6a; color: #f56a6a; }
+		.table-empty {
+			text-align: center;
+			padding: 3.5em 1.5em;
+			color: #9fa3a6;
+			font-size: 0.88em;
+		}
+		.table-empty i { display: block; font-size: 2.8em; margin-bottom: 0.5em; color: rgba(210,215,217,0.85); }
 
 		@media (max-width: 900px) { .page-body { padding: 1.5em; } }
 		@media (max-width: 680px) {
@@ -273,7 +266,6 @@
 			.sidebar { width: 100% !important; min-width: unset !important; height: auto; position: static; }
 			.topbar { padding: 1em 1.5em; }
 			.page-body { padding: 1.25em; }
-			.cursos-table thead th, .cursos-table tbody td { padding: 0.9em 1em; }
 		}
 
 	</style>
@@ -288,39 +280,22 @@
 			<h1>Cloud Group 5</h1>
 			<span>Panel de administración</span>
 		</div>
-
 		<div class="sidebar-section-label">Menú principal</div>
-
 		<ul class="sidebar-nav">
+			<li>
+				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
+			</li>
 			<li class="active">
-				<a href="cursos.html">
-					<i class="fas fa-book-open"></i>
-					Cursos
-				</a>
+				<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
 			</li>
 			<li>
-				<a href="slices.html">
-					<i class="fas fa-layer-group"></i>
-					Slices
-				</a>
+				<a href="#"><i class="fas fa-chart-bar"></i> Dashboards</a>
 			</li>
 			<li>
-				<a href="#">
-					<i class="fas fa-chart-bar"></i>
-					Dashboards
-				</a>
-			</li>
-			<li>
-				<a href="#">
-					<i class="fas fa-users-cog"></i>
-					Gestión de usuarios
-				</a>
+				<a href="#"><i class="fas fa-users-cog"></i> Gestión de usuarios</a>
 			</li>
 		</ul>
-
-		<div class="sidebar-footer">
-			&copy; 2026 Cloud Grupo 5
-		</div>
+		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
 	</aside>
 
 	<!-- CONTENIDO PRINCIPAL -->
@@ -330,7 +305,7 @@
 			<button class="btn-sidebar-toggle" id="sidebarToggle" title="Mostrar / ocultar menú">
 				<i class="fas fa-bars"></i>
 			</button>
-			<h2 class="topbar-title">Cursos</h2>
+			<h2 class="topbar-title">Slices</h2>
 			<span class="topbar-user">
 				<i class="fas fa-user-circle"></i>
 				Administrador
@@ -341,86 +316,24 @@
 
 			<div class="section-header">
 				<div class="section-header-left">
-					<h2>Listado de Cursos</h2>
-					<p>Administra los cursos registrados en la plataforma.</p>
+					<h2>Slices sin asignar</h2>
+					<p>Slices creados y guardados que aún no han sido asignados a un curso.</p>
 				</div>
-				<a href="crear-curso.html" class="btn-crear">
+				<a href="configurar-slice.html" class="btn-crear">
 					<i class="fas fa-plus"></i>
-					Crear Nuevo Curso
+					Crear Nuevo Slice
 				</a>
 			</div>
 
 			<div class="table-card">
-				<table class="cursos-table">
+				<table class="slices-table">
 					<thead>
 						<tr>
-							<th>Curso</th>
-							<th class="col-action">Editar</th>
-							<th class="col-action">Eliminar</th>
+							<th>Nombre del Slice</th>
+							<th class="col-center">Editar</th>
 						</tr>
 					</thead>
-					<tbody>
-						<tr>
-							<td>
-								<span class="curso-code">TEL141</span>
-								<a href="detalle-curso.html?id=TEL141&nombre=Ingenier%C3%ADa+de+Redes+Cloud" class="curso-nombre">Ingeniería de Redes Cloud</a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-						<tr>
-							<td>
-								<span class="curso-code">TEL142</span>
-								<a href="detalle-curso.html?id=TEL142&nombre=Comunicaciones+M%C3%B3viles" class="curso-nombre">Comunicaciones Móviles</a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-						<tr>
-							<td>
-								<span class="curso-code">TEL143</span>
-								<a href="detalle-curso.html?id=TEL143&nombre=Trabajo+de+Tesis+1" class="curso-nombre">Trabajo de Tesis 1</a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-						<tr>
-							<td>
-								<span class="curso-code">TEL144</span>
-								<a href="detalle-curso.html?id=TEL144&nombre=Formulaci%C3%B3n+y+Evaluaci%C3%B3n+de+Proyectos" class="curso-nombre">Formulación y Evaluación de Proyectos de Telecomunicaciones</a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-						<tr>
-							<td>
-								<span class="curso-code">TEL221</span>
-								<a href="detalle-curso.html?id=TEL221&nombre=Infraestructura+de+Redes+de+Telecomunicaciones" class="curso-nombre">Infraestructura de Redes de Telecomunicaciones</a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-					</tbody>
+					<tbody id="slices-tbody"></tbody>
 				</table>
 			</div>
 
@@ -430,9 +343,46 @@
 </div>
 
 <script>
+const SLICES_DEMO = [
+	{ id: 1, nombre: 'Slice de Red A' },
+	{ id: 2, nombre: 'Slice de Red B' },
+	{ id: 3, nombre: 'Topología Árbol Lab 1' },
+	{ id: 4, nombre: 'Topología Lineal Demo' },
+];
+
+function renderTable() {
+	const tbody = document.getElementById('slices-tbody');
+	if (!SLICES_DEMO.length) {
+		tbody.innerHTML = `
+			<tr>
+				<td colspan="2" class="table-empty">
+					<i class="fas fa-layer-group"></i>
+					No hay slices sin asignar.<br>Crea uno nuevo para comenzar.
+				</td>
+			</tr>
+		`;
+		return;
+	}
+	tbody.innerHTML = SLICES_DEMO.map(s => `
+		<tr>
+			<td>
+				<span class="slice-name">${s.nombre}</span>
+				<span class="badge-unassigned">Sin asignar</span>
+			</td>
+			<td class="col-center">
+				<a href="configurar-slice.html?slice=${s.id}&slicenombre=${encodeURIComponent(s.nombre)}" class="btn-action btn-edit" title="Editar slice">
+					<i class="fas fa-pencil-alt"></i>
+				</a>
+			</td>
+		</tr>
+	`).join('');
+}
+
 document.getElementById('sidebarToggle').addEventListener('click', () => {
 	document.getElementById('sidebar').classList.toggle('collapsed');
 });
+
+renderTable();
 </script>
 
 </body>

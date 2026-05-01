@@ -21,150 +21,45 @@
 			line-height: 1.65;
 		}
 
-		.app-layout {
-			display: flex;
-			height: 100vh;
-			overflow: hidden;
-		}
+		.app-layout { display: flex; height: 100vh; overflow: hidden; }
 
 		/* ══ SIDEBAR ══ */
 		.sidebar {
-			width: 260px;
-			min-width: 260px;
+			width: 260px; min-width: 260px;
 			background: #fff;
 			border-right: solid 1px rgba(210,215,217,0.75);
-			display: flex;
-			flex-direction: column;
-			height: 100vh;
-			overflow-y: auto;
-			overflow-x: hidden;
+			display: flex; flex-direction: column;
+			height: 100vh; overflow-y: auto; overflow-x: hidden;
 			flex-shrink: 0;
 			transition: width 0.28s ease, min-width 0.28s ease, border-color 0.28s ease;
 		}
+		.sidebar.collapsed { width: 0; min-width: 0; border-right-color: transparent; overflow: hidden; }
 
-		.sidebar.collapsed {
-			width: 0;
-			min-width: 0;
-			border-right-color: transparent;
-		}
+		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; white-space: nowrap; }
+		.sidebar-brand h1 { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 1.1em; color: #3d4449; text-transform: uppercase; letter-spacing: 0.075em; margin: 0 0 0.2em; }
+		.sidebar-brand span { font-size: 0.75em; color: #9fa3a6; display: block; }
 
-		.sidebar-brand {
-			padding: 2em 1.75em 1.5em;
-			border-bottom: solid 4px #f56a6a;
-			white-space: nowrap;
-		}
+		.sidebar-section-label { font-family: 'Roboto Slab', serif; font-size: 0.65em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #9fa3a6; padding: 1.5em 1.75em 0.5em; white-space: nowrap; }
 
-		.sidebar-brand h1 {
-			font-family: 'Roboto Slab', serif;
-			font-weight: 700;
-			font-size: 1.1em;
-			color: #3d4449;
-			text-transform: uppercase;
-			letter-spacing: 0.075em;
-			margin: 0 0 0.2em;
-		}
-
-		.sidebar-brand span {
-			font-size: 0.75em;
-			color: #9fa3a6;
-			display: block;
-		}
-
-		.sidebar-section-label {
-			font-family: 'Roboto Slab', serif;
-			font-size: 0.65em;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.1em;
-			color: #9fa3a6;
-			padding: 1.5em 1.75em 0.5em;
-			white-space: nowrap;
-		}
-
-		.sidebar-nav {
-			list-style: none;
-			margin: 0;
-			padding: 0 0 1em;
-			flex: 1;
-		}
-
-		.sidebar-nav li a {
-			display: flex;
-			align-items: center;
-			gap: 0.75em;
-			padding: 0.75em 1.75em;
-			font-size: 0.9em;
-			font-weight: 600;
-			color: #7f888f;
-			text-decoration: none;
-			border-left: solid 3px transparent;
-			transition: color 0.2s, background 0.2s, border-color 0.2s;
-			white-space: nowrap;
-		}
-
-		.sidebar-nav li a i {
-			width: 1.25em;
-			text-align: center;
-			font-size: 0.95em;
-			color: #9fa3a6;
-			transition: color 0.2s;
-		}
-
+		.sidebar-nav { list-style: none; margin: 0; padding: 0 0 1em; flex: 1; }
+		.sidebar-nav li a { display: flex; align-items: center; gap: 0.75em; padding: 0.75em 1.75em; font-size: 0.9em; font-weight: 600; color: #7f888f; text-decoration: none; border-left: solid 3px transparent; white-space: nowrap; transition: color 0.2s, background 0.2s, border-color 0.2s; }
+		.sidebar-nav li a i { width: 1.25em; text-align: center; font-size: 0.95em; color: #9fa3a6; transition: color 0.2s; }
 		.sidebar-nav li a:hover { color: #3d4449; background: rgba(245,106,106,0.05); border-left-color: rgba(245,106,106,0.4); }
 		.sidebar-nav li a:hover i { color: #f56a6a; }
 		.sidebar-nav li.active a { color: #f56a6a; background: rgba(245,106,106,0.07); border-left-color: #f56a6a; }
 		.sidebar-nav li.active a i { color: #f56a6a; }
 
-		.sidebar-footer {
-			padding: 1.25em 1.75em;
-			border-top: solid 1px rgba(210,215,217,0.75);
-			font-size: 0.75em;
-			color: #9fa3a6;
-			white-space: nowrap;
-		}
+		.sidebar-footer { padding: 1.25em 1.75em; border-top: solid 1px rgba(210,215,217,0.75); font-size: 0.75em; color: #9fa3a6; white-space: nowrap; }
 
-		/* ══ MAIN CONTENT ══ */
-		.main-content {
-			flex: 1;
-			display: flex;
-			flex-direction: column;
-			min-width: 0;
-			height: 100vh;
-			overflow: hidden;
-		}
+		/* ══ MAIN ══ */
+		.main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden; }
 
-		/* ── Topbar ── */
-		.topbar {
-			background: #fff;
-			border-bottom: solid 1px rgba(210,215,217,0.75);
-			padding: 0.9em 1.75em;
-			display: flex;
-			align-items: center;
-			gap: 1em;
-			flex-shrink: 0;
-		}
+		.topbar { background: #fff; border-bottom: solid 1px rgba(210,215,217,0.75); padding: 0.9em 1.75em; display: flex; align-items: center; gap: 1em; flex-shrink: 0; }
 
-		.btn-sidebar-toggle {
-			width: 2.2em; height: 2.2em;
-			border-radius: 0.35em;
-			border: solid 1px rgba(210,215,217,0.75);
-			background: transparent;
-			color: #7f888f;
-			display: flex; align-items: center; justify-content: center;
-			cursor: pointer;
-			flex-shrink: 0;
-			transition: background 0.2s, color 0.2s;
-		}
+		.btn-sidebar-toggle { width: 2.2em; height: 2.2em; border-radius: 0.35em; border: solid 1px rgba(210,215,217,0.75); background: transparent; color: #7f888f; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background 0.2s, color 0.2s; }
 		.btn-sidebar-toggle:hover { background: rgba(245,106,106,0.07); color: #f56a6a; }
 
-		.topbar-breadcrumb {
-			display: flex;
-			align-items: center;
-			gap: 0.55em;
-			font-size: 0.82em;
-			flex: 1;
-			min-width: 0;
-		}
+		.topbar-breadcrumb { display: flex; align-items: center; gap: 0.55em; font-size: 0.82em; flex: 1; min-width: 0; }
 		.topbar-breadcrumb a { color: #9fa3a6; text-decoration: none; white-space: nowrap; }
 		.topbar-breadcrumb a:hover { color: #f56a6a; }
 		.topbar-breadcrumb .sep { color: rgba(210,215,217,0.9); font-size: 0.8em; }
@@ -173,307 +68,103 @@
 		.topbar-user { font-size: 0.82em; color: #9fa3a6; white-space: nowrap; flex-shrink: 0; }
 		.topbar-user i { color: #f56a6a; margin-right: 0.4em; }
 
-		/* ── Page body ── */
-		.page-body {
-			flex: 1;
-			display: flex;
-			flex-direction: column;
-			overflow: hidden;
-			padding: 1.25em 1.5em 1em;
-		}
+		/* ══ PAGE BODY ══ */
+		.page-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 1.25em 1.5em 1em; }
 
-		.page-heading {
-			flex-shrink: 0;
-			margin-bottom: 0.9em;
-		}
-		.page-heading .label {
-			font-family: 'Roboto Slab', serif;
-			font-size: 0.65em;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.12em;
-			color: #f56a6a;
-			display: block;
-			margin-bottom: 0.25em;
-		}
-		.page-heading h2 {
-			font-family: 'Roboto Slab', serif;
-			font-weight: 700;
-			font-size: 1.4em;
-			color: #3d4449;
-			text-transform: uppercase;
-			letter-spacing: 0.05em;
-			margin: 0;
-		}
+		.page-heading { flex-shrink: 0; margin-bottom: 0.9em; }
+		.page-heading .label { font-family: 'Roboto Slab', serif; font-size: 0.65em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #f56a6a; display: block; margin-bottom: 0.25em; }
+		.page-heading h2 { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 1.4em; color: #3d4449; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
 
 		/* ══ WORKSPACE ══ */
-		.slice-workspace {
-			flex: 1;
-			display: flex;
-			gap: 1.1em;
-			overflow: hidden;
-			min-height: 0;
-		}
+		.slice-workspace { flex: 1; display: flex; gap: 1.1em; overflow: hidden; min-height: 0; }
 
-		/* ── Config panel ── */
+		/* ── CONFIG PANEL ── */
 		.config-panel {
-			width: 330px;
-			min-width: 290px;
-			flex-shrink: 0;
+			width: 330px; min-width: 290px; flex-shrink: 0;
 			background: #fff;
 			border: solid 1px rgba(210,215,217,0.75);
 			border-top: solid 4px #f56a6a;
 			border-radius: 0.375em;
 			overflow-y: auto;
-			display: flex;
-			flex-direction: column;
+			display: flex; flex-direction: column;
 		}
-
 		.config-panel::-webkit-scrollbar { width: 4px; }
 		.config-panel::-webkit-scrollbar-track { background: transparent; }
 		.config-panel::-webkit-scrollbar-thumb { background: rgba(210,215,217,0.9); border-radius: 2px; }
 
-		.config-section { padding: 1.4em 1.4em 0; }
+		.config-section { padding: 1.2em 1.2em 0; }
 
-		.config-divider {
-			border: none;
-			border-top: solid 1px rgba(210,215,217,0.6);
-			margin: 1.25em 0 0;
-		}
+		.config-divider { border: none; border-top: solid 1px rgba(210,215,217,0.6); margin: 1.1em 0 0; }
 
-		.config-subtitle {
-			font-family: 'Roboto Slab', serif;
-			font-size: 0.7em;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.1em;
-			color: #3d4449;
-			margin: 0 0 1em;
-			display: flex;
-			align-items: center;
-			gap: 0.5em;
-		}
+		.config-subtitle { font-family: 'Roboto Slab', serif; font-size: 0.68em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #3d4449; margin: 0 0 0.85em; display: flex; align-items: center; gap: 0.5em; }
 		.config-subtitle i { color: #f56a6a; }
 
 		/* Fields */
-		.field { margin-bottom: 1em; }
-
-		.field label {
-			display: block;
-			font-size: 0.82em;
-			font-weight: 600;
-			color: #3d4449;
-			margin-bottom: 0.38em;
-		}
+		.field { margin-bottom: 0.9em; }
+		.field label { display: block; font-size: 0.82em; font-weight: 600; color: #3d4449; margin-bottom: 0.35em; }
 		.field label .req { color: #f56a6a; }
 
-		.field select {
-			display: block;
-			width: 100%;
-			height: 2.45em;
+		.field select, .field input[type="text"], .field input[type="number"] {
+			display: block; width: 100%; height: 2.35em;
 			padding: 0 2em 0 0.85em;
 			background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239fa3a6'/%3E%3C/svg%3E") no-repeat right 0.85em center;
-			border: solid 1px rgba(210,215,217,0.75);
-			border-radius: 0.35em;
-			font-family: 'Open Sans', sans-serif;
-			font-size: 0.88em;
-			color: #3d4449;
-			outline: none;
-			appearance: none;
-			-webkit-appearance: none;
-			cursor: pointer;
+			border: solid 1px rgba(210,215,217,0.75); border-radius: 0.35em;
+			font-family: 'Open Sans', sans-serif; font-size: 0.85em; color: #3d4449;
+			outline: none; appearance: none; -webkit-appearance: none; cursor: pointer;
 			transition: border-color 0.2s, box-shadow 0.2s;
 		}
-		.field select:focus { border-color: #f56a6a; box-shadow: 0 0 0 1px #f56a6a; }
+		.field input[type="text"], .field input[type="number"] { padding: 0 0.85em; background-image: none; }
+		.field select:focus, .field input:focus { border-color: #f56a6a; box-shadow: 0 0 0 1px #f56a6a; }
 
-		/* Topology checkboxes */
-		.topo-grid {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: 0.5em;
-			margin-bottom: 1em;
-		}
+		/* ── Topo Table ── */
+		.topo-table-wrap { margin-bottom: 0.75em; }
 
-		.topo-option { position: relative; }
-
-		.topo-option input[type="checkbox"] {
-			position: absolute; opacity: 0; width: 0; height: 0;
-		}
-
-		.topo-option label {
-			display: flex;
-			align-items: center;
-			gap: 0.5em;
-			padding: 0.6em 0.85em;
-			border: solid 1.5px rgba(210,215,217,0.75);
-			border-radius: 0.35em;
-			cursor: pointer;
-			font-size: 0.83em;
-			font-weight: 600;
-			color: #7f888f;
-			transition: border-color 0.2s, background 0.2s, color 0.2s;
-			user-select: none;
-			margin: 0;
-		}
-		.topo-option label i { font-size: 0.88em; color: #9fa3a6; transition: color 0.2s; }
-		.topo-option input:checked + label { border-color: #f56a6a; background: rgba(245,106,106,0.07); color: #f56a6a; }
-		.topo-option input:checked + label i { color: #f56a6a; }
-
-		/* Node count rows */
-		.nodos-container { margin-bottom: 0.5em; }
-
-		.nodos-header {
-			font-size: 0.8em;
-			font-weight: 600;
-			color: #3d4449;
-			margin-bottom: 0.6em;
-		}
-
-		.nodo-row {
-			display: flex;
-			align-items: center;
-			gap: 0.65em;
-			margin-bottom: 0.55em;
-		}
-
-		.nodo-row-label {
-			flex: 1;
-			display: flex;
-			align-items: center;
-			gap: 0.5em;
-			font-size: 0.83em;
-			font-weight: 600;
-			color: #3d4449;
-		}
-		.nodo-row-label i { color: #f56a6a; font-size: 0.9em; width: 1em; text-align: center; }
-
-		.nodo-row input[type="number"] {
-			width: 68px;
-			height: 2.2em;
-			padding: 0 0.5em;
-			border: solid 1px rgba(210,215,217,0.75);
-			border-radius: 0.35em;
-			font-family: 'Open Sans', sans-serif;
-			font-size: 0.88em;
-			color: #3d4449;
-			text-align: center;
-			outline: none;
-			transition: border-color 0.2s, box-shadow 0.2s;
-		}
-		.nodo-row input[type="number"]:focus { border-color: #f56a6a; box-shadow: 0 0 0 1px #f56a6a; }
-
-		/* Security chips */
-		.sec-chips {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.4em;
-			margin-bottom: 0.75em;
-		}
-
-		.sec-chip {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.3em;
-			padding: 0.28em 0.7em;
-			border: solid 1.5px rgba(210,215,217,0.75);
-			border-radius: 2em;
-			font-size: 0.76em;
-			font-weight: 600;
-			color: #7f888f;
-			cursor: pointer;
-			user-select: none;
-			transition: border-color 0.18s, background 0.18s, color 0.18s;
-		}
-		.sec-chip.active { border-color: #f56a6a; background: rgba(245,106,106,0.09); color: #f56a6a; }
-		.sec-chip i { font-size: 0.82em; }
-
-		/* Custom rules table */
-		.sec-custom {
-			border: solid 1px rgba(210,215,217,0.6);
-			border-radius: 0.35em;
-			overflow: hidden;
+		.topo-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.82em;
 			margin-bottom: 0.5em;
 		}
-
-		.sec-custom-head {
-			background: #f5f6f7;
-			padding: 0.48em 0.85em;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			border-bottom: solid 1px rgba(210,215,217,0.5);
-		}
-
-		.sec-custom-head span {
+		.topo-table thead th {
 			font-family: 'Roboto Slab', serif;
 			font-size: 0.68em;
 			font-weight: 700;
 			text-transform: uppercase;
-			letter-spacing: 0.07em;
-			color: #3d4449;
+			letter-spacing: 0.08em;
+			color: #9fa3a6;
+			padding: 0.4em 0.5em;
+			text-align: left;
+			border-bottom: solid 1px rgba(210,215,217,0.5);
 		}
+		.topo-table thead th:last-child { width: 2em; }
 
-		.btn-add-rule {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.3em;
-			padding: 0.22em 0.65em;
-			background: transparent;
-			border: solid 1px #f56a6a;
-			border-radius: 0.3em;
-			color: #f56a6a;
-			font-size: 0.7em;
-			font-weight: 700;
-			font-family: 'Roboto Slab', serif;
-			text-transform: uppercase;
-			cursor: pointer;
-			transition: background 0.18s;
+		.topo-table tbody td { padding: 0.35em 0.4em; vertical-align: middle; }
+
+		.topo-table select {
+			width: 100%;
+			height: 2.1em;
+			padding: 0 1.5em 0 0.5em;
+			background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239fa3a6'/%3E%3C/svg%3E") no-repeat right 0.4em center;
+			border: solid 1px rgba(210,215,217,0.75); border-radius: 0.3em;
+			font-family: 'Open Sans', sans-serif; font-size: 1em; color: #3d4449;
+			outline: none; appearance: none; -webkit-appearance: none; cursor: pointer;
+			transition: border-color 0.2s;
 		}
-		.btn-add-rule:hover { background: rgba(245,106,106,0.08); }
+		.topo-table select:focus { border-color: #f56a6a; }
 
-		.sec-rule-row {
-			display: flex;
-			align-items: center;
-			gap: 0.45em;
-			padding: 0.5em 0.85em;
-			border-bottom: solid 1px rgba(210,215,217,0.3);
+		.topo-table input[type="number"] {
+			width: 100%;
+			height: 2.1em;
+			padding: 0 0.4em;
+			border: solid 1px rgba(210,215,217,0.75); border-radius: 0.3em;
+			font-family: 'Open Sans', sans-serif; font-size: 1em; color: #3d4449;
+			text-align: center; outline: none; background: #fff;
+			transition: border-color 0.2s;
 		}
-		.sec-rule-row:last-child { border-bottom: none; }
+		.topo-table input[type="number"]:focus { border-color: #f56a6a; }
 
-		.sec-rule-row select {
-			width: 84px;
-			height: 2em;
-			padding: 0 0.45em;
-			border: solid 1px rgba(210,215,217,0.75);
-			border-radius: 0.3em;
-			font-family: 'Open Sans', sans-serif;
-			font-size: 0.8em;
-			color: #3d4449;
-			background: #fff;
-			outline: none;
-			cursor: pointer;
-			appearance: none;
-			-webkit-appearance: none;
-		}
-
-		.sec-rule-row input[type="text"] {
-			flex: 1;
-			min-width: 0;
-			height: 2em;
-			padding: 0 0.5em;
-			border: solid 1px rgba(210,215,217,0.75);
-			border-radius: 0.3em;
-			font-family: 'Open Sans', sans-serif;
-			font-size: 0.8em;
-			color: #3d4449;
-			background: #fff;
-			outline: none;
-		}
-		.sec-rule-row select:focus,
-		.sec-rule-row input:focus { border-color: #f56a6a; }
-
-		.btn-del-rule {
-			width: 1.65em; height: 1.65em;
+		.btn-del-topo {
+			width: 1.7em; height: 1.7em;
 			border-radius: 50%;
 			border: solid 1px rgba(210,215,217,0.75);
 			background: transparent;
@@ -481,278 +172,333 @@
 			display: flex; align-items: center; justify-content: center;
 			font-size: 0.75em;
 			cursor: pointer;
-			flex-shrink: 0;
 			transition: background 0.18s, color 0.18s, border-color 0.18s;
 		}
-		.btn-del-rule:hover { background: rgba(245,106,106,0.1); border-color: #f56a6a; color: #f56a6a; }
+		.btn-del-topo:hover { background: rgba(245,106,106,0.1); border-color: #f56a6a; color: #f56a6a; }
 
-		.rules-empty {
-			padding: 0.8em;
-			text-align: center;
-			font-size: 0.78em;
-			color: #9fa3a6;
+		.btn-add-topo {
+			display: flex; align-items: center; justify-content: center; gap: 0.4em;
+			width: 100%; height: 2.1em;
+			background: transparent;
+			border: solid 1.5px rgba(210,215,217,0.75);
+			border-radius: 0.35em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.7em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			color: #7f888f;
+			cursor: pointer;
+			transition: border-color 0.18s, color 0.18s, background 0.18s;
 		}
+		.btn-add-topo:hover { border-color: #f56a6a; color: #f56a6a; background: rgba(245,106,106,0.04); }
 
-		/* Launch button */
-		.config-footer {
-			padding: 1.1em 1.4em 1.4em;
-			margin-top: auto;
-		}
+		.topo-empty-hint { font-size: 0.78em; color: #9fa3a6; text-align: center; padding: 0.75em 0; }
 
-		.btn-lanzar {
+		/* ── VM Config section ── */
+		.vm-section { padding: 1.2em 1.2em 0; }
+
+		.vm-node-header {
 			display: flex;
 			align-items: center;
-			justify-content: center;
-			gap: 0.6em;
-			width: 100%;
-			height: 3.1em;
+			justify-content: space-between;
+			margin-bottom: 0.85em;
+			padding-bottom: 0.65em;
+			border-bottom: solid 1px rgba(210,215,217,0.5);
+		}
+
+		.vm-node-label {
+			display: flex;
+			align-items: center;
+			gap: 0.5em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.68em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: #3d4449;
+		}
+		.vm-node-label i { color: #f56a6a; }
+
+		.btn-deselect {
+			width: 1.6em; height: 1.6em;
+			border-radius: 50%;
+			border: solid 1px rgba(210,215,217,0.75);
+			background: transparent;
+			color: #9fa3a6;
+			display: flex; align-items: center; justify-content: center;
+			font-size: 0.72em;
+			cursor: pointer;
+			transition: background 0.18s, color 0.18s, border-color 0.18s;
+		}
+		.btn-deselect:hover { background: rgba(245,106,106,0.1); border-color: #f56a6a; color: #f56a6a; }
+
+		/* Image mode tabs */
+		.img-tabs {
+			display: flex;
+			gap: 0;
+			margin-bottom: 0.5em;
+			border-radius: 0.35em;
+			overflow: hidden;
+			border: solid 1px rgba(210,215,217,0.75);
+		}
+		.img-tab {
+			flex: 1;
+			height: 2em;
+			background: transparent;
+			border: none;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.78em;
+			font-weight: 600;
+			color: #7f888f;
+			cursor: pointer;
+			transition: background 0.18s, color 0.18s;
+		}
+		.img-tab:first-child { border-right: solid 1px rgba(210,215,217,0.75); }
+		.img-tab.active { background: rgba(245,106,106,0.08); color: #f56a6a; }
+		.img-tab:hover:not(.active) { background: rgba(245,106,106,0.04); }
+
+		.img-upload-field {
+			display: flex;
+			align-items: center;
+			gap: 0.5em;
+		}
+
+		.img-upload-field input[type="file"] { display: none; }
+
+		.btn-upload-file {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.4em;
+			height: 2.35em;
+			padding: 0 1em;
+			background: transparent;
+			border: solid 1px rgba(210,215,217,0.75);
+			border-radius: 0.35em;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.82em;
+			color: #7f888f;
+			cursor: pointer;
+			transition: border-color 0.18s, color 0.18s;
+			white-space: nowrap;
+		}
+		.btn-upload-file:hover { border-color: #f56a6a; color: #f56a6a; }
+
+		.upload-filename {
+			font-size: 0.78em;
+			color: #3d4449;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			min-width: 0;
+		}
+
+		/* VM empty state */
+		.vm-empty {
+			text-align: center;
+			padding: 1.5em 1em;
+			color: #9fa3a6;
+		}
+		.vm-empty i { font-size: 2em; color: rgba(210,215,217,0.85); display: block; margin-bottom: 0.5em; }
+		.vm-empty p { font-size: 0.78em; margin: 0; line-height: 1.6; }
+
+		/* Security chips */
+		.sec-chips { display: flex; flex-wrap: wrap; gap: 0.4em; margin-bottom: 0.65em; }
+		.sec-chip { display: inline-flex; align-items: center; gap: 0.3em; padding: 0.25em 0.65em; border: solid 1.5px rgba(210,215,217,0.75); border-radius: 2em; font-size: 0.74em; font-weight: 600; color: #7f888f; cursor: pointer; user-select: none; transition: border-color 0.18s, background 0.18s, color 0.18s; }
+		.sec-chip.active { border-color: #f56a6a; background: rgba(245,106,106,0.09); color: #f56a6a; }
+		.sec-chip i { font-size: 0.82em; }
+
+		/* Custom rules */
+		.sec-custom { border: solid 1px rgba(210,215,217,0.6); border-radius: 0.35em; overflow: hidden; margin-bottom: 0.5em; }
+		.sec-custom-head { background: #f5f6f7; padding: 0.44em 0.8em; display: flex; justify-content: space-between; align-items: center; border-bottom: solid 1px rgba(210,215,217,0.5); }
+		.sec-custom-head span { font-family: 'Roboto Slab', serif; font-size: 0.66em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #3d4449; }
+		.btn-add-rule { display: inline-flex; align-items: center; gap: 0.3em; padding: 0.2em 0.6em; background: transparent; border: solid 1px #f56a6a; border-radius: 0.3em; color: #f56a6a; font-size: 0.68em; font-weight: 700; font-family: 'Roboto Slab', serif; text-transform: uppercase; cursor: pointer; transition: background 0.18s; }
+		.btn-add-rule:hover { background: rgba(245,106,106,0.08); }
+		.sec-rule-row { display: flex; align-items: center; gap: 0.4em; padding: 0.45em 0.8em; border-bottom: solid 1px rgba(210,215,217,0.3); }
+		.sec-rule-row:last-child { border-bottom: none; }
+		.sec-rule-row select { width: 80px; height: 1.9em; padding: 0 0.4em; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.3em; font-family: 'Open Sans', sans-serif; font-size: 0.78em; color: #3d4449; background: #fff; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; }
+		.sec-rule-row input[type="text"] { flex: 1; min-width: 0; height: 1.9em; padding: 0 0.5em; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.3em; font-family: 'Open Sans', sans-serif; font-size: 0.78em; color: #3d4449; background: #fff; outline: none; }
+		.sec-rule-row select:focus, .sec-rule-row input:focus { border-color: #f56a6a; }
+		.btn-del-rule { width: 1.6em; height: 1.6em; border-radius: 50%; border: solid 1px rgba(210,215,217,0.75); background: transparent; color: #9fa3a6; display: flex; align-items: center; justify-content: center; font-size: 0.72em; cursor: pointer; flex-shrink: 0; transition: background 0.18s, color 0.18s, border-color 0.18s; }
+		.btn-del-rule:hover { background: rgba(245,106,106,0.1); border-color: #f56a6a; color: #f56a6a; }
+		.rules-empty { padding: 0.7em; text-align: center; font-size: 0.76em; color: #9fa3a6; }
+
+		/* Config footer */
+		.config-footer { padding: 1em 1.2em 1.2em; margin-top: auto; display: flex; gap: 0.6em; }
+
+		.btn-guardar {
+			flex: 1;
+			display: flex; align-items: center; justify-content: center; gap: 0.5em;
+			height: 3em;
+			background: transparent;
+			color: #f56a6a;
+			border: solid 2px #f56a6a;
+			border-radius: 0.375em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.76em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			cursor: pointer;
+			text-decoration: none;
+			transition: background 0.2s;
+		}
+		.btn-guardar:hover { background: rgba(245,106,106,0.07); }
+
+		.btn-siguiente {
+			flex: 1;
+			display: flex; align-items: center; justify-content: center; gap: 0.5em;
+			height: 3em;
 			background: #f56a6a;
 			color: #fff;
 			border: none;
 			border-radius: 0.375em;
 			font-family: 'Roboto Slab', serif;
-			font-size: 0.8em;
+			font-size: 0.76em;
 			font-weight: 700;
 			text-transform: uppercase;
-			letter-spacing: 0.075em;
+			letter-spacing: 0.06em;
 			cursor: pointer;
+			text-decoration: none;
 			transition: background 0.2s;
 		}
-		.btn-lanzar:hover { background: #f67878; }
-		.btn-lanzar:active { background: #f45c5c; }
+		.btn-siguiente:hover { background: #f67878; color: #fff; }
 
 		/* ══ TOPOLOGY CANVAS ══ */
-		.topology-canvas {
-			flex: 1;
-			background: #fff;
-			border: solid 1px rgba(210,215,217,0.75);
-			border-radius: 0.375em;
-			display: flex;
-			flex-direction: column;
-			overflow: hidden;
-			min-width: 0;
-		}
+		.topology-canvas { flex: 1; background: #fff; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.375em; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 
-		.canvas-toolbar {
-			padding: 0.7em 1.2em;
-			border-bottom: solid 1px rgba(210,215,217,0.6);
-			background: #f8f9fa;
-			display: flex;
-			align-items: center;
-			gap: 1em;
-			flex-shrink: 0;
-			flex-wrap: wrap;
-		}
+		.canvas-toolbar { padding: 0.6em 1em; border-bottom: solid 1px rgba(210,215,217,0.6); background: #f8f9fa; display: flex; align-items: center; gap: 0.75em; flex-shrink: 0; flex-wrap: wrap; }
 
-		.canvas-toolbar-title {
-			font-family: 'Roboto Slab', serif;
-			font-size: 0.68em;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.09em;
-			color: #9fa3a6;
-			white-space: nowrap;
-		}
+		.canvas-toolbar-title { font-family: 'Roboto Slab', serif; font-size: 0.66em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: #9fa3a6; white-space: nowrap; }
 
-		.node-legend {
-			display: flex;
-			gap: 0.7em;
-			flex-wrap: wrap;
-		}
-
-		.legend-item {
-			display: flex;
-			align-items: center;
-			gap: 0.38em;
-			font-size: 0.76em;
-			color: #7f888f;
-		}
-
-		.legend-icon {
-			width: 1.75em; height: 1.75em;
-			border-radius: 0.25em;
-			display: flex; align-items: center; justify-content: center;
-			font-size: 0.85em;
-		}
+		.node-legend { display: flex; gap: 0.6em; flex-wrap: wrap; }
+		.legend-item { display: flex; align-items: center; gap: 0.35em; font-size: 0.73em; color: #7f888f; }
+		.legend-icon { width: 1.65em; height: 1.65em; border-radius: 0.25em; display: flex; align-items: center; justify-content: center; font-size: 0.82em; }
 		.li-srv { background: rgba(245,106,106,0.12); color: #f56a6a; }
 		.li-pc  { background: rgba(74,159,213,0.12);  color: #4a9fd5; }
 		.li-rt  { background: rgba(68,176,120,0.12);  color: #44b078; }
 		.li-sw  { background: rgba(160,96,200,0.12);  color: #a060c8; }
 
-		.canvas-hint {
-			font-size: 0.72em;
-			color: #9fa3a6;
-			margin-left: auto;
+		.canvas-actions { display: flex; gap: 0.4em; margin-left: auto; }
+
+		.canvas-action-btn {
+			display: inline-flex; align-items: center; gap: 0.35em;
+			height: 2em; padding: 0 0.75em;
+			border: solid 1px rgba(210,215,217,0.75);
+			border-radius: 0.35em;
+			background: transparent;
+			color: #7f888f;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.76em;
+			font-weight: 600;
+			cursor: pointer;
 			white-space: nowrap;
+			transition: background 0.18s, color 0.18s, border-color 0.18s;
 		}
+		.canvas-action-btn:hover { background: rgba(245,106,106,0.07); border-color: rgba(245,106,106,0.4); color: #f56a6a; }
+		.canvas-action-btn.active { background: rgba(245,106,106,0.1); border-color: #f56a6a; color: #f56a6a; }
+		.canvas-action-btn:disabled { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
+		.canvas-action-btn i { font-size: 0.88em; }
 
-		.canvas-area {
-			flex: 1;
-			position: relative;
-			overflow: hidden;
-			background: #fafbfc;
-			background-image:
-				radial-gradient(circle, rgba(210,215,217,0.5) 1px, transparent 1px);
-			background-size: 24px 24px;
+		/* Link mode banner */
+		.link-banner {
+			display: none;
+			padding: 0.4em 1em;
+			background: rgba(74,159,213,0.08);
+			border-bottom: solid 1px rgba(74,159,213,0.25);
+			font-size: 0.76em;
+			color: #4a9fd5;
+			font-weight: 600;
+			align-items: center;
+			gap: 0.5em;
+			flex-shrink: 0;
 		}
+		.link-banner.visible { display: flex; }
 
-		#topo-svg {
-			position: absolute;
-			top: 0; left: 0;
-			width: 100%; height: 100%;
-			pointer-events: none;
-		}
+		.canvas-hint { font-size: 0.7em; color: #9fa3a6; white-space: nowrap; }
+
+		.canvas-area { flex: 1; position: relative; overflow: hidden; background: #fafbfc; background-image: radial-gradient(circle, rgba(210,215,217,0.5) 1px, transparent 1px); background-size: 24px 24px; }
+
+		#topo-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
 		/* Topology nodes */
-		.topo-node {
-			position: absolute;
-			width: 54px; height: 54px;
-			border-radius: 0.5em;
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-			gap: 3px;
-			cursor: grab;
-			user-select: none;
-			transform: translate(-50%, -50%);
-			border: 1.5px solid transparent;
-			transition: box-shadow 0.15s, transform 0.05s;
-			z-index: 2;
-		}
+		.topo-node { position: absolute; width: 54px; height: 54px; border-radius: 0.5em; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; user-select: none; transform: translate(-50%, -50%); border: 1.5px solid transparent; transition: box-shadow 0.15s, border-color 0.15s; z-index: 2; }
 		.topo-node:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.13); z-index: 10; }
-		.topo-node:active { cursor: grabbing; }
-		.topo-node i { font-size: 1.3em; line-height: 1; }
-
-		.node-lbl {
-			font-size: 8.5px;
-			font-weight: 700;
-			font-family: 'Roboto Slab', serif;
-			text-transform: uppercase;
-			letter-spacing: 0.04em;
-			line-height: 1;
-		}
+		.topo-node.selected { box-shadow: 0 0 0 3px rgba(245,106,106,0.35), 0 3px 14px rgba(0,0,0,0.13); z-index: 15; }
+		.topo-node.link-source { box-shadow: 0 0 0 3px rgba(74,159,213,0.5); z-index: 15; }
+		.topo-node i { font-size: 1.3em; line-height: 1; pointer-events: none; }
+		.node-lbl { font-size: 8.5px; font-weight: 700; font-family: 'Roboto Slab', serif; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1; pointer-events: none; }
 
 		.nt-srv { background: rgba(245,106,106,0.11); border-color: rgba(245,106,106,0.35); color: #f56a6a; }
 		.nt-pc  { background: rgba(74,159,213,0.11);  border-color: rgba(74,159,213,0.35);  color: #4a9fd5; }
 		.nt-rt  { background: rgba(68,176,120,0.11);  border-color: rgba(68,176,120,0.35);  color: #44b078; }
 		.nt-sw  { background: rgba(160,96,200,0.11);  border-color: rgba(160,96,200,0.35);  color: #a060c8; }
 
-		/* Node popover */
-		.node-popover {
-			position: fixed;
-			background: #fff;
-			border: solid 1px rgba(210,215,217,0.75);
-			border-radius: 0.4em;
-			box-shadow: 0 4px 20px rgba(0,0,0,0.13);
-			padding: 0.45em;
-			z-index: 1000;
-			display: none;
-			flex-direction: column;
-			gap: 0.2em;
-			min-width: 138px;
-		}
+		/* Canvas empty */
+		.canvas-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: #9fa3a6; pointer-events: none; }
+		.canvas-empty i { font-size: 3em; color: rgba(210,215,217,0.85); display: block; margin-bottom: 0.5em; }
+		.canvas-empty p { font-size: 0.84em; margin: 0; line-height: 1.6; }
+
+		/* Node type popover (on double-click) */
+		.node-popover { position: fixed; background: #fff; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.4em; box-shadow: 0 4px 20px rgba(0,0,0,0.13); padding: 0.45em; z-index: 1000; display: none; flex-direction: column; gap: 0.2em; min-width: 145px; }
 		.node-popover.open { display: flex; }
-
-		.pop-head {
-			font-family: 'Roboto Slab', serif;
-			font-size: 0.63em;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.08em;
-			color: #9fa3a6;
-			padding: 0.2em 0.5em 0.45em;
-			border-bottom: solid 1px rgba(210,215,217,0.5);
-			margin-bottom: 0.15em;
-		}
-
-		.pop-opt {
-			display: flex;
-			align-items: center;
-			gap: 0.55em;
-			padding: 0.42em 0.65em;
-			border-radius: 0.3em;
-			cursor: pointer;
-			font-size: 0.82em;
-			font-weight: 600;
-			color: #7f888f;
-			transition: background 0.14s, color 0.14s;
-		}
+		.pop-head { font-family: 'Roboto Slab', serif; font-size: 0.62em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9fa3a6; padding: 0.2em 0.5em 0.42em; border-bottom: solid 1px rgba(210,215,217,0.5); margin-bottom: 0.15em; }
+		.pop-opt { display: flex; align-items: center; gap: 0.55em; padding: 0.42em 0.65em; border-radius: 0.3em; cursor: pointer; font-size: 0.82em; font-weight: 600; color: #7f888f; transition: background 0.14s, color 0.14s; }
 		.pop-opt:hover { background: rgba(245,106,106,0.07); color: #3d4449; }
 		.pop-opt.sel { color: #f56a6a; background: rgba(245,106,106,0.09); }
 		.pop-opt i { width: 1.1em; text-align: center; font-size: 1em; }
 
-		/* Canvas empty state */
-		.canvas-empty {
-			position: absolute;
-			top: 50%; left: 50%;
-			transform: translate(-50%, -50%);
-			text-align: center;
-			color: #9fa3a6;
-			pointer-events: none;
-		}
-		.canvas-empty i { font-size: 3em; color: rgba(210,215,217,0.85); display: block; margin-bottom: 0.5em; }
-		.canvas-empty p { font-size: 0.84em; margin: 0; line-height: 1.6; }
+		/* Context menu */
+		.ctx-menu { position: fixed; background: #fff; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.4em; box-shadow: 0 4px 16px rgba(0,0,0,0.12); padding: 0.3em; z-index: 1001; display: none; flex-direction: column; min-width: 145px; }
+		.ctx-menu.open { display: flex; }
+		.ctx-item { display: flex; align-items: center; gap: 0.55em; padding: 0.45em 0.7em; border-radius: 0.3em; cursor: pointer; font-size: 0.82em; font-weight: 600; color: #7f888f; transition: background 0.14s, color 0.14s; }
+		.ctx-item:hover { background: rgba(245,106,106,0.07); color: #f56a6a; }
+		.ctx-item i { width: 1.1em; text-align: center; }
 
-		/* Responsive */
-		@media (max-width: 1100px) {
-			.config-panel { width: 295px; min-width: 270px; }
-		}
-		@media (max-width: 820px) {
-			.slice-workspace { flex-direction: column; overflow-y: auto; }
-			.config-panel { width: 100%; min-width: unset; max-height: 480px; }
-			.topology-canvas { min-height: 380px; flex: unset; height: 380px; }
-		}
+		/* SVG edge selection */
+		.edge-line { cursor: pointer; }
+
+		@media (max-width: 1100px) { .config-panel { width: 295px; min-width: 270px; } }
+		@media (max-width: 820px) { .slice-workspace { flex-direction: column; overflow-y: auto; } .config-panel { width: 100%; min-width: unset; max-height: 500px; } .topology-canvas { min-height: 380px; flex: unset; height: 380px; } }
 	</style>
 </head>
 <body>
 
 <div class="app-layout">
 
-	<!-- ════ SIDEBAR ════ -->
+	<!-- SIDEBAR -->
 	<aside class="sidebar" id="sidebar">
 		<div class="sidebar-brand">
 			<h1>Cloud Group 5</h1>
 			<span>Panel de administración</span>
 		</div>
-
 		<div class="sidebar-section-label">Menú principal</div>
-
 		<ul class="sidebar-nav">
-			<li class="active">
-				<a href="cursos.html">
-					<i class="fas fa-book-open"></i>
-					Cursos
-				</a>
+			<li id="nav-cursos">
+				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
+			</li>
+			<li id="nav-slices" class="active">
+				<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
 			</li>
 			<li>
-				<a href="#">
-					<i class="fas fa-chart-bar"></i>
-					Dashboards
-				</a>
+				<a href="#"><i class="fas fa-chart-bar"></i> Dashboards</a>
 			</li>
 			<li>
-				<a href="#">
-					<i class="fas fa-users-cog"></i>
-					Gestión de usuarios
-				</a>
+				<a href="#"><i class="fas fa-users-cog"></i> Gestión de usuarios</a>
 			</li>
 		</ul>
-
 		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
 	</aside>
 
-	<!-- ════ MAIN CONTENT ════ -->
+	<!-- MAIN CONTENT -->
 	<div class="main-content">
 
 		<header class="topbar">
 			<button class="btn-sidebar-toggle" id="sidebarToggle" title="Mostrar / ocultar menú">
 				<i class="fas fa-bars"></i>
 			</button>
-			<nav class="topbar-breadcrumb">
-				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
-				<span class="sep"><i class="fas fa-chevron-right"></i></span>
-				<a href="crear-curso.html">Crear Curso</a>
+			<nav class="topbar-breadcrumb" id="topbar-breadcrumb">
+				<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
 				<span class="sep"><i class="fas fa-chevron-right"></i></span>
 				<span class="current">Configurar Slice</span>
 			</nav>
@@ -764,8 +510,8 @@
 
 		<div class="page-body">
 			<div class="page-heading">
-				<span class="label">Paso 2</span>
-				<h2>Configurar Slice de Red</h2>
+				<span class="label" id="page-label">Slices</span>
+				<h2 id="page-heading">Configurar Slice</h2>
 			</div>
 
 			<div class="slice-workspace">
@@ -773,13 +519,9 @@
 				<!-- ── CONFIG PANEL ── -->
 				<div class="config-panel">
 
-					<!-- Sección 1 -->
+					<!-- Zona -->
 					<div class="config-section">
-						<p class="config-subtitle">
-							<i class="fas fa-layer-group"></i>
-							Configuración del slice
-						</p>
-
+						<p class="config-subtitle"><i class="fas fa-layer-group"></i> Configuración del slice</p>
 						<div class="field">
 							<label>Zona de disponibilidad <span class="req">*</span></label>
 							<select id="zona">
@@ -791,134 +533,160 @@
 								<option value="sa-east-1a">sa-east-1a</option>
 							</select>
 						</div>
-
-						<div class="field" style="margin-bottom:0.5em">
-							<label>Tipo de topología <span class="req">*</span></label>
-							<div class="topo-grid">
-								<div class="topo-option">
-									<input type="checkbox" id="topo-arbol" value="arbol" onchange="onTopoChange()">
-									<label for="topo-arbol"><i class="fas fa-sitemap"></i> Árbol</label>
-								</div>
-								<div class="topo-option">
-									<input type="checkbox" id="topo-lineal" value="lineal" onchange="onTopoChange()">
-									<label for="topo-lineal"><i class="fas fa-minus"></i> Lineal</label>
-								</div>
-								<div class="topo-option">
-									<input type="checkbox" id="topo-anillo" value="anillo" onchange="onTopoChange()">
-									<label for="topo-anillo"><i class="fas fa-sync-alt"></i> Anillo</label>
-								</div>
-								<div class="topo-option">
-									<input type="checkbox" id="topo-bus" value="bus" onchange="onTopoChange()">
-									<label for="topo-bus"><i class="fas fa-bars"></i> Bus</label>
-								</div>
-							</div>
-						</div>
-
-						<div id="nodos-container" class="nodos-container"></div>
 					</div>
 
 					<hr class="config-divider" />
 
-					<!-- Sección 2 -->
-					<div class="config-section" style="padding-top:1.25em">
-						<p class="config-subtitle">
-							<i class="fas fa-desktop"></i>
-							Configuración de las VM's
-						</p>
+					<!-- Topología -->
+					<div class="config-section" style="padding-top:1.1em">
+						<p class="config-subtitle"><i class="fas fa-project-diagram"></i> Topologías</p>
 
-						<div class="field">
-							<label>Flavor <span class="req">*</span></label>
-							<select id="flavor">
-								<option value="">— Seleccionar flavor —</option>
-								<option value="m1.tiny">m1.tiny — 1 vCPU / 512 MB RAM</option>
-								<option value="m1.small">m1.small — 1 vCPU / 2 GB RAM</option>
-								<option value="m1.medium">m1.medium — 2 vCPUs / 4 GB RAM</option>
-								<option value="m1.large">m1.large — 4 vCPUs / 8 GB RAM</option>
-								<option value="m1.xlarge">m1.xlarge — 8 vCPUs / 16 GB RAM</option>
-								<option value="m1.2xlarge">m1.2xlarge — 16 vCPUs / 32 GB RAM</option>
-							</select>
-						</div>
-
-						<div class="field">
-							<label>Disco <span class="req">*</span></label>
-							<select id="disco">
-								<option value="">— Seleccionar —</option>
-								<option value="20">20 GB SSD</option>
-								<option value="50">50 GB SSD</option>
-								<option value="100">100 GB SSD</option>
-								<option value="200">200 GB SSD</option>
-								<option value="500">500 GB HDD</option>
-							</select>
-						</div>
-
-						<div class="field">
-							<label>Imagen <span class="req">*</span></label>
-							<select id="imagen">
-								<option value="">— Seleccionar imagen —</option>
-								<option value="ubuntu-22">Ubuntu 22.04 LTS</option>
-								<option value="ubuntu-20">Ubuntu 20.04 LTS</option>
-								<option value="debian-12">Debian 12</option>
-								<option value="centos-9">CentOS Stream 9</option>
-								<option value="windows-2022">Windows Server 2022</option>
-								<option value="fedora-38">Fedora 38</option>
-							</select>
-						</div>
-
-						<div class="field">
-							<label>Par de llaves <span class="req">*</span></label>
-							<select id="llaves">
-								<option value="">— Seleccionar par de llaves —</option>
-								<option value="key-prod">key-prod</option>
-								<option value="key-dev">key-dev</option>
-								<option value="key-admin">key-admin</option>
-								<option value="key-testing">key-testing</option>
-								<option value="new">+ Crear nuevo par…</option>
-							</select>
-						</div>
-
-						<div class="field" style="margin-bottom:0.6em">
-							<label>Reglas de seguridad</label>
-						</div>
-
-						<!-- Predefined rule chips -->
-						<div class="sec-chips">
-							<div class="sec-chip" onclick="toggleChip(this)">
-								<i class="fas fa-terminal"></i> SSH (22)
-							</div>
-							<div class="sec-chip" onclick="toggleChip(this)">
-								<i class="fas fa-globe"></i> HTTP (80)
-							</div>
-							<div class="sec-chip active" onclick="toggleChip(this)">
-								<i class="fas fa-lock"></i> HTTPS (443)
-							</div>
-							<div class="sec-chip" onclick="toggleChip(this)">
-								<i class="fas fa-broadcast-tower"></i> ICMP
-							</div>
-							<div class="sec-chip" onclick="toggleChip(this)">
-								<i class="fas fa-server"></i> DNS (53)
-							</div>
-						</div>
-
-						<!-- Custom rules -->
-						<div class="sec-custom">
-							<div class="sec-custom-head">
-								<span>Reglas personalizadas</span>
-								<button type="button" class="btn-add-rule" onclick="addRule()">
-									<i class="fas fa-plus"></i> Agregar
-								</button>
-							</div>
-							<div id="rules-list">
-								<div class="rules-empty" id="rules-empty">Sin reglas personalizadas</div>
-							</div>
+						<div class="topo-table-wrap">
+							<table class="topo-table" id="topo-table">
+								<thead>
+									<tr>
+										<th>Tipo de topología</th>
+										<th style="width:62px">Nº nodos</th>
+										<th></th>
+									</tr>
+								</thead>
+								<tbody id="topo-tbody">
+									<tr id="topo-empty-row">
+										<td colspan="3">
+											<div class="topo-empty-hint">Sin topologías — agrega una</div>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+							<button class="btn-add-topo" onclick="addTopoEntry()">
+								<i class="fas fa-plus"></i> Agregar topología
+							</button>
 						</div>
 					</div>
 
-					<!-- Launch -->
+					<hr class="config-divider" />
+
+					<!-- VM Config -->
+					<div class="vm-section" id="vm-section" style="padding-top:1.1em; padding-bottom:0.5em;">
+						<div id="vm-empty">
+							<p class="config-subtitle" style="color:#9fa3a6"><i class="fas fa-desktop" style="color:#d2d7d9"></i> VM del nodo</p>
+							<div class="vm-empty">
+								<i class="fas fa-mouse-pointer"></i>
+								<p>Haz clic en un nodo<br>del canvas para configurar<br>su máquina virtual</p>
+							</div>
+						</div>
+
+						<div id="vm-config" style="display:none">
+							<div class="vm-node-header">
+								<div class="vm-node-label">
+									<i class="fas fa-desktop"></i>
+									<span id="vm-node-name">Nodo</span>
+								</div>
+								<button class="btn-deselect" onclick="deselectNode()" title="Cerrar">
+									<i class="fas fa-times"></i>
+								</button>
+							</div>
+
+							<div class="field">
+								<label>Flavor <span class="req">*</span></label>
+								<select id="nc-flavor" onchange="saveNodeConfig()">
+									<option value="">— Seleccionar flavor —</option>
+									<option value="m1.tiny">m1.tiny — 1 vCPU / 512 MB</option>
+									<option value="m1.small">m1.small — 1 vCPU / 2 GB</option>
+									<option value="m1.medium">m1.medium — 2 vCPUs / 4 GB</option>
+									<option value="m1.large">m1.large — 4 vCPUs / 8 GB</option>
+									<option value="m1.xlarge">m1.xlarge — 8 vCPUs / 16 GB</option>
+								</select>
+							</div>
+
+							<div class="field">
+								<label>Disco <span class="req">*</span></label>
+								<select id="nc-disco" onchange="saveNodeConfig()">
+									<option value="">— Seleccionar —</option>
+									<option value="20">20 GB SSD</option>
+									<option value="50">50 GB SSD</option>
+									<option value="100">100 GB SSD</option>
+									<option value="200">200 GB SSD</option>
+									<option value="500">500 GB HDD</option>
+								</select>
+							</div>
+
+							<div class="field">
+								<label>Imagen <span class="req">*</span></label>
+								<div class="img-tabs">
+									<button class="img-tab active" id="tab-select" onclick="setImgMode('select')">Seleccionar</button>
+									<button class="img-tab" id="tab-upload" onclick="setImgMode('upload')">Subir archivo</button>
+								</div>
+								<div id="img-select-wrap">
+									<select id="nc-imagen" onchange="saveNodeConfig()">
+										<option value="">— Seleccionar imagen —</option>
+										<option value="ubuntu-22">Ubuntu 22.04 LTS</option>
+										<option value="ubuntu-20">Ubuntu 20.04 LTS</option>
+										<option value="debian-12">Debian 12</option>
+										<option value="centos-9">CentOS Stream 9</option>
+										<option value="windows-2022">Windows Server 2022</option>
+										<option value="fedora-38">Fedora 38</option>
+									</select>
+								</div>
+								<div id="img-upload-wrap" style="display:none">
+									<div class="img-upload-field">
+										<button class="btn-upload-file" onclick="document.getElementById('nc-imagen-file').click()">
+											<i class="fas fa-upload"></i> Elegir archivo
+										</button>
+										<span class="upload-filename" id="upload-fname">Sin archivo</span>
+										<input type="file" id="nc-imagen-file" accept=".img,.iso,.qcow2" onchange="onFileChange(this)">
+									</div>
+								</div>
+							</div>
+
+							<div class="field">
+								<label>Par de llaves <span class="req">*</span></label>
+								<select id="nc-llaves" onchange="saveNodeConfig()">
+									<option value="">— Seleccionar par de llaves —</option>
+									<option value="key-prod">key-prod</option>
+									<option value="key-dev">key-dev</option>
+									<option value="key-admin">key-admin</option>
+									<option value="key-testing">key-testing</option>
+								</select>
+							</div>
+
+							<div class="field" style="margin-bottom:0.5em">
+								<label>Reglas de seguridad</label>
+							</div>
+
+							<div class="sec-chips" id="nc-chips">
+								<div class="sec-chip" onclick="toggleChip(this,'22')"><i class="fas fa-terminal"></i> SSH (22)</div>
+								<div class="sec-chip" onclick="toggleChip(this,'80')"><i class="fas fa-globe"></i> HTTP (80)</div>
+								<div class="sec-chip active" onclick="toggleChip(this,'443')"><i class="fas fa-lock"></i> HTTPS (443)</div>
+								<div class="sec-chip" onclick="toggleChip(this,'icmp')"><i class="fas fa-broadcast-tower"></i> ICMP</div>
+								<div class="sec-chip" onclick="toggleChip(this,'53')"><i class="fas fa-server"></i> DNS (53)</div>
+							</div>
+
+							<div class="sec-custom">
+								<div class="sec-custom-head">
+									<span>Reglas personalizadas</span>
+									<button type="button" class="btn-add-rule" onclick="addRule()">
+										<i class="fas fa-plus"></i> Agregar
+									</button>
+								</div>
+								<div id="rules-list">
+									<div class="rules-empty" id="rules-empty">Sin reglas personalizadas</div>
+								</div>
+							</div>
+
+						</div>
+					</div>
+
+					<!-- Footer -->
 					<div class="config-footer">
-						<button type="button" class="btn-lanzar" onclick="lanzarSlice()">
-							<i class="fas fa-rocket"></i>
-							Lanzar Slice
-						</button>
+						<a href="slices.html" class="btn-guardar">
+							<i class="fas fa-save"></i>
+							Guardar
+						</a>
+						<a href="asignar-slice.html" class="btn-siguiente">
+							Siguiente
+							<i class="fas fa-arrow-right"></i>
+						</a>
 					</div>
 
 				</div>
@@ -930,33 +698,46 @@
 						<span class="canvas-toolbar-title">Vista de topología</span>
 						<div class="node-legend">
 							<div class="legend-item">
-								<div class="legend-icon li-srv"><i class="fas fa-server"></i></div>
-								Servidor
+								<div class="legend-icon li-srv"><i class="fas fa-server"></i></div> Servidor
 							</div>
 							<div class="legend-item">
-								<div class="legend-icon li-pc"><i class="fas fa-desktop"></i></div>
-								Computadora
+								<div class="legend-icon li-pc"><i class="fas fa-desktop"></i></div> Computadora
 							</div>
 							<div class="legend-item">
-								<div class="legend-icon li-rt"><i class="fas fa-random"></i></div>
-								Router
+								<div class="legend-icon li-rt"><i class="fas fa-random"></i></div> Router
 							</div>
 							<div class="legend-item">
-								<div class="legend-icon li-sw"><i class="fas fa-sitemap"></i></div>
-								Switch
+								<div class="legend-icon li-sw"><i class="fas fa-sitemap"></i></div> Switch
 							</div>
 						</div>
-						<span class="canvas-hint">
-							<i class="fas fa-info-circle"></i>
-							Clic en nodo para cambiar tipo &middot; Arrastra para mover
-						</span>
+						<div class="canvas-actions">
+							<button class="canvas-action-btn" id="btn-add-node" onclick="addStandaloneNode()" title="Agregar nodo individual">
+								<i class="fas fa-plus"></i> Nodo
+							</button>
+							<button class="canvas-action-btn" id="btn-connect" onclick="toggleLinkMode()" title="Modo conectar nodos">
+								<i class="fas fa-link"></i> Conectar
+							</button>
+							<button class="canvas-action-btn" id="btn-del-node" onclick="deleteSelectedNode()" disabled title="Eliminar nodo seleccionado">
+								<i class="fas fa-trash-alt"></i> Eliminar
+							</button>
+						</div>
+					</div>
+
+					<div class="link-banner" id="link-banner">
+						<i class="fas fa-link"></i>
+						Modo conectar: haz clic en el nodo origen, luego en el destino. Presiona ESC para cancelar.
+					</div>
+
+					<div class="canvas-hint" style="padding:0.3em 1em; font-size:0.7em; color:#9fa3a6; border-bottom: solid 1px rgba(210,215,217,0.4); background:#fafbfc; flex-shrink:0;">
+						<i class="fas fa-info-circle"></i>
+						Clic: configurar VM &middot; Doble clic: cambiar tipo &middot; Ctrl+arrastrar: mover grupo &middot; Clic derecho: eliminar nodo
 					</div>
 
 					<div class="canvas-area" id="canvas-area">
 						<svg id="topo-svg"></svg>
 						<div class="canvas-empty" id="canvas-empty">
 							<i class="fas fa-project-diagram"></i>
-							<p>Selecciona al menos una topología<br>y configura los nodos para ver la<br>visualización aquí.</p>
+							<p>Agrega una topología o un nodo<br>individual para comenzar.</p>
 						</div>
 					</div>
 				</div>
@@ -967,9 +748,9 @@
 	</div>
 </div>
 
-<!-- Node type popover -->
+<!-- Node type popover (double-click) -->
 <div class="node-popover" id="node-popover">
-	<div class="pop-head">Tipo de nodo</div>
+	<div class="pop-head">Cambiar tipo</div>
 	<div class="pop-opt" data-type="srv" onclick="setNodeType('srv')">
 		<i class="fas fa-server" style="color:#f56a6a"></i> Servidor
 	</div>
@@ -984,30 +765,29 @@
 	</div>
 </div>
 
-<script>
-/* ════════════════════════
-   SIDEBAR TOGGLE
-════════════════════════ */
-document.getElementById('sidebarToggle').addEventListener('click', () => {
-	document.getElementById('sidebar').classList.toggle('collapsed');
-	setTimeout(() => { if (getSelectedTopos().length) renderTopology(); }, 300);
-});
+<!-- Context menu (right-click) -->
+<div class="ctx-menu" id="ctx-menu">
+	<div class="ctx-item" id="ctx-delete" onclick="deleteCtxNode()">
+		<i class="fas fa-trash-alt"></i> Eliminar nodo
+	</div>
+</div>
 
-/* ════════════════════════
-   TOPOLOGY CONFIG
-════════════════════════ */
+<script>
+/* ════════════════════
+   DATA
+════════════════════ */
 const TOPO_META = {
-	arbol:  { icon: 'fa-sitemap',    label: 'Árbol'  },
-	lineal: { icon: 'fa-minus',      label: 'Lineal' },
-	anillo: { icon: 'fa-sync-alt',   label: 'Anillo' },
-	bus:    { icon: 'fa-bars',       label: 'Bus'    }
+	arbol:  { icon: 'fa-sitemap',  label: 'Árbol'  },
+	lineal: { icon: 'fa-minus',    label: 'Lineal' },
+	anillo: { icon: 'fa-sync-alt', label: 'Anillo' },
+	bus:    { icon: 'fa-bars',     label: 'Bus'    }
 };
 
 const NODE_TYPES = {
-	srv: { icon: 'fa-server',    label: 'SRV' },
-	pc:  { icon: 'fa-desktop',   label: 'PC'  },
-	rt:  { icon: 'fa-random',    label: 'RT'  },
-	sw:  { icon: 'fa-sitemap',   label: 'SW'  }
+	srv: { icon: 'fa-server',  label: 'SRV' },
+	pc:  { icon: 'fa-desktop', label: 'PC'  },
+	rt:  { icon: 'fa-random',  label: 'RT'  },
+	sw:  { icon: 'fa-sitemap', label: 'SW'  }
 };
 
 const TOPO_COLORS = {
@@ -1017,183 +797,282 @@ const TOPO_COLORS = {
 	bus:    'rgba(160,96,200,0.4)'
 };
 
+let topoEntries = [];
 let nodes = [];
 let edges = [];
-let nodeCounts = { arbol: 5, lineal: 4, anillo: 6, bus: 5 };
-let activeNodeId = null;
+let nodeConfigs = {};
+let topoSeq = 0, nodeSeq = 0, edgeSeq = 0, ruleSeq = 0;
+let selectedNodeId = null;
+let popoverNodeId = null;
+let ctxNodeId = null;
+let linkMode = false;
+let linkSourceId = null;
 
-function getSelectedTopos() {
-	return ['arbol','lineal','anillo','bus'].filter(t =>
-		document.getElementById('topo-' + t).checked
-	);
+/* ════════════════════
+   TOPOLOGY TABLE
+════════════════════ */
+function addTopoEntry(type, count) {
+	const id = ++topoSeq;
+	const entry = { id, type: type || '', count: count || 3 };
+	topoEntries.push(entry);
+	renderTopoTable();
+	if (entry.type) rebuildTopoGroup(entry, false);
+	updateCanvasEmpty();
 }
 
-function onTopoChange() {
-	renderNodoInputs();
-	renderTopology();
+function removeTopoEntry(id) {
+	removeTopoNodes(id);
+	topoEntries = topoEntries.filter(e => e.id !== id);
+	renderTopoTable();
+	drawEdges();
+	updateCanvasEmpty();
+	if (selectedNodeId) {
+		const nd = nodes.find(n => n.id === selectedNodeId);
+		if (!nd) deselectNode();
+	}
 }
 
-/* ── Node count inputs ── */
-function renderNodoInputs() {
-	const el = document.getElementById('nodos-container');
-	const sel = getSelectedTopos();
-	if (!sel.length) { el.innerHTML = ''; return; }
-
-	el.innerHTML = `
-		<div class="nodos-header">Cantidad de nodos por topología</div>
-		${sel.map(t => `
-			<div class="nodo-row">
-				<div class="nodo-row-label">
-					<i class="fas ${TOPO_META[t].icon}"></i>
-					${TOPO_META[t].label}
-				</div>
-				<input type="number" id="ncount-${t}" value="${nodeCounts[t]}" min="2" max="20"
-					onchange="onCountChange('${t}', this.value)" />
-			</div>
-		`).join('')}
-	`;
+function onTopoTypeChange(id, val) {
+	const entry = topoEntries.find(e => e.id === id);
+	if (!entry) return;
+	entry.type = val;
+	rebuildTopoGroup(entry, false);
+	updateCanvasEmpty();
 }
 
-function onCountChange(topo, val) {
-	nodeCounts[topo] = Math.max(2, Math.min(20, parseInt(val) || 2));
-	document.getElementById('ncount-' + topo).value = nodeCounts[topo];
-	renderTopology();
+function onTopoCountChange(id, val) {
+	const entry = topoEntries.find(e => e.id === id);
+	if (!entry) return;
+	const n = Math.max(2, Math.min(30, parseInt(val) || 2));
+	const preserve = (entry.type !== '') && true;
+	entry.count = n;
+	document.getElementById('ncount-' + id) && (document.getElementById('ncount-' + id).value = n);
+	rebuildTopoGroup(entry, preserve);
 }
 
-/* ════════════════════════
-   TOPOLOGY RENDERING
-════════════════════════ */
-function renderTopology() {
-	const area  = document.getElementById('canvas-area');
-	const empty = document.getElementById('canvas-empty');
-	const sel   = getSelectedTopos();
-
-	area.querySelectorAll('.topo-node').forEach(n => n.remove());
-	document.getElementById('topo-svg').innerHTML = '';
-	nodes = []; edges = [];
-
-	if (!sel.length) {
-		empty.style.display = '';
+function renderTopoTable() {
+	const tbody = document.getElementById('topo-tbody');
+	if (!topoEntries.length) {
+		tbody.innerHTML = `<tr id="topo-empty-row"><td colspan="3"><div class="topo-empty-hint">Sin topologías — agrega una</div></td></tr>`;
 		return;
 	}
-	empty.style.display = 'none';
+	tbody.innerHTML = topoEntries.map(e => `
+		<tr>
+			<td>
+				<select onchange="onTopoTypeChange(${e.id}, this.value)">
+					<option value="">— Tipo —</option>
+					<option value="arbol"  ${e.type==='arbol' ?'selected':''}>Árbol</option>
+					<option value="lineal" ${e.type==='lineal'?'selected':''}>Lineal</option>
+					<option value="anillo" ${e.type==='anillo'?'selected':''}>Anillo</option>
+					<option value="bus"    ${e.type==='bus'   ?'selected':''}>Bus</option>
+				</select>
+			</td>
+			<td>
+				<input type="number" id="ncount-${e.id}" value="${e.count}" min="2" max="30"
+					onchange="onTopoCountChange(${e.id}, this.value)" />
+			</td>
+			<td>
+				<button class="btn-del-topo" onclick="removeTopoEntry(${e.id})" title="Eliminar topología">
+					<i class="fas fa-times"></i>
+				</button>
+			</td>
+		</tr>
+	`).join('');
+}
 
-	const W = area.offsetWidth  || 600;
-	const H = area.offsetHeight || 400;
+/* ════════════════════
+   CANVAS — TOPOLOGY BUILD
+════════════════════ */
+function rebuildTopoGroup(entry, preservePositions) {
+	if (!entry.type) { removeTopoNodes(entry.id); drawEdges(); return; }
+
+	const area = document.getElementById('canvas-area');
+	const W = area.offsetWidth  || 700;
+	const H = area.offsetHeight || 420;
+
+	// save existing positions keyed by index
+	const existing = nodes.filter(n => n.topoId === entry.id);
+	const savedPos = preservePositions ? existing.map(n => ({x: n.x, y: n.y})) : [];
+
+	// how many topology groups exist (for vertical banding)
+	const ti = topoEntries.findIndex(e => e.id === entry.id);
+	const numGroups = topoEntries.filter(e => e.type).length || 1;
 	const PAD = 60;
-	const regionH = (H - PAD * 2) / sel.length;
+	const regionH = (H - PAD * 2) / numGroups;
+	const bandIdx = topoEntries.filter(e => e.type && e.id <= entry.id).length - 1;
+	const startY = PAD + bandIdx * regionH;
+	const midY   = startY + regionH / 2;
 
-	sel.forEach((topo, ti) => {
-		const n = nodeCounts[topo];
-		const startY = PAD + ti * regionH;
-		const midY   = startY + regionH / 2;
-		const topoNodes = [];
+	const positions = calcLayout(entry.type, entry.count, W, PAD, startY, midY, regionH);
 
-		if (topo === 'lineal') layoutLineal(topoNodes, n, W, PAD, midY);
-		else if (topo === 'anillo') layoutAnillo(topoNodes, n, W, PAD, midY, regionH);
-		else if (topo === 'arbol')  layoutArbol(topoNodes, n, W, PAD, startY + 30, regionH);
-		else if (topo === 'bus')    layoutBus(topoNodes, n, W, PAD, midY);
+	// Remove existing nodes for this topo
+	existing.forEach(n => {
+		const el = document.getElementById('node-' + n.id);
+		if (el) el.remove();
+	});
+	edges = edges.filter(e => !existing.some(n => n.id === e.from || n.id === e.to));
+	nodes = nodes.filter(n => n.topoId !== entry.id);
 
-		topoNodes.forEach(nd => {
-			nd.topo = topo;
-			nd.el = createNodeEl(nd);
-			area.appendChild(nd.el);
+	// Create new nodes
+	const newNodes = [];
+	for (let i = 0; i < entry.count; i++) {
+		const pos = savedPos[i] || positions[i];
+		const id = `t${entry.id}-n${i}`;
+		const nd = { id, x: pos.x, y: pos.y, nodeType: 'srv', topoId: entry.id };
+		const el = createNodeEl(nd);
+		area.appendChild(el);
+		nodes.push(nd);
+		newNodes.push(nd);
+		if (!nodeConfigs[id]) nodeConfigs[id] = defaultConfig();
+	}
+
+	buildEdgesForGroup(entry.type, newNodes);
+	drawEdges();
+	updateCanvasEmpty();
+}
+
+function rebuildAllTopos() {
+	const area = document.getElementById('canvas-area');
+	// Remove all topo nodes
+	topoEntries.forEach(e => {
+		nodes.filter(n => n.topoId === e.id).forEach(n => {
+			const el = document.getElementById('node-' + n.id); if (el) el.remove();
 		});
-		nodes.push(...topoNodes);
-		buildEdges(topo, topoNodes);
+	});
+	edges = edges.filter(e => {
+		const fromNd = nodes.find(n => n.id === e.from);
+		return fromNd && fromNd.topoId === null;
+	});
+	nodes = nodes.filter(n => n.topoId === null);
+
+	const W = area.offsetWidth  || 700;
+	const H = area.offsetHeight || 420;
+	const PAD = 60;
+	const numGroups = topoEntries.filter(e => e.type).length || 1;
+	const regionH = (H - PAD * 2) / numGroups;
+
+	let bandIdx = 0;
+	topoEntries.forEach(entry => {
+		if (!entry.type) return;
+		const startY = PAD + bandIdx * regionH;
+		const midY   = startY + regionH / 2;
+		const positions = calcLayout(entry.type, entry.count, W, PAD, startY, midY, regionH);
+		const newNodes = [];
+		for (let i = 0; i < entry.count; i++) {
+			const id = `t${entry.id}-n${i}`;
+			const nd = { id, x: positions[i].x, y: positions[i].y, nodeType: 'srv', topoId: entry.id };
+			const el = createNodeEl(nd);
+			area.appendChild(el);
+			nodes.push(nd);
+			newNodes.push(nd);
+			if (!nodeConfigs[id]) nodeConfigs[id] = defaultConfig();
+		}
+		buildEdgesForGroup(entry.type, newNodes);
+		bandIdx++;
 	});
 
 	drawEdges();
+	updateCanvasEmpty();
 }
 
-/* ── Layouts ── */
-function mkNode(id, x, y) { return { id, x, y, type: 'srv' }; }
-
-function layoutLineal(arr, n, W, PAD, midY) {
-	const step = (W - PAD * 2) / (n + 1);
-	for (let i = 0; i < n; i++)
-		arr.push(mkNode(`lineal-${i}`, PAD + step * (i + 1), midY));
+function removeTopoNodes(topoId) {
+	const topoNodes = nodes.filter(n => n.topoId === topoId);
+	topoNodes.forEach(n => {
+		const el = document.getElementById('node-' + n.id);
+		if (el) el.remove();
+		edges = edges.filter(e => e.from !== n.id && e.to !== n.id);
+	});
+	nodes = nodes.filter(n => n.topoId !== topoId);
 }
 
-function layoutAnillo(arr, n, W, PAD, midY, rH) {
-	const cx = W / 2;
-	const rx = Math.min((W - PAD * 2) / 2.3, rH / 2.5);
-	const ry = Math.min(rH / 2.6, rx * 0.72);
-	for (let i = 0; i < n; i++) {
-		const a = (2 * Math.PI * i / n) - Math.PI / 2;
-		arr.push(mkNode(`anillo-${i}`, cx + rx * Math.cos(a), midY + ry * Math.sin(a)));
-	}
-}
-
-function layoutArbol(arr, n, W, PAD, startY, rH) {
-	const levelH = Math.min(78, (rH - 25) / Math.ceil(Math.log2(n + 1)));
-	const usable = W - PAD * 2;
-	let idx = 0, size = 1;
-	let li  = 0;
-	while (idx < n) {
-		const take = Math.min(size, n - idx);
-		const step = usable / (take + 1);
-		for (let i = 0; i < take; i++)
-			arr.push(mkNode(`arbol-${idx + i}`, PAD + step * (i + 1), startY + li * levelH));
-		idx += take; li++;
-		size *= 2;
-	}
-}
-
-function layoutBus(arr, n, W, PAD, midY) {
-	const step = (W - PAD * 2) / (n + 1);
-	for (let i = 0; i < n; i++) {
-		const x = PAD + step * (i + 1);
-		arr.push(mkNode(`bus-${i}`, x, midY + (i % 2 === 0 ? -52 : 52)));
-	}
-}
-
-/* ── Edge building ── */
-function buildEdges(topo, arr) {
-	if (topo === 'lineal') {
-		for (let i = 0; i < arr.length - 1; i++)
-			edges.push({ from: arr[i].id, to: arr[i+1].id, topo });
-	} else if (topo === 'anillo') {
-		for (let i = 0; i < arr.length; i++)
-			edges.push({ from: arr[i].id, to: arr[(i+1) % arr.length].id, topo });
-	} else if (topo === 'arbol') {
-		for (let i = 0; i < arr.length; i++) {
-			if (2*i+1 < arr.length) edges.push({ from: arr[i].id, to: arr[2*i+1].id, topo });
-			if (2*i+2 < arr.length) edges.push({ from: arr[i].id, to: arr[2*i+2].id, topo });
+/* ════════════════════
+   LAYOUTS
+════════════════════ */
+function calcLayout(type, n, W, PAD, startY, midY, regionH) {
+	const arr = [];
+	if (type === 'lineal') {
+		const step = (W - PAD * 2) / (n + 1);
+		for (let i = 0; i < n; i++) arr.push({ x: PAD + step * (i + 1), y: midY });
+	} else if (type === 'anillo') {
+		const cx = W / 2;
+		const rx = Math.min((W - PAD * 2) / 2.3, regionH / 2.5);
+		const ry = Math.min(regionH / 2.6, rx * 0.72);
+		for (let i = 0; i < n; i++) {
+			const a = (2 * Math.PI * i / n) - Math.PI / 2;
+			arr.push({ x: cx + rx * Math.cos(a), y: midY + ry * Math.sin(a) });
 		}
-	} else if (topo === 'bus') {
-		edges.push({ bus: true, nodes: arr, topo });
+	} else if (type === 'arbol') {
+		const levelH = Math.min(78, (regionH - 25) / Math.ceil(Math.log2(n + 1)));
+		const usable = W - PAD * 2;
+		let idx = 0, size = 1, li = 0;
+		while (idx < n) {
+			const take = Math.min(size, n - idx);
+			const step = usable / (take + 1);
+			for (let i = 0; i < take; i++)
+				arr.push({ x: PAD + step * (i + 1), y: startY + 30 + li * levelH });
+			idx += take; li++; size *= 2;
+		}
+	} else if (type === 'bus') {
+		const step = (W - PAD * 2) / (n + 1);
+		for (let i = 0; i < n; i++)
+			arr.push({ x: PAD + step * (i + 1), y: midY + (i % 2 === 0 ? -48 : 48) });
+	}
+	return arr;
+}
+
+function buildEdgesForGroup(type, arr) {
+	if (type === 'lineal') {
+		for (let i = 0; i < arr.length - 1; i++)
+			edges.push({ id: ++edgeSeq, from: arr[i].id, to: arr[i+1].id, topo: type });
+	} else if (type === 'anillo') {
+		for (let i = 0; i < arr.length; i++)
+			edges.push({ id: ++edgeSeq, from: arr[i].id, to: arr[(i+1) % arr.length].id, topo: type });
+	} else if (type === 'arbol') {
+		for (let i = 0; i < arr.length; i++) {
+			if (2*i+1 < arr.length) edges.push({ id: ++edgeSeq, from: arr[i].id, to: arr[2*i+1].id, topo: type });
+			if (2*i+2 < arr.length) edges.push({ id: ++edgeSeq, from: arr[i].id, to: arr[2*i+2].id, topo: type });
+		}
+	} else if (type === 'bus') {
+		const mid = { id: '__bus__' + edgeSeq, x: null, y: null };
+		edges.push({ id: ++edgeSeq, bus: true, busNodes: arr, topo: type });
 	}
 }
 
-/* ── SVG draw ── */
+/* ════════════════════
+   DRAW EDGES
+════════════════════ */
 function drawEdges() {
 	const svg = document.getElementById('topo-svg');
-	const nm  = {};
+	const nm = {};
 	nodes.forEach(n => nm[n.id] = n);
 	let html = '';
 
 	edges.forEach(e => {
 		if (e.bus) {
-			const xs  = e.nodes.map(n => n.x);
-			const ys  = e.nodes.map(n => n.y);
+			const xs = e.busNodes.map(n => n.x);
+			const ys = e.busNodes.map(n => n.y);
 			const busY = (Math.min(...ys) + Math.max(...ys)) / 2;
 			const minX = Math.min(...xs), maxX = Math.max(...xs);
-			html += `<line x1="${minX}" y1="${busY}" x2="${maxX}" y2="${busY}" stroke="${TOPO_COLORS.bus}" stroke-width="3" stroke-dasharray="7,4"/>`;
-			e.nodes.forEach(nd => {
-				html += `<line x1="${nd.x}" y1="${nd.y}" x2="${nd.x}" y2="${busY}" stroke="${TOPO_COLORS.bus}" stroke-width="1.8" opacity="0.7"/>`;
+			html += `<line x1="${minX}" y1="${busY}" x2="${maxX}" y2="${busY}" stroke="${TOPO_COLORS.bus}" stroke-width="3" stroke-dasharray="7,4" pointer-events="none"/>`;
+			e.busNodes.forEach(nd => {
+				html += `<line x1="${nd.x}" y1="${nd.y}" x2="${nd.x}" y2="${busY}" stroke="${TOPO_COLORS.bus}" stroke-width="1.8" opacity="0.7" pointer-events="none"/>`;
 			});
 		} else {
 			const a = nm[e.from], b = nm[e.to];
-			if (a && b)
-				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${TOPO_COLORS[e.topo]}" stroke-width="2.2"/>`;
+			if (a && b) {
+				const color = TOPO_COLORS[e.topo] || 'rgba(160,160,160,0.5)';
+				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${color}" stroke-width="2.2" pointer-events="none"/>`;
+				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="transparent" stroke-width="12" class="edge-line" data-edge-id="${e.id}" style="cursor:pointer"/>`;
+			}
 		}
 	});
 
 	svg.innerHTML = html;
 }
 
-/* ── Node elements ── */
+/* ════════════════════
+   NODE ELEMENTS
+════════════════════ */
 function nodeInner(type) {
 	const t = NODE_TYPES[type];
 	return `<i class="fas ${t.icon}"></i><span class="node-lbl">${t.label}</span>`;
@@ -1201,15 +1080,33 @@ function nodeInner(type) {
 
 function createNodeEl(nd) {
 	const div = document.createElement('div');
-	div.className = `topo-node nt-${nd.type}`;
+	div.className = `topo-node nt-${nd.nodeType}`;
 	div.id = `node-${nd.id}`;
 	div.style.left = nd.x + 'px';
 	div.style.top  = nd.y + 'px';
-	div.innerHTML  = nodeInner(nd.type);
+	div.innerHTML  = nodeInner(nd.nodeType);
 
+	// Single click: select / link
 	div.addEventListener('click', e => {
 		e.stopPropagation();
-		showPopover(nd.id, e.clientX, e.clientY);
+		if (linkMode) {
+			handleLinkClick(nd.id);
+		} else {
+			selectNode(nd.id);
+		}
+	});
+
+	// Double click: change type
+	div.addEventListener('dblclick', e => {
+		e.stopPropagation();
+		showNodeTypePopover(nd.id, e.clientX, e.clientY);
+	});
+
+	// Right click: context menu
+	div.addEventListener('contextmenu', e => {
+		e.preventDefault();
+		e.stopPropagation();
+		showCtxMenu(nd.id, e.clientX, e.clientY);
 	});
 
 	makeDraggable(div, nd);
@@ -1219,47 +1116,314 @@ function createNodeEl(nd) {
 function updateNodeEl(nd) {
 	const el = document.getElementById('node-' + nd.id);
 	if (!el) return;
-	el.className  = `topo-node nt-${nd.type}`;
-	el.innerHTML  = nodeInner(nd.type);
+	el.className = `topo-node nt-${nd.nodeType}`;
+	if (nd.id === selectedNodeId) el.classList.add('selected');
+	el.innerHTML = nodeInner(nd.nodeType);
 }
 
-/* ── Drag ── */
+/* ════════════════════
+   DRAG
+════════════════════ */
 function makeDraggable(el, nd) {
 	el.addEventListener('mousedown', e => {
 		if (e.button !== 0) return;
 		e.preventDefault();
 		const ox = nd.x, oy = nd.y, sx = e.clientX, sy = e.clientY;
+		const moveGroup = e.ctrlKey && nd.topoId !== null;
+
+		let groupNodes = [];
+		if (moveGroup) {
+			groupNodes = nodes.filter(n => n.topoId === nd.topoId);
+		}
 
 		function mv(e) {
-			nd.x = ox + e.clientX - sx;
-			nd.y = oy + e.clientY - sy;
-			el.style.left = nd.x + 'px';
-			el.style.top  = nd.y + 'px';
+			const dx = e.clientX - sx, dy = e.clientY - sy;
+			if (moveGroup) {
+				groupNodes.forEach(n => {
+					const origEl = document.getElementById('node-' + n.id);
+					if (!origEl) return;
+					n.x = n._dragOx + dx;
+					n.y = n._dragOy + dy;
+					origEl.style.left = n.x + 'px';
+					origEl.style.top  = n.y + 'px';
+				});
+			} else {
+				nd.x = ox + dx;
+				nd.y = oy + dy;
+				el.style.left = nd.x + 'px';
+				el.style.top  = nd.y + 'px';
+			}
 			drawEdges();
 		}
+
 		function up() {
 			document.removeEventListener('mousemove', mv);
 			document.removeEventListener('mouseup', up);
+		}
+
+		if (moveGroup) {
+			groupNodes.forEach(n => { n._dragOx = n.x; n._dragOy = n.y; });
 		}
 		document.addEventListener('mousemove', mv);
 		document.addEventListener('mouseup', up);
 	});
 }
 
-/* ════════════════════════
-   NODE POPOVER
-════════════════════════ */
-function showPopover(nodeId, cx, cy) {
-	activeNodeId = nodeId;
+/* ════════════════════
+   NODE SELECTION
+════════════════════ */
+function selectNode(id) {
+	// deselect previous
+	if (selectedNodeId) {
+		const prev = document.getElementById('node-' + selectedNodeId);
+		if (prev) prev.classList.remove('selected');
+	}
+
+	selectedNodeId = id;
+	const el = document.getElementById('node-' + id);
+	if (el) el.classList.add('selected');
+
+	document.getElementById('btn-del-node').disabled = false;
+	renderNodeConfig();
+}
+
+function deselectNode() {
+	if (selectedNodeId) {
+		const el = document.getElementById('node-' + selectedNodeId);
+		if (el) el.classList.remove('selected');
+	}
+	selectedNodeId = null;
+	document.getElementById('btn-del-node').disabled = true;
+	document.getElementById('vm-empty').style.display = '';
+	document.getElementById('vm-config').style.display = 'none';
+}
+
+/* ════════════════════
+   NODE VM CONFIG
+════════════════════ */
+function defaultConfig() {
+	return { flavor: '', disco: '', imagen: '', imagenMode: 'select', imagenFile: null, llaves: '', secChips: new Set(['443']), rules: [] };
+}
+
+function renderNodeConfig() {
+	const nd = nodes.find(n => n.id === selectedNodeId);
+	if (!nd) { deselectNode(); return; }
+
+	const cfg = nodeConfigs[selectedNodeId] || (nodeConfigs[selectedNodeId] = defaultConfig());
+
+	document.getElementById('vm-empty').style.display = 'none';
+	document.getElementById('vm-config').style.display = '';
+	document.getElementById('vm-node-name').textContent = `Nodo ${nd.id}`;
+
+	document.getElementById('nc-flavor').value = cfg.flavor || '';
+	document.getElementById('nc-disco').value  = cfg.disco  || '';
+	document.getElementById('nc-llaves').value = cfg.llaves || '';
+
+	// Image mode
+	setImgMode(cfg.imagenMode || 'select', false);
+	document.getElementById('nc-imagen').value = cfg.imagen || '';
+	document.getElementById('upload-fname').textContent = cfg.imagenFile ? cfg.imagenFile : 'Sin archivo';
+
+	// Security chips
+	const chipsEl = document.getElementById('nc-chips');
+	chipsEl.querySelectorAll('.sec-chip').forEach(chip => {
+		const port = chip.dataset.port || chip.getAttribute('onclick').match(/'([^']+)'\)/)?.[1];
+		chip.classList.toggle('active', cfg.secChips.has(port));
+	});
+
+	// Custom rules
+	const rulesList = document.getElementById('rules-list');
+	const rulesEmpty = document.getElementById('rules-empty');
+	rulesList.querySelectorAll('.sec-rule-row').forEach(r => r.remove());
+	if (cfg.rules.length === 0) {
+		rulesEmpty.style.display = '';
+	} else {
+		rulesEmpty.style.display = 'none';
+		cfg.rules.forEach(r => {
+			const row = makeRuleRow(r.id, r.proto, r.port);
+			rulesList.appendChild(row);
+		});
+	}
+}
+
+function saveNodeConfig() {
+	if (!selectedNodeId) return;
+	const cfg = nodeConfigs[selectedNodeId] || (nodeConfigs[selectedNodeId] = defaultConfig());
+	cfg.flavor = document.getElementById('nc-flavor').value;
+	cfg.disco  = document.getElementById('nc-disco').value;
+	cfg.llaves = document.getElementById('nc-llaves').value;
+	cfg.imagen = document.getElementById('nc-imagen').value;
+}
+
+function setImgMode(mode, doSave) {
+	if (doSave !== false && selectedNodeId) {
+		const cfg = nodeConfigs[selectedNodeId];
+		if (cfg) cfg.imagenMode = mode;
+	}
+	document.getElementById('tab-select').classList.toggle('active', mode === 'select');
+	document.getElementById('tab-upload').classList.toggle('active', mode === 'upload');
+	document.getElementById('img-select-wrap').style.display = mode === 'select' ? '' : 'none';
+	document.getElementById('img-upload-wrap').style.display = mode === 'upload' ? '' : 'none';
+}
+
+function onFileChange(input) {
+	const fname = input.files[0] ? input.files[0].name : 'Sin archivo';
+	document.getElementById('upload-fname').textContent = fname;
+	if (selectedNodeId) {
+		const cfg = nodeConfigs[selectedNodeId];
+		if (cfg) cfg.imagenFile = fname;
+	}
+}
+
+function toggleChip(el, port) {
+	el.classList.toggle('active');
+	if (selectedNodeId) {
+		const cfg = nodeConfigs[selectedNodeId];
+		if (!cfg) return;
+		if (el.classList.contains('active')) cfg.secChips.add(port);
+		else cfg.secChips.delete(port);
+	}
+}
+
+function addRule() {
+	if (!selectedNodeId) return;
+	const cfg = nodeConfigs[selectedNodeId] || (nodeConfigs[selectedNodeId] = defaultConfig());
+	const id = ++ruleSeq;
+	cfg.rules.push({ id, proto: 'TCP', port: '' });
+	const list = document.getElementById('rules-list');
+	document.getElementById('rules-empty').style.display = 'none';
+	const row = makeRuleRow(id, 'TCP', '');
+	list.appendChild(row);
+}
+
+function makeRuleRow(id, proto, port) {
+	const row = document.createElement('div');
+	row.className = 'sec-rule-row';
+	row.id = 'rule-' + id;
+	row.innerHTML = `
+		<select title="Protocolo" onchange="updateRule(${id},'proto',this.value)">
+			<option ${proto==='TCP'?'selected':''}>TCP</option>
+			<option ${proto==='UDP'?'selected':''}>UDP</option>
+			<option ${proto==='ICMP'?'selected':''}>ICMP</option>
+			<option ${proto==='CUALQUIER'?'selected':''}>CUALQUIER</option>
+		</select>
+		<input type="text" placeholder="Puerto / rango" value="${port}"
+			onchange="updateRule(${id},'port',this.value)" />
+		<button type="button" class="btn-del-rule" onclick="removeRule(${id})" title="Eliminar">
+			<i class="fas fa-times"></i>
+		</button>
+	`;
+	return row;
+}
+
+function updateRule(id, field, val) {
+	if (!selectedNodeId) return;
+	const cfg = nodeConfigs[selectedNodeId];
+	if (!cfg) return;
+	const rule = cfg.rules.find(r => r.id === id);
+	if (rule) rule[field] = val;
+}
+
+function removeRule(id) {
+	if (selectedNodeId) {
+		const cfg = nodeConfigs[selectedNodeId];
+		if (cfg) cfg.rules = cfg.rules.filter(r => r.id !== id);
+	}
+	const row = document.getElementById('rule-' + id);
+	if (row) row.remove();
+	const list = document.getElementById('rules-list');
+	if (!list.querySelector('.sec-rule-row'))
+		document.getElementById('rules-empty').style.display = '';
+}
+
+/* ════════════════════
+   ADD STANDALONE NODE
+════════════════════ */
+function addStandaloneNode() {
+	const area = document.getElementById('canvas-area');
+	const W = area.offsetWidth  || 600;
+	const H = area.offsetHeight || 400;
+	const id = `standalone-${++nodeSeq}`;
+	const x = W / 2 + (Math.random() - 0.5) * 120;
+	const y = H / 2 + (Math.random() - 0.5) * 80;
+	const nd = { id, x, y, nodeType: 'srv', topoId: null };
+	nodeConfigs[id] = defaultConfig();
+	const el = createNodeEl(nd);
+	area.appendChild(el);
+	nodes.push(nd);
+	updateCanvasEmpty();
+}
+
+/* ════════════════════
+   DELETE NODE
+════════════════════ */
+function deleteNode(id) {
+	const el = document.getElementById('node-' + id);
+	if (el) el.remove();
+	edges = edges.filter(e => e.from !== id && e.to !== id && !(e.bus && e.busNodes && e.busNodes.some(n => n.id === id)));
+	nodes = nodes.filter(n => n.id !== id);
+	delete nodeConfigs[id];
+	if (selectedNodeId === id) deselectNode();
+	drawEdges();
+	updateCanvasEmpty();
+}
+
+function deleteSelectedNode() {
+	if (selectedNodeId) deleteNode(selectedNodeId);
+}
+
+/* ════════════════════
+   LINK MODE
+════════════════════ */
+function toggleLinkMode() {
+	linkMode = !linkMode;
+	const btn = document.getElementById('btn-connect');
+	const banner = document.getElementById('link-banner');
+	btn.classList.toggle('active', linkMode);
+	banner.classList.toggle('visible', linkMode);
+	if (!linkMode) cancelLink();
+}
+
+function handleLinkClick(nodeId) {
+	if (!linkSourceId) {
+		linkSourceId = nodeId;
+		const el = document.getElementById('node-' + nodeId);
+		if (el) el.classList.add('link-source');
+	} else if (linkSourceId === nodeId) {
+		cancelLink();
+	} else {
+		// Create edge
+		const exists = edges.some(e => (e.from === linkSourceId && e.to === nodeId) || (e.from === nodeId && e.to === linkSourceId));
+		if (!exists) {
+			edges.push({ id: ++edgeSeq, from: linkSourceId, to: nodeId, topo: 'custom' });
+			drawEdges();
+		}
+		const srcEl = document.getElementById('node-' + linkSourceId);
+		if (srcEl) srcEl.classList.remove('link-source');
+		linkSourceId = null;
+	}
+}
+
+function cancelLink() {
+	if (linkSourceId) {
+		const el = document.getElementById('node-' + linkSourceId);
+		if (el) el.classList.remove('link-source');
+		linkSourceId = null;
+	}
+}
+
+/* ════════════════════
+   NODE TYPE POPOVER
+════════════════════ */
+function showNodeTypePopover(nodeId, cx, cy) {
+	popoverNodeId = nodeId;
+	const nd = nodes.find(n => n.id === nodeId);
+	if (!nd) return;
 	const pop = document.getElementById('node-popover');
-	const nd  = nodes.find(n => n.id === nodeId);
-	pop.querySelectorAll('.pop-opt').forEach(o =>
-		o.classList.toggle('sel', o.dataset.type === nd.type)
-	);
+	pop.querySelectorAll('.pop-opt').forEach(o => o.classList.toggle('sel', o.dataset.type === nd.nodeType));
 	pop.style.left = (cx + 10) + 'px';
 	pop.style.top  = (cy - 8)  + 'px';
 	pop.classList.add('open');
-
 	requestAnimationFrame(() => {
 		const r = pop.getBoundingClientRect();
 		if (r.right  > window.innerWidth  - 8) pop.style.left = (cx - r.width  - 10) + 'px';
@@ -1268,81 +1432,160 @@ function showPopover(nodeId, cx, cy) {
 }
 
 function setNodeType(type) {
-	if (!activeNodeId) return;
-	const nd = nodes.find(n => n.id === activeNodeId);
-	if (!nd) return;
-	nd.type = type;
-	updateNodeEl(nd);
+	if (!popoverNodeId) return;
+	const nd = nodes.find(n => n.id === popoverNodeId);
+	if (nd) {
+		nd.nodeType = type;
+		updateNodeEl(nd);
+	}
 	document.getElementById('node-popover').classList.remove('open');
-	activeNodeId = null;
+	popoverNodeId = null;
 }
 
-document.addEventListener('click', () => {
-	document.getElementById('node-popover').classList.remove('open');
-	activeNodeId = null;
+/* ════════════════════
+   CONTEXT MENU
+════════════════════ */
+function showCtxMenu(nodeId, cx, cy) {
+	ctxNodeId = nodeId;
+	const menu = document.getElementById('ctx-menu');
+	menu.style.left = cx + 'px';
+	menu.style.top  = cy + 'px';
+	menu.classList.add('open');
+	requestAnimationFrame(() => {
+		const r = menu.getBoundingClientRect();
+		if (r.right  > window.innerWidth  - 8) menu.style.left = (cx - r.width)  + 'px';
+		if (r.bottom > window.innerHeight - 8) menu.style.top  = (cy - r.height) + 'px';
+	});
+}
+
+function deleteCtxNode() {
+	if (ctxNodeId) deleteNode(ctxNodeId);
+	document.getElementById('ctx-menu').classList.remove('open');
+	ctxNodeId = null;
+}
+
+/* ════════════════════
+   CANVAS EMPTY STATE
+════════════════════ */
+function updateCanvasEmpty() {
+	const empty = document.getElementById('canvas-empty');
+	empty.style.display = nodes.length === 0 ? '' : 'none';
+}
+
+/* ════════════════════
+   GLOBAL EVENTS
+════════════════════ */
+document.addEventListener('click', e => {
+	if (!e.target.closest('#node-popover'))
+		document.getElementById('node-popover').classList.remove('open');
+	if (!e.target.closest('#ctx-menu') && !e.target.closest('.topo-node'))
+		document.getElementById('ctx-menu').classList.remove('open');
 });
 
-/* ════════════════════════
-   SECURITY RULES
-════════════════════════ */
-function toggleChip(el) { el.classList.toggle('active'); }
+document.addEventListener('keydown', e => {
+	if (e.key === 'Escape') {
+		if (linkMode) { toggleLinkMode(); }
+		deselectNode();
+	}
+	if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !e.target.matches('input,select,textarea')) {
+		deleteSelectedNode();
+	}
+});
 
-let ruleSeq = 0;
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+	document.getElementById('sidebar').classList.toggle('collapsed');
+	setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+});
 
-function addRule() {
-	const list  = document.getElementById('rules-list');
-	const empty = document.getElementById('rules-empty');
-	if (empty) empty.style.display = 'none';
-
-	ruleSeq++;
-	const id  = 'rule-' + ruleSeq;
-	const row = document.createElement('div');
-	row.className = 'sec-rule-row';
-	row.id = id;
-	row.innerHTML = `
-		<select title="Protocolo">
-			<option>TCP</option>
-			<option>UDP</option>
-			<option>ICMP</option>
-			<option>CUALQUIER</option>
-		</select>
-		<input type="text" placeholder="Puerto / rango  ej. 8080 o 8000-9000" />
-		<button type="button" class="btn-del-rule" title="Eliminar" onclick="removeRule('${id}')">
-			<i class="fas fa-times"></i>
-		</button>
-	`;
-	list.appendChild(row);
-}
-
-function removeRule(id) {
-	const row = document.getElementById(id);
-	if (row) row.remove();
-	const list  = document.getElementById('rules-list');
-	const empty = document.getElementById('rules-empty');
-	if (empty && !list.querySelector('.sec-rule-row'))
-		empty.style.display = '';
-}
-
-/* ════════════════════════
-   LAUNCH
-════════════════════════ */
-function lanzarSlice() {
-	const sel = getSelectedTopos();
-	if (!sel.length) { alert('Selecciona al menos un tipo de topología.'); return; }
-
-	const missing = ['zona','flavor','imagen','llaves']
-		.filter(id => !document.getElementById(id).value);
-	if (missing.length) { alert('Completa todos los campos obligatorios antes de lanzar.'); return; }
-
-	alert('¡Slice lanzado exitosamente!\n\nTopologías activas: ' + sel.join(', '));
-}
-
-/* ════════════════════════
-   RESIZE
-════════════════════════ */
 window.addEventListener('resize', () => {
-	if (getSelectedTopos().length) renderTopology();
+	if (nodes.length) drawEdges();
 });
+
+// Canvas click deselects if not on node
+document.getElementById('canvas-area').addEventListener('click', e => {
+	if (!e.target.closest('.topo-node')) {
+		if (linkMode) cancelLink();
+		else deselectNode();
+	}
+});
+
+// SVG custom edge color
+const TOPO_COLORS_CUSTOM = Object.assign({}, TOPO_COLORS, { custom: 'rgba(120,120,120,0.5)' });
+
+/* ════════════════════
+   URL PARAM CONTEXT
+════════════════════ */
+(function initContext() {
+	const p          = new URLSearchParams(window.location.search);
+	const sliceId    = p.get('slice');
+	const sliceNom   = decodeURIComponent(p.get('slicenombre') || '');
+	const courseId   = p.get('curso')  || null;
+	const courseNom  = decodeURIComponent(p.get('nombre') || '');
+	const isEdit     = !!sliceId;
+	const sliceLabel = sliceNom || (sliceId ? `Slice ${sliceId}` : '');
+
+	/* ── Sidebar active item ── */
+	if (courseId) {
+		document.getElementById('nav-slices').classList.remove('active');
+		document.getElementById('nav-cursos').classList.add('active');
+	}
+
+	/* ── Breadcrumb ── */
+	const bc = document.getElementById('topbar-breadcrumb');
+	if (courseId && courseNom) {
+		const detailUrl = `detalle-curso.html?id=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}`;
+		bc.innerHTML = `
+			<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
+			<span class="sep"><i class="fas fa-chevron-right"></i></span>
+			<a href="${detailUrl}">${courseNom}</a>
+			<span class="sep"><i class="fas fa-chevron-right"></i></span>
+			<span class="current">${isEdit ? `Editar ${sliceLabel}` : 'Nuevo Slice'}</span>`;
+	} else if (isEdit) {
+		bc.innerHTML = `
+			<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
+			<span class="sep"><i class="fas fa-chevron-right"></i></span>
+			<span class="current">Editar ${sliceLabel}</span>`;
+	}
+
+	/* ── Heading ── */
+	if (isEdit) {
+		document.getElementById('page-heading').textContent = `Editar ${sliceLabel}`;
+		document.getElementById('page-label').textContent = courseNom || 'Slices';
+		document.title = `Editar ${sliceLabel}`;
+	}
+
+	/* ── Footer buttons ── */
+	if (isEdit) {
+		const footer = document.querySelector('.config-footer');
+		const backUrl = courseId
+			? `ver-slice.html?slice=${sliceId}&curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}`
+			: 'slices.html';
+		footer.innerHTML = `
+			<a href="${backUrl}" class="btn-guardar" style="flex:1">
+				<i class="fas fa-arrow-left"></i>
+				Cancelar
+			</a>
+			<a href="${backUrl}" class="btn-siguiente" style="flex:1">
+				<i class="fas fa-save"></i>
+				Guardar cambios
+			</a>`;
+	}
+
+	/* ── Pre-populate demo data in edit mode ── */
+	if (isEdit) {
+		const DEMO_SLICES = {
+			'1': { zona: 'us-east-1a', topos: [{ type: 'lineal', count: 4 }] },
+			'2': { zona: 'us-east-1b', topos: [{ type: 'arbol', count: 5 }] },
+			'3': { zona: 'us-west-2a', topos: [{ type: 'arbol', count: 7 }, { type: 'lineal', count: 3 }] },
+			'4': { zona: 'eu-west-1a', topos: [{ type: 'lineal', count: 6 }] },
+		};
+		const demo = DEMO_SLICES[sliceId];
+		if (demo) {
+			document.getElementById('zona').value = demo.zona;
+			demo.topos.forEach(t => addTopoEntry(t.type, t.count));
+		}
+	}
+})();
 </script>
 
 </body>

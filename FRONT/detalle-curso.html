@@ -35,9 +35,19 @@
 			top: 0;
 			height: 100vh;
 			overflow-y: auto;
+			overflow-x: hidden;
+			flex-shrink: 0;
+			transition: width 0.28s ease, min-width 0.28s ease, border-color 0.28s ease;
 		}
 
-		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; }
+		.sidebar.collapsed {
+			width: 0;
+			min-width: 0;
+			border-right-color: transparent;
+			overflow: hidden;
+		}
+
+		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; white-space: nowrap; }
 
 		.sidebar-brand h1 {
 			font-family: 'Roboto Slab', serif;
@@ -59,6 +69,7 @@
 			letter-spacing: 0.1em;
 			color: #9fa3a6;
 			padding: 1.5em 1.75em 0.5em;
+			white-space: nowrap;
 		}
 
 		.sidebar-nav { list-style: none; margin: 0; padding: 0 0 1em; flex: 1; }
@@ -73,6 +84,7 @@
 			color: #7f888f;
 			text-decoration: none;
 			border-left: solid 3px transparent;
+			white-space: nowrap;
 			transition: color 0.2s, background 0.2s, border-color 0.2s;
 		}
 
@@ -82,34 +94,50 @@
 		.sidebar-nav li.active a { color: #f56a6a; background: rgba(245,106,106,0.07); border-left-color: #f56a6a; }
 		.sidebar-nav li.active a i { color: #f56a6a; }
 
-		.sidebar-footer { padding: 1.25em 1.75em; border-top: solid 1px rgba(210,215,217,0.75); font-size: 0.75em; color: #9fa3a6; }
+		.sidebar-footer { padding: 1.25em 1.75em; border-top: solid 1px rgba(210,215,217,0.75); font-size: 0.75em; color: #9fa3a6; white-space: nowrap; }
 
 		/* ══ MAIN CONTENT ══ */
 		.main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
-		/* Topbar */
 		.topbar {
 			background: #fff;
 			border-bottom: solid 1px rgba(210,215,217,0.75);
 			padding: 1em 2.5em;
 			display: flex;
 			align-items: center;
-			justify-content: space-between;
-			gap: 1em;
+			gap: 0.75em;
 		}
 
-		.topbar-breadcrumb { display: flex; align-items: center; gap: 0.6em; font-size: 0.82em; }
+		.btn-sidebar-toggle {
+			width: 2.2em; height: 2.2em;
+			border-radius: 0.35em;
+			border: solid 1px rgba(210,215,217,0.75);
+			background: transparent;
+			color: #7f888f;
+			display: flex; align-items: center; justify-content: center;
+			cursor: pointer;
+			flex-shrink: 0;
+			transition: background 0.2s, color 0.2s;
+		}
+		.btn-sidebar-toggle:hover { background: rgba(245,106,106,0.07); color: #f56a6a; }
+
+		.topbar-breadcrumb {
+			display: flex;
+			align-items: center;
+			gap: 0.6em;
+			font-size: 0.82em;
+			flex: 1;
+		}
 		.topbar-breadcrumb a { color: #9fa3a6; text-decoration: none; transition: color 0.2s; }
 		.topbar-breadcrumb a:hover { color: #f56a6a; }
 		.topbar-breadcrumb .sep { color: rgba(210,215,217,0.9); font-size: 0.8em; }
 		.topbar-breadcrumb .current { color: #3d4449; font-weight: 600; }
 
-		.topbar-user { font-size: 0.82em; color: #9fa3a6; }
+		.topbar-user { font-size: 0.82em; color: #9fa3a6; white-space: nowrap; }
 		.topbar-user i { color: #f56a6a; margin-right: 0.4em; }
 
 		.page-body { padding: 2.5em; flex: 1; }
 
-		/* Section header */
 		.section-header {
 			display: flex;
 			align-items: flex-end;
@@ -166,7 +194,6 @@
 		.btn-crear:hover { background: #f67878; color: #fff; }
 		.btn-crear:active { background: #f45c5c; }
 
-		/* Table card */
 		.table-card {
 			background: #fff;
 			border: solid 1px rgba(210,215,217,0.75);
@@ -174,7 +201,6 @@
 			overflow: hidden;
 		}
 
-		/* Slices table */
 		.slices-table {
 			width: 100%;
 			border-collapse: collapse;
@@ -182,10 +208,7 @@
 			font-size: 0.9em;
 		}
 
-		.slices-table thead tr {
-			background: #f5f6f7;
-			border-bottom: solid 2px rgba(210,215,217,0.75);
-		}
+		.slices-table thead tr { background: #f5f6f7; border-bottom: solid 2px rgba(210,215,217,0.75); }
 
 		.slices-table thead th {
 			font-family: 'Roboto Slab', serif;
@@ -208,15 +231,9 @@
 		.slices-table tbody tr:last-child { border-bottom: none; }
 		.slices-table tbody tr:hover { background: rgba(245,106,106,0.03); }
 
-		.slices-table tbody td {
-			padding: 1.05em 1.5em;
-			color: #7f888f;
-			vertical-align: middle;
-		}
-
+		.slices-table tbody td { padding: 1.05em 1.5em; color: #7f888f; vertical-align: middle; }
 		.slices-table tbody td.col-center { text-align: center; }
 
-		/* Status dot */
 		.status-dot {
 			display: inline-block;
 			width: 8px; height: 8px;
@@ -225,16 +242,12 @@
 			vertical-align: middle;
 			flex-shrink: 0;
 		}
-		.status-dot.running {
-			background: #44b078;
-			box-shadow: 0 0 0 3px rgba(68,176,120,0.2);
-		}
+		.status-dot.running { background: #44b078; box-shadow: 0 0 0 3px rgba(68,176,120,0.2); }
 		.status-dot.stopped { background: #f5a623; }
 		.status-dot.off     { background: #c0c4c8; }
 
 		.slice-name { font-weight: 600; color: #3d4449; }
 
-		/* Timer */
 		.timer {
 			font-family: 'Roboto Slab', serif;
 			font-size: 0.92em;
@@ -244,12 +257,7 @@
 		.timer.paused { color: #f5a623; }
 		.timer.off     { color: #9fa3a6; }
 
-		/* Control buttons */
-		.ctrl-btns {
-			display: inline-flex;
-			gap: 0.35em;
-			align-items: center;
-		}
+		.ctrl-btns { display: inline-flex; gap: 0.35em; align-items: center; }
 
 		.btn-ctrl {
 			width: 2.3em; height: 2.3em;
@@ -265,19 +273,10 @@
 			transition: background 0.18s, border-color 0.18s, color 0.18s;
 		}
 
-		.btn-ctrl:hover { opacity: 0.85; }
+		.btn-ctrl.btn-play:hover, .btn-ctrl.btn-play.on    { background: rgba(68,176,120,0.12); border-color: #44b078; color: #44b078; }
+		.btn-ctrl.btn-stop:hover, .btn-ctrl.btn-stop.on    { background: rgba(245,166,35,0.12); border-color: #f5a623; color: #f5a623; }
+		.btn-ctrl.btn-power:hover, .btn-ctrl.btn-power.on  { background: rgba(245,106,106,0.12); border-color: #f56a6a; color: #f56a6a; }
 
-		.btn-ctrl.btn-play       { color: #9fa3a6; }
-		.btn-ctrl.btn-play:hover,
-		.btn-ctrl.btn-play.on    { background: rgba(68,176,120,0.12); border-color: #44b078; color: #44b078; }
-
-		.btn-ctrl.btn-stop:hover,
-		.btn-ctrl.btn-stop.on    { background: rgba(245,166,35,0.12); border-color: #f5a623; color: #f5a623; }
-
-		.btn-ctrl.btn-power:hover,
-		.btn-ctrl.btn-power.on   { background: rgba(245,106,106,0.12); border-color: #f56a6a; color: #f56a6a; }
-
-		/* Eye button */
 		.btn-action {
 			display: inline-flex;
 			align-items: center;
@@ -295,14 +294,10 @@
 		.btn-view { color: #7f888f; }
 		.btn-view:hover { background: rgba(74,159,213,0.09); border-color: #4a9fd5; color: #4a9fd5; }
 
-		/* Responsive */
-		@media (max-width: 900px) {
-			.sidebar { width: 220px; min-width: 220px; }
-			.page-body { padding: 1.5em; }
-		}
+		@media (max-width: 900px) { .page-body { padding: 1.5em; } }
 		@media (max-width: 680px) {
 			.app-layout { flex-direction: column; }
-			.sidebar { width: 100%; min-width: unset; height: auto; position: static; }
+			.sidebar { width: 100% !important; min-width: unset !important; height: auto; position: static; }
 			.topbar { padding: 1em 1.5em; }
 			.page-body { padding: 1.25em; }
 		}
@@ -313,8 +308,8 @@
 
 <div class="app-layout">
 
-	<!-- ════ SIDEBAR ════ -->
-	<aside class="sidebar">
+	<!-- SIDEBAR -->
+	<aside class="sidebar" id="sidebar">
 		<div class="sidebar-brand">
 			<h1>Cloud Group 5</h1>
 			<span>Panel de administración</span>
@@ -322,31 +317,28 @@
 		<div class="sidebar-section-label">Menú principal</div>
 		<ul class="sidebar-nav">
 			<li class="active">
-				<a href="cursos.html">
-					<i class="fas fa-book-open"></i>
-					Cursos
-				</a>
+				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
 			</li>
 			<li>
-				<a href="#">
-					<i class="fas fa-chart-bar"></i>
-					Dashboards
-				</a>
+				<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
 			</li>
 			<li>
-				<a href="#">
-					<i class="fas fa-users-cog"></i>
-					Gestión de usuarios
-				</a>
+				<a href="#"><i class="fas fa-chart-bar"></i> Dashboards</a>
+			</li>
+			<li>
+				<a href="#"><i class="fas fa-users-cog"></i> Gestión de usuarios</a>
 			</li>
 		</ul>
 		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
 	</aside>
 
-	<!-- ════ MAIN CONTENT ════ -->
+	<!-- CONTENIDO PRINCIPAL -->
 	<div class="main-content">
 
 		<header class="topbar">
+			<button class="btn-sidebar-toggle" id="sidebarToggle" title="Mostrar / ocultar menú">
+				<i class="fas fa-bars"></i>
+			</button>
 			<nav class="topbar-breadcrumb">
 				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
 				<span class="sep"><i class="fas fa-chevron-right"></i></span>
@@ -392,22 +384,19 @@
 </div>
 
 <script>
-/* ── URL params ── */
 const params    = new URLSearchParams(window.location.search);
 const courseId  = params.get('id')     || 'TEL000';
 const courseNom = decodeURIComponent(params.get('nombre') || 'Curso');
 
-/* ── Populate headings ── */
 document.title = `Slices — ${courseNom}`;
 document.getElementById('bc-curso').textContent   = courseNom;
 document.getElementById('badge-id').textContent   = courseId;
 document.getElementById('page-title').textContent = `Slices — ${courseNom}`;
 document.getElementById('col-slices').textContent = `Slices — ${courseNom}`;
 
-/* ── Demo slice data ── */
 const NUM_SLICES = 5;
 const INIT_STATES = ['running', 'running', 'stopped', 'off', 'running'];
-const INIT_TIMES  = [5412, 2873, 1440, 0, 9001]; // seconds
+const INIT_TIMES  = [5412, 2873, 1440, 0, 9001];
 
 const slices = Array.from({ length: NUM_SLICES }, (_, i) => ({
 	id:    i + 1,
@@ -416,7 +405,6 @@ const slices = Array.from({ length: NUM_SLICES }, (_, i) => ({
 	secs:  INIT_TIMES[i]
 }));
 
-/* ── Format time ── */
 function fmt(s) {
 	const h = Math.floor(s / 3600);
 	const m = Math.floor((s % 3600) / 60);
@@ -424,7 +412,6 @@ function fmt(s) {
 	return [h, m, sec].map(n => String(n).padStart(2, '0')).join(':');
 }
 
-/* ── Render table ── */
 function renderTable() {
 	const tbody = document.getElementById('slices-tbody');
 	tbody.innerHTML = slices.map(s => `
@@ -463,29 +450,22 @@ function renderTable() {
 	`).join('');
 }
 
-/* ── State change ── */
 function ctrlSlice(id, action) {
 	const s = slices.find(x => x.id === id);
 	if (!s) return;
-
 	s.state = action === 'play' ? 'running' : action === 'stop' ? 'stopped' : 'off';
 	if (s.state === 'off') s.secs = 0;
-
 	const row = document.getElementById('tr-' + id);
-
 	row.querySelector('.btn-play').classList.toggle('on',  s.state === 'running');
 	row.querySelector('.btn-stop').classList.toggle('on',  s.state === 'stopped');
 	row.querySelector('.btn-power').classList.toggle('on', s.state === 'off');
-
-	const dot   = document.getElementById('dot-' + id);
+	const dot = document.getElementById('dot-' + id);
 	dot.className = `status-dot ${s.state}`;
-
 	const timer = document.getElementById('timer-' + id);
 	timer.className = `timer${s.state === 'stopped' ? ' paused' : s.state === 'off' ? ' off' : ''}`;
 	if (s.state === 'off') timer.textContent = '00:00:00';
 }
 
-/* ── Countdown ── */
 function tick() {
 	slices.forEach(s => {
 		if (s.state !== 'running' || s.secs <= 0) return;
@@ -494,6 +474,10 @@ function tick() {
 		if (el) el.textContent = fmt(s.secs);
 	});
 }
+
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+	document.getElementById('sidebar').classList.toggle('collapsed');
+});
 
 renderTable();
 setInterval(tick, 1000);

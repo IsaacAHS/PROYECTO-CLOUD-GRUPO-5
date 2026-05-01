@@ -1,0 +1,457 @@
+<!DOCTYPE HTML>
+<html lang="es">
+<head>
+	<title>Asignar Slice a Curso</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<link rel="stylesheet" href="assets/css/fontawesome-all.min.css" />
+	<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
+	<style>
+
+		*, *::before, *::after { box-sizing: border-box; }
+
+		html, body {
+			height: 100%;
+			margin: 0; padding: 0;
+			background-color: #f5f6f7;
+			font-family: 'Open Sans', sans-serif;
+			color: #7f888f;
+			font-size: 13pt;
+			line-height: 1.65;
+		}
+
+		.app-layout { display: flex; min-height: 100vh; }
+
+		/* ══ SIDEBAR ══ */
+		.sidebar {
+			width: 260px;
+			min-width: 260px;
+			background: #fff;
+			border-right: solid 1px rgba(210,215,217,0.75);
+			display: flex;
+			flex-direction: column;
+			position: sticky;
+			top: 0;
+			height: 100vh;
+			overflow-y: auto;
+			overflow-x: hidden;
+			flex-shrink: 0;
+			transition: width 0.28s ease, min-width 0.28s ease, border-color 0.28s ease;
+		}
+
+		.sidebar.collapsed {
+			width: 0;
+			min-width: 0;
+			border-right-color: transparent;
+			overflow: hidden;
+		}
+
+		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; white-space: nowrap; }
+
+		.sidebar-brand h1 {
+			font-family: 'Roboto Slab', serif;
+			font-weight: 700;
+			font-size: 1.1em;
+			color: #3d4449;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			margin: 0 0 0.2em;
+		}
+
+		.sidebar-brand span { font-size: 0.75em; color: #9fa3a6; display: block; }
+
+		.sidebar-section-label {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.65em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: #9fa3a6;
+			padding: 1.5em 1.75em 0.5em;
+			white-space: nowrap;
+		}
+
+		.sidebar-nav { list-style: none; margin: 0; padding: 0 0 1em; flex: 1; }
+
+		.sidebar-nav li a {
+			display: flex;
+			align-items: center;
+			gap: 0.75em;
+			padding: 0.75em 1.75em;
+			font-size: 0.9em;
+			font-weight: 600;
+			color: #7f888f;
+			text-decoration: none;
+			border-left: solid 3px transparent;
+			white-space: nowrap;
+			transition: color 0.2s, background 0.2s, border-color 0.2s;
+		}
+
+		.sidebar-nav li a i { width: 1.25em; text-align: center; font-size: 0.95em; color: #9fa3a6; transition: color 0.2s; }
+		.sidebar-nav li a:hover { color: #3d4449; background: rgba(245,106,106,0.05); border-left-color: rgba(245,106,106,0.4); }
+		.sidebar-nav li a:hover i { color: #f56a6a; }
+		.sidebar-nav li.active a { color: #f56a6a; background: rgba(245,106,106,0.07); border-left-color: #f56a6a; }
+		.sidebar-nav li.active a i { color: #f56a6a; }
+
+		.sidebar-footer { padding: 1.25em 1.75em; border-top: solid 1px rgba(210,215,217,0.75); font-size: 0.75em; color: #9fa3a6; white-space: nowrap; }
+
+		/* ══ MAIN ══ */
+		.main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+		.topbar {
+			background: #fff;
+			border-bottom: solid 1px rgba(210,215,217,0.75);
+			padding: 1em 2.5em;
+			display: flex;
+			align-items: center;
+			gap: 0.75em;
+		}
+
+		.btn-sidebar-toggle {
+			width: 2.2em; height: 2.2em;
+			border-radius: 0.35em;
+			border: solid 1px rgba(210,215,217,0.75);
+			background: transparent;
+			color: #7f888f;
+			display: flex; align-items: center; justify-content: center;
+			cursor: pointer;
+			flex-shrink: 0;
+			transition: background 0.2s, color 0.2s;
+		}
+		.btn-sidebar-toggle:hover { background: rgba(245,106,106,0.07); color: #f56a6a; }
+
+		.topbar-breadcrumb {
+			display: flex;
+			align-items: center;
+			gap: 0.6em;
+			font-size: 0.82em;
+			flex: 1;
+		}
+		.topbar-breadcrumb a { color: #9fa3a6; text-decoration: none; transition: color 0.2s; }
+		.topbar-breadcrumb a:hover { color: #f56a6a; }
+		.topbar-breadcrumb .sep { color: rgba(210,215,217,0.9); font-size: 0.8em; }
+		.topbar-breadcrumb .current { color: #3d4449; font-weight: 600; }
+
+		.topbar-user { font-size: 0.82em; color: #9fa3a6; white-space: nowrap; }
+		.topbar-user i { color: #f56a6a; margin-right: 0.4em; }
+
+		.page-body { padding: 2.5em; flex: 1; }
+
+		.page-heading { margin-bottom: 2em; }
+
+		.page-heading .label {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.68em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.12em;
+			color: #f56a6a;
+			display: block;
+			margin-bottom: 0.4em;
+		}
+
+		.page-heading h2 {
+			font-family: 'Roboto Slab', serif;
+			font-weight: 700;
+			font-size: 1.6em;
+			color: #3d4449;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			margin: 0;
+		}
+
+		/* Course selection card */
+		.assign-card {
+			background: #fff;
+			border: solid 1px rgba(210,215,217,0.75);
+			border-top: solid 4px #f56a6a;
+			border-radius: 0.375em;
+			max-width: 680px;
+			overflow: hidden;
+		}
+
+		.assign-card-header {
+			padding: 1.25em 1.75em;
+			border-bottom: solid 1px rgba(210,215,217,0.6);
+			background: #f8f9fa;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		.assign-card-header span {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.72em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: #3d4449;
+		}
+
+		.selected-count {
+			background: #f56a6a;
+			color: #fff;
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.72em;
+			font-weight: 700;
+			border-radius: 1em;
+			padding: 0.15em 0.6em;
+			display: none;
+		}
+		.selected-count.visible { display: inline-block; }
+
+		.courses-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		.courses-list li {
+			display: flex;
+			align-items: center;
+			gap: 1em;
+			padding: 1em 1.75em;
+			border-bottom: solid 1px rgba(210,215,217,0.4);
+			cursor: pointer;
+			transition: background 0.15s;
+		}
+		.courses-list li:last-child { border-bottom: none; }
+		.courses-list li:hover { background: rgba(245,106,106,0.03); }
+		.courses-list li.selected { background: rgba(245,106,106,0.05); }
+
+		.course-checkbox {
+			width: 1.3em; height: 1.3em;
+			border-radius: 0.3em;
+			border: solid 2px rgba(210,215,217,0.75);
+			background: #fff;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+			transition: border-color 0.18s, background 0.18s;
+		}
+		.course-checkbox i { font-size: 0.7em; color: #fff; opacity: 0; transition: opacity 0.15s; }
+		.courses-list li.selected .course-checkbox {
+			border-color: #f56a6a;
+			background: #f56a6a;
+		}
+		.courses-list li.selected .course-checkbox i { opacity: 1; }
+
+		.course-info { flex: 1; min-width: 0; }
+
+		.course-code {
+			display: inline-block;
+			background: rgba(245,106,106,0.1);
+			color: #f56a6a;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.72em;
+			font-weight: 700;
+			padding: 0.18em 0.55em;
+			border-radius: 0.25em;
+			margin-right: 0.6em;
+			letter-spacing: 0.04em;
+		}
+
+		.course-nombre {
+			font-family: 'Open Sans', sans-serif;
+			font-size: 0.9em;
+			font-weight: 600;
+			color: #3d4449;
+		}
+
+		/* Footer actions */
+		.assign-footer {
+			padding: 1.5em 0 0;
+			display: flex;
+			align-items: center;
+			gap: 1em;
+			flex-wrap: wrap;
+		}
+
+		.btn-back {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.45em;
+			height: 3.5em;
+			padding: 0 2em;
+			background: transparent;
+			color: #9fa3a6;
+			border: solid 1px rgba(210,215,217,0.75);
+			border-radius: 0.375em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.78em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			cursor: pointer;
+			text-decoration: none;
+			transition: background 0.2s, color 0.2s, border-color 0.2s;
+		}
+		.btn-back:hover { background: rgba(61,68,73,0.05); border-color: #7f888f; color: #3d4449; }
+
+		.btn-lanzar {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5em;
+			height: 3.5em;
+			padding: 0 2.25em;
+			background: #f56a6a;
+			color: #fff;
+			border: none;
+			border-radius: 0.375em;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.78em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.075em;
+			cursor: pointer;
+			transition: background 0.2s, opacity 0.2s;
+		}
+		.btn-lanzar:hover:not(:disabled) { background: #f67878; }
+		.btn-lanzar:disabled { opacity: 0.45; cursor: not-allowed; }
+
+		@media (max-width: 680px) {
+			.app-layout { flex-direction: column; }
+			.sidebar { width: 100% !important; min-width: unset !important; height: auto; position: static; }
+			.topbar { padding: 1em 1.5em; }
+			.page-body { padding: 1.25em; }
+		}
+
+	</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+	<!-- SIDEBAR -->
+	<aside class="sidebar" id="sidebar">
+		<div class="sidebar-brand">
+			<h1>Cloud Group 5</h1>
+			<span>Panel de administración</span>
+		</div>
+		<div class="sidebar-section-label">Menú principal</div>
+		<ul class="sidebar-nav">
+			<li>
+				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
+			</li>
+			<li class="active">
+				<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
+			</li>
+			<li>
+				<a href="#"><i class="fas fa-chart-bar"></i> Dashboards</a>
+			</li>
+			<li>
+				<a href="#"><i class="fas fa-users-cog"></i> Gestión de usuarios</a>
+			</li>
+		</ul>
+		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
+	</aside>
+
+	<!-- CONTENIDO PRINCIPAL -->
+	<div class="main-content">
+
+		<header class="topbar">
+			<button class="btn-sidebar-toggle" id="sidebarToggle" title="Mostrar / ocultar menú">
+				<i class="fas fa-bars"></i>
+			</button>
+			<nav class="topbar-breadcrumb">
+				<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
+				<span class="sep"><i class="fas fa-chevron-right"></i></span>
+				<a href="configurar-slice.html">Configurar Slice</a>
+				<span class="sep"><i class="fas fa-chevron-right"></i></span>
+				<span class="current">Asignar a Curso</span>
+			</nav>
+			<div class="topbar-user">
+				<i class="fas fa-user-circle"></i>
+				Administrador
+			</div>
+		</header>
+
+		<div class="page-body">
+
+			<div class="page-heading">
+				<span class="label">Paso 2</span>
+				<h2>Asignar Slice a Curso</h2>
+			</div>
+
+			<div class="assign-card">
+				<div class="assign-card-header">
+					<span>Selecciona uno o más cursos</span>
+					<span class="selected-count" id="sel-count">0</span>
+				</div>
+				<ul class="courses-list" id="courses-list"></ul>
+			</div>
+
+			<div class="assign-footer">
+				<a href="configurar-slice.html" class="btn-back">
+					<i class="fas fa-arrow-left"></i>
+					Volver
+				</a>
+				<button class="btn-lanzar" id="btn-lanzar" disabled onclick="lanzarSlices()">
+					<i class="fas fa-rocket"></i>
+					Lanzar Slices
+				</button>
+			</div>
+
+		</div>
+	</div>
+
+</div>
+
+<script>
+const CURSOS = [
+	{ id: 'TEL141', nombre: 'Ingeniería de Redes Cloud' },
+	{ id: 'TEL142', nombre: 'Comunicaciones Móviles' },
+	{ id: 'TEL143', nombre: 'Trabajo de Tesis 1' },
+	{ id: 'TEL144', nombre: 'Formulación y Evaluación de Proyectos de Telecomunicaciones' },
+	{ id: 'TEL221', nombre: 'Infraestructura de Redes de Telecomunicaciones' },
+];
+
+const seleccionados = new Set();
+
+function renderCursos() {
+	const ul = document.getElementById('courses-list');
+	ul.innerHTML = CURSOS.map(c => `
+		<li id="li-${c.id}" onclick="toggleCurso('${c.id}')">
+			<div class="course-checkbox"><i class="fas fa-check"></i></div>
+			<div class="course-info">
+				<span class="course-code">${c.id}</span>
+				<span class="course-nombre">${c.nombre}</span>
+			</div>
+		</li>
+	`).join('');
+}
+
+function toggleCurso(id) {
+	const li = document.getElementById('li-' + id);
+	if (seleccionados.has(id)) {
+		seleccionados.delete(id);
+		li.classList.remove('selected');
+	} else {
+		seleccionados.add(id);
+		li.classList.add('selected');
+	}
+	const count = seleccionados.size;
+	const badge = document.getElementById('sel-count');
+	badge.textContent = count;
+	badge.classList.toggle('visible', count > 0);
+	document.getElementById('btn-lanzar').disabled = count === 0;
+}
+
+function lanzarSlices() {
+	if (!seleccionados.size) return;
+	const nombres = CURSOS.filter(c => seleccionados.has(c.id)).map(c => c.nombre).join(', ');
+	alert(`¡Slices lanzados exitosamente!\n\nAsignados a: ${nombres}`);
+	window.location.href = 'slices.html';
+}
+
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+	document.getElementById('sidebar').classList.toggle('collapsed');
+});
+
+renderCursos();
+</script>
+
+</body>
+</html>

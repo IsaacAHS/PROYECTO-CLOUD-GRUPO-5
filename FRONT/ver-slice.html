@@ -397,6 +397,9 @@
 				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
 			</li>
 			<li>
+				<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
+			</li>
+			<li>
 				<a href="#"><i class="fas fa-chart-bar"></i> Dashboards</a>
 			</li>
 			<li>
@@ -693,7 +696,7 @@ document.getElementById('bc-curso-link').href        = detailUrl;
 document.getElementById('bc-slice').textContent      = sliceName;
 document.getElementById('heading-label').textContent = courseNom;
 document.getElementById('page-title').textContent    = sliceName;
-document.getElementById('edit-link').href = `configurar-slice.html?curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}`;
+document.getElementById('edit-link').href = `configurar-slice.html?slice=${sliceId}&curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}`;
 
 /* ── Sidebar toggle ── */
 document.getElementById('sidebarToggle').addEventListener('click', () => {
