@@ -781,7 +781,7 @@
 							Guardar
 						</button>
 					</div>
-					<div style="padding: 0 1.2em 1.2em;">
+					<div id="asignar-wrapper" style="padding: 0 1.2em 1.2em;">
 						<button class="btn-asignar" onclick="openModal()">
 							<i class="fas fa-graduation-cap"></i>
 							Asignar a Curso
@@ -1710,6 +1710,12 @@ const TOPO_COLORS_CUSTOM = Object.assign({}, TOPO_COLORS, { custom: 'rgba(120,12
 			<button onclick="guardarSlice()" class="btn-siguiente"><i class="fas fa-save"></i> Guardar cambios</button>`;
 	} else if (courseId) {
 		footer.querySelector('a.btn-guardar').href = ctxBackUrl;
+	}
+
+	/* ── Hide "Asignar a Curso" when editing a slice that already belongs to a course ── */
+	if (isEdit && courseId) {
+		const aw = document.getElementById('asignar-wrapper');
+		if (aw) aw.style.display = 'none';
 	}
 
 	/* ── Slice name pre-fill in edit mode ── */
