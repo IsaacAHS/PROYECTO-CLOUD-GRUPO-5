@@ -24,7 +24,7 @@
 		.app-layout { display: flex; height: 100vh; overflow: hidden; }
 
 		/* ══ SIDEBAR ══ */
-		.sidebar {
+		#sidebar {
 			width: 260px; min-width: 260px;
 			background: #fff;
 			border-right: solid 1px rgba(210,215,217,0.75);
@@ -33,7 +33,7 @@
 			flex-shrink: 0;
 			transition: width 0.28s ease, min-width 0.28s ease, border-color 0.28s ease;
 		}
-		.sidebar.collapsed { width: 0; min-width: 0; border-right-color: transparent; overflow: hidden; }
+		#sidebar.collapsed { width: 0; min-width: 0; border-right-color: transparent; overflow: hidden; }
 
 		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; white-space: nowrap; }
 		.sidebar-brand h1 { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 1.1em; color: #3d4449; text-transform: uppercase; letter-spacing: 0.075em; margin: 0 0 0.2em; }
