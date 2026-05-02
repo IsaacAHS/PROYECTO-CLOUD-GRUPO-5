@@ -1,0 +1,665 @@
+<!DOCTYPE HTML>
+<html lang="es">
+<head>
+	<title>Dashboards</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<link rel="stylesheet" href="assets/css/fontawesome-all.min.css" />
+	<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+	<style>
+		*, *::before, *::after { box-sizing: border-box; }
+
+		html, body {
+			height: 100%;
+			margin: 0; padding: 0;
+			overflow: hidden;
+			background: #f5f6f7;
+			font-family: 'Open Sans', sans-serif;
+			color: #7f888f;
+			font-size: 13pt;
+			line-height: 1.65;
+		}
+
+		.app-layout { display: flex; height: 100vh; overflow: hidden; }
+
+		/* ══ SIDEBAR ══ */
+		#sidebar {
+			width: 260px; min-width: 260px;
+			background: #fff;
+			border-right: solid 1px rgba(210,215,217,0.75);
+			display: flex; flex-direction: column;
+			height: 100vh; overflow-y: auto; overflow-x: hidden;
+			flex-shrink: 0;
+			transition: width 0.28s ease, min-width 0.28s ease, border-color 0.28s ease;
+		}
+		#sidebar.collapsed { width: 0; min-width: 0; border-right-color: transparent; overflow: hidden; }
+
+		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; white-space: nowrap; }
+		.sidebar-brand h1 { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 1.1em; color: #3d4449; text-transform: uppercase; letter-spacing: 0.075em; margin: 0 0 0.2em; }
+		.sidebar-brand span { font-size: 0.75em; color: #9fa3a6; display: block; }
+
+		.sidebar-section-label { font-family: 'Roboto Slab', serif; font-size: 0.65em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #9fa3a6; padding: 1.5em 1.75em 0.5em; white-space: nowrap; }
+
+		.sidebar-nav { list-style: none; margin: 0; padding: 0 0 1em; flex: 1; }
+		.sidebar-nav li a { display: flex; align-items: center; gap: 0.75em; padding: 0.75em 1.75em; font-size: 0.9em; font-weight: 600; color: #7f888f; text-decoration: none; border-left: solid 3px transparent; white-space: nowrap; transition: color 0.2s, background 0.2s, border-color 0.2s; }
+		.sidebar-nav li a i { width: 1.25em; text-align: center; font-size: 0.95em; color: #9fa3a6; transition: color 0.2s; }
+		.sidebar-nav li a:hover { color: #3d4449; background: rgba(245,106,106,0.05); border-left-color: rgba(245,106,106,0.4); }
+		.sidebar-nav li a:hover i { color: #f56a6a; }
+		.sidebar-nav li.active a { color: #f56a6a; background: rgba(245,106,106,0.07); border-left-color: #f56a6a; }
+		.sidebar-nav li.active a i { color: #f56a6a; }
+
+		.sidebar-footer { padding: 1.25em 1.75em; border-top: solid 1px rgba(210,215,217,0.75); font-size: 0.75em; color: #9fa3a6; white-space: nowrap; }
+
+		/* ══ MAIN ══ */
+		.main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden; }
+
+		.topbar { background: #fff; border-bottom: solid 1px rgba(210,215,217,0.75); padding: 0.9em 1.75em; display: flex; align-items: center; gap: 1em; flex-shrink: 0; }
+		.btn-sidebar-toggle { width: 2.2em; height: 2.2em; border-radius: 0.35em; border: solid 1px rgba(210,215,217,0.75); background: transparent; color: #7f888f; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background 0.2s, color 0.2s; }
+		.btn-sidebar-toggle:hover { background: rgba(245,106,106,0.07); color: #f56a6a; }
+		.topbar-title { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 1.1em; color: #3d4449; text-transform: uppercase; letter-spacing: 0.075em; margin: 0; flex: 1; }
+		.topbar-user { font-size: 0.82em; color: #9fa3a6; white-space: nowrap; }
+		.topbar-user i { color: #f56a6a; margin-right: 0.4em; }
+
+		/* ══ PAGE BODY ══ */
+		.page-body { flex: 1; overflow-y: auto; padding: 2em 2em 2.5em; }
+
+		/* ══ DASHBOARD HEADER ══ */
+		.dash-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 1.75em; flex-wrap: wrap; gap: 0.75em; }
+		.dash-header h2 { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 1.4em; color: #3d4449; margin: 0 0 0.2em; }
+		.dash-header p { font-size: 0.85em; color: #9fa3a6; margin: 0; }
+		.dash-live { display: flex; align-items: center; gap: 0.55em; font-size: 0.75em; color: #9fa3a6; flex-shrink: 0; }
+		.dash-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #6acf6e; box-shadow: 0 0 0 2px rgba(106,207,110,0.25); animation: pulse-dot 2.2s ease-in-out infinite; flex-shrink: 0; }
+		@keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 2px rgba(106,207,110,0.25); } 50% { box-shadow: 0 0 0 5px rgba(106,207,110,0.08); } }
+
+		/* ══ GRID ══ */
+		.dash-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 1.25em;
+		}
+
+		/* ══ CHART CARD ══ */
+		.chart-card {
+			background: #fff;
+			border: solid 1px rgba(210,215,217,0.75);
+			border-radius: 0.5em;
+			padding: 1.35em 1.5em 1.25em;
+			display: flex;
+			flex-direction: column;
+		}
+		.card-title { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.08em; color: #3d4449; margin: 0; }
+		.card-sub   { font-size: 0.72em; color: #9fa3a6; margin: 0.2em 0 1.1em; }
+
+		/* ══ GAUGE ══ */
+		.gauge-wrap {
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex: 1;
+			padding: 0.5em 0;
+		}
+		.gauge-wrap canvas { max-width: 175px; max-height: 175px; }
+		.gauge-center {
+			position: absolute;
+			top: 50%; left: 50%;
+			transform: translate(-50%, -50%);
+			text-align: center;
+			pointer-events: none;
+		}
+		.gauge-val { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 1.45em; color: #3d4449; display: block; line-height: 1.1; }
+		.gauge-lbl { font-size: 0.6em; color: #9fa3a6; text-transform: uppercase; letter-spacing: 0.07em; display: block; margin-top: 0.25em; }
+
+		/* ══ CHART AREA ══ */
+		.chart-area { position: relative; flex: 1; min-height: 0; }
+
+		/* ══ SPANS ══ */
+		.span-2 { grid-column: span 2; }
+		.span-3 { grid-column: span 3; }
+
+		/* ══ RESPONSIVE ══ */
+		@media (max-width: 1150px) {
+			.dash-grid { grid-template-columns: repeat(2, 1fr); }
+			.span-3 { grid-column: span 2; }
+		}
+		@media (max-width: 760px) {
+			.dash-grid { grid-template-columns: 1fr; }
+			.span-2, .span-3 { grid-column: span 1; }
+		}
+		@media (max-width: 680px) {
+			.app-layout { flex-direction: column; height: auto; overflow: auto; }
+			.sidebar { width: 100% !important; min-width: unset !important; height: auto; overflow: visible; }
+			.main-content { overflow: visible; }
+			.page-body { overflow: auto; padding: 1.25em; }
+		}
+	</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+	<!-- SIDEBAR -->
+	<aside id="sidebar">
+		<div class="sidebar-brand">
+			<h1>Cloud Group 5</h1>
+			<span>Panel de administración</span>
+		</div>
+		<div class="sidebar-section-label">Menú principal</div>
+		<ul class="sidebar-nav">
+			<li>
+				<a href="cursos.html"><i class="fas fa-book-open"></i> Cursos</a>
+			</li>
+			<li>
+				<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
+			</li>
+			<li class="active">
+				<a href="dashboards.html"><i class="fas fa-chart-bar"></i> Dashboards</a>
+			</li>
+			<li>
+				<a href="#"><i class="fas fa-users-cog"></i> Gestión de usuarios</a>
+			</li>
+		</ul>
+		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
+	</aside>
+
+	<!-- MAIN CONTENT -->
+	<div class="main-content">
+
+		<header class="topbar">
+			<button class="btn-sidebar-toggle" id="sidebarToggle" title="Mostrar / ocultar menú">
+				<i class="fas fa-bars"></i>
+			</button>
+			<h2 class="topbar-title">Dashboards</h2>
+			<span class="topbar-user">
+				<i class="fas fa-user-circle"></i>
+				Administrador
+			</span>
+		</header>
+
+		<div class="page-body">
+
+			<div class="dash-header">
+				<div>
+					<h2>Monitoreo de Infraestructura</h2>
+					<p>Estado en tiempo real de los recursos cloud.</p>
+				</div>
+				<div class="dash-live">
+					<span class="dash-live-dot"></span>
+					<span id="last-update">En vivo</span>
+				</div>
+			</div>
+
+			<div class="dash-grid">
+
+				<!-- ── Fila 1: Gauges ── -->
+				<div class="chart-card">
+					<p class="card-title">Clusters Online</p>
+					<p class="card-sub">Estado actual de clústeres</p>
+					<div class="gauge-wrap">
+						<canvas id="chart-clusters"></canvas>
+						<div class="gauge-center">
+							<span class="gauge-val" id="val-clusters">11</span>
+							<span class="gauge-lbl">de 14 online</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="chart-card">
+					<p class="card-title">CPU Disponible</p>
+					<p class="card-sub">Capacidad libre en todos los nodos</p>
+					<div class="gauge-wrap">
+						<canvas id="chart-cpu"></canvas>
+						<div class="gauge-center">
+							<span class="gauge-val" id="val-cpu">63%</span>
+							<span class="gauge-lbl">libre</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="chart-card">
+					<p class="card-title">RAM Disponible</p>
+					<p class="card-sub">Memoria libre en todos los nodos</p>
+					<div class="gauge-wrap">
+						<canvas id="chart-ram"></canvas>
+						<div class="gauge-center">
+							<span class="gauge-val" id="val-ram">71%</span>
+							<span class="gauge-lbl">libre</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- ── Fila 2: Solicitudes + Distribución de Slices ── -->
+				<div class="chart-card span-2">
+					<p class="card-title">Solicitudes</p>
+					<p class="card-sub">Solicitudes procesadas en las últimas 24 horas</p>
+					<div class="chart-area" style="height:220px">
+						<canvas id="chart-solicitudes"></canvas>
+					</div>
+				</div>
+
+				<div class="chart-card">
+					<p class="card-title">Distribución de Slices</p>
+					<p class="card-sub">Por tipo de topología</p>
+					<div class="gauge-wrap" style="min-height:220px">
+						<canvas id="chart-slices"></canvas>
+					</div>
+				</div>
+
+				<!-- ── Fila 3: Tráfico Gateway (ancho completo) ── -->
+				<div class="chart-card span-3">
+					<p class="card-title">Tráfico Gateway</p>
+					<p class="card-sub">Tráfico entrante y saliente — Mbps</p>
+					<div class="chart-area" style="height:195px">
+						<canvas id="chart-gateway"></canvas>
+					</div>
+				</div>
+
+				<!-- ── Fila 4: Cluster Linux + Cluster OpenStack + Carga por Servidor ── -->
+				<div class="chart-card">
+					<p class="card-title">Cluster Linux</p>
+					<p class="card-sub">Nodos activos por distribución</p>
+					<div class="chart-area" style="height:215px">
+						<canvas id="chart-linux"></canvas>
+					</div>
+				</div>
+
+				<div class="chart-card">
+					<p class="card-title">Cluster OpenStack</p>
+					<p class="card-sub">Recursos activos por servicio</p>
+					<div class="chart-area" style="height:215px">
+						<canvas id="chart-openstack"></canvas>
+					</div>
+				</div>
+
+				<div class="chart-card">
+					<p class="card-title">Carga por Servidor</p>
+					<p class="card-sub">Uso de CPU por nodo</p>
+					<div class="chart-area" style="height:215px">
+						<canvas id="chart-carga"></canvas>
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+/* ── Chart.js defaults ── */
+Chart.defaults.font.family = "'Open Sans', sans-serif";
+Chart.defaults.color = '#9fa3a6';
+
+const C_RED    = '#f56a6a';
+const C_BLUE   = '#4a9fd5';
+const C_GREEN  = '#6acf6e';
+const C_ORANGE = '#f5c06a';
+const C_PURPLE = '#9b59b6';
+const C_GRAY   = '#e8eaec';
+
+/* ════════════════════════════════════════
+   1. CLUSTERS ONLINE — donut gauge
+════════════════════════════════════════ */
+const chartClusters = new Chart(document.getElementById('chart-clusters'), {
+	type: 'doughnut',
+	data: {
+		labels: ['Online', 'Offline'],
+		datasets: [{ data: [11, 3], backgroundColor: [C_GREEN, C_GRAY], borderWidth: 0 }]
+	},
+	options: {
+		cutout: '74%',
+		plugins: {
+			legend: { display: false },
+			tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } }
+		},
+		animation: { duration: 700 },
+	}
+});
+
+/* ════════════════════════════════════════
+   2. CPU DISPONIBLE — donut gauge
+════════════════════════════════════════ */
+const cpuData = [63, 37];
+const chartCpu = new Chart(document.getElementById('chart-cpu'), {
+	type: 'doughnut',
+	data: {
+		labels: ['Libre', 'En uso'],
+		datasets: [{ data: cpuData, backgroundColor: [C_BLUE, C_GRAY], borderWidth: 0 }]
+	},
+	options: {
+		cutout: '74%',
+		plugins: {
+			legend: { display: false },
+			tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` } }
+		},
+		animation: { duration: 700 },
+	}
+});
+
+/* ════════════════════════════════════════
+   3. RAM DISPONIBLE — donut gauge
+════════════════════════════════════════ */
+const ramData = [71, 29];
+const chartRam = new Chart(document.getElementById('chart-ram'), {
+	type: 'doughnut',
+	data: {
+		labels: ['Libre', 'En uso'],
+		datasets: [{ data: ramData, backgroundColor: [C_PURPLE, C_GRAY], borderWidth: 0 }]
+	},
+	options: {
+		cutout: '74%',
+		plugins: {
+			legend: { display: false },
+			tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` } }
+		},
+		animation: { duration: 700 },
+	}
+});
+
+/* ════════════════════════════════════════
+   4. SOLICITUDES — área line chart (24 h)
+════════════════════════════════════════ */
+const hours24 = Array.from({ length: 25 }, (_, i) => `${String(i).padStart(2,'0')}:00`);
+const solicData = [42,38,31,29,27,33,56,88,124,98,112,135,148,131,142,156,168,152,138,121,98,84,67,54,48];
+
+const chartSolic = new Chart(document.getElementById('chart-solicitudes'), {
+	type: 'line',
+	data: {
+		labels: hours24,
+		datasets: [{
+			label: 'Solicitudes',
+			data: [...solicData],
+			fill: true,
+			borderColor: C_RED,
+			backgroundColor: 'rgba(245,106,106,0.1)',
+			tension: 0.4,
+			pointRadius: 0,
+			pointHoverRadius: 5,
+			borderWidth: 2,
+		}]
+	},
+	options: {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: { legend: { display: false } },
+		scales: {
+			x: {
+				border: { display: false },
+				grid: { display: false },
+				ticks: { color: '#9fa3a6', font: { size: 10 }, maxTicksLimit: 13 }
+			},
+			y: {
+				border: { display: false },
+				grid: { color: 'rgba(210,215,217,0.45)' },
+				ticks: { color: '#9fa3a6', font: { size: 10 } },
+				beginAtZero: true,
+			}
+		}
+	}
+});
+
+/* ════════════════════════════════════════
+   5. DISTRIBUCIÓN DE SLICES — donut
+════════════════════════════════════════ */
+new Chart(document.getElementById('chart-slices'), {
+	type: 'doughnut',
+	data: {
+		labels: ['Lineal', 'Árbol', 'Estrella', 'Anillo', 'Personalizada'],
+		datasets: [{
+			data: [8, 6, 4, 3, 2],
+			backgroundColor: [C_RED, C_BLUE, C_GREEN, C_ORANGE, C_PURPLE],
+			borderWidth: 2,
+			borderColor: '#fff',
+		}]
+	},
+	options: {
+		cutout: '50%',
+		plugins: {
+			legend: {
+				position: 'bottom',
+				labels: { font: { size: 10 }, color: '#7f888f', padding: 10, boxWidth: 11, usePointStyle: true }
+			}
+		},
+		animation: { duration: 700 },
+	}
+});
+
+/* ════════════════════════════════════════
+   6. TRÁFICO GATEWAY — area line (24 h)
+════════════════════════════════════════ */
+const gwIn  = [12,10,8,7,9,15,28,45,62,55,68,72,80,75,78,84,91,85,78,68,55,42,32,22,15];
+const gwOut = [8,7,5,5,6,10,18,32,48,41,52,58,64,60,62,68,74,70,62,54,44,35,26,18,12];
+
+const chartGW = new Chart(document.getElementById('chart-gateway'), {
+	type: 'line',
+	data: {
+		labels: [...hours24],
+		datasets: [
+			{
+				label: 'Entrante',
+				data: [...gwIn],
+				fill: true,
+				borderColor: C_BLUE,
+				backgroundColor: 'rgba(74,159,213,0.1)',
+				tension: 0.4, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2,
+			},
+			{
+				label: 'Saliente',
+				data: [...gwOut],
+				fill: true,
+				borderColor: C_RED,
+				backgroundColor: 'rgba(245,106,106,0.07)',
+				tension: 0.4, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2,
+			}
+		]
+	},
+	options: {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			legend: {
+				position: 'top', align: 'end',
+				labels: { font: { size: 11 }, color: '#7f888f', padding: 16, boxWidth: 12, usePointStyle: true }
+			}
+		},
+		scales: {
+			x: {
+				border: { display: false },
+				grid: { display: false },
+				ticks: { color: '#9fa3a6', font: { size: 10 }, maxTicksLimit: 13 }
+			},
+			y: {
+				border: { display: false },
+				grid: { color: 'rgba(210,215,217,0.45)' },
+				ticks: { color: '#9fa3a6', font: { size: 10 }, callback: v => v + ' Mbps' },
+				beginAtZero: true,
+			}
+		}
+	}
+});
+
+/* ════════════════════════════════════════
+   7. CLUSTER LINUX — bar chart
+════════════════════════════════════════ */
+new Chart(document.getElementById('chart-linux'), {
+	type: 'bar',
+	data: {
+		labels: ['Ubuntu 22.04', 'Ubuntu 20.04', 'Debian 12', 'CentOS 9', 'Fedora 38'],
+		datasets: [{
+			label: 'Nodos',
+			data: [8, 5, 4, 3, 2],
+			backgroundColor: [
+				'rgba(245,106,106,0.85)',
+				'rgba(245,106,106,0.65)',
+				'rgba(245,106,106,0.45)',
+				'rgba(245,106,106,0.28)',
+				'rgba(245,106,106,0.14)',
+			],
+			borderColor: 'rgba(245,106,106,0.4)',
+			borderWidth: 1,
+			borderRadius: 4,
+		}]
+	},
+	options: {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: { legend: { display: false } },
+		scales: {
+			x: {
+				border: { display: false },
+				grid: { display: false },
+				ticks: { color: '#9fa3a6', font: { size: 9 } }
+			},
+			y: {
+				border: { display: false },
+				grid: { color: 'rgba(210,215,217,0.45)' },
+				ticks: { color: '#9fa3a6', font: { size: 10 }, stepSize: 2 },
+				beginAtZero: true,
+			}
+		}
+	}
+});
+
+/* ════════════════════════════════════════
+   8. CLUSTER OPENSTACK — bar chart
+════════════════════════════════════════ */
+new Chart(document.getElementById('chart-openstack'), {
+	type: 'bar',
+	data: {
+		labels: ['Nova', 'Cinder', 'Neutron', 'Keystone', 'Glance'],
+		datasets: [{
+			label: 'Recursos',
+			data: [24, 18, 12, 9, 6],
+			backgroundColor: [
+				'rgba(74,159,213,0.85)',
+				'rgba(74,159,213,0.65)',
+				'rgba(74,159,213,0.45)',
+				'rgba(74,159,213,0.28)',
+				'rgba(74,159,213,0.14)',
+			],
+			borderColor: 'rgba(74,159,213,0.4)',
+			borderWidth: 1,
+			borderRadius: 4,
+		}]
+	},
+	options: {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: { legend: { display: false } },
+		scales: {
+			x: {
+				border: { display: false },
+				grid: { display: false },
+				ticks: { color: '#9fa3a6', font: { size: 10 } }
+			},
+			y: {
+				border: { display: false },
+				grid: { color: 'rgba(210,215,217,0.45)' },
+				ticks: { color: '#9fa3a6', font: { size: 10 }, stepSize: 6 },
+				beginAtZero: true,
+			}
+		}
+	}
+});
+
+/* ════════════════════════════════════════
+   9. CARGA POR SERVIDOR — horizontal bar
+════════════════════════════════════════ */
+const loadVals = [78, 45, 92, 31, 67, 55];
+new Chart(document.getElementById('chart-carga'), {
+	type: 'bar',
+	data: {
+		labels: ['srv-node-01', 'srv-node-02', 'srv-node-03', 'srv-node-04', 'srv-node-05', 'srv-node-06'],
+		datasets: [{
+			label: 'CPU %',
+			data: loadVals,
+			backgroundColor: loadVals.map(v =>
+				v >= 85 ? 'rgba(245,106,106,0.85)' :
+				v >= 60 ? 'rgba(245,192,106,0.82)'  :
+				          'rgba(106,207,110,0.78)'
+			),
+			borderWidth: 0,
+			borderRadius: 3,
+		}]
+	},
+	options: {
+		indexAxis: 'y',
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: { legend: { display: false } },
+		scales: {
+			x: {
+				border: { display: false },
+				grid: { color: 'rgba(210,215,217,0.45)' },
+				ticks: { color: '#9fa3a6', font: { size: 10 }, callback: v => v + '%' },
+				max: 100, beginAtZero: true,
+			},
+			y: {
+				border: { display: false },
+				grid: { display: false },
+				ticks: { color: '#9fa3a6', font: { size: 10 } }
+			},
+		}
+	}
+});
+
+/* ════════════════════════════════════════
+   SIDEBAR TOGGLE
+════════════════════════════════════════ */
+(function () {
+	const sidebar = document.getElementById('sidebar');
+	if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
+	document.getElementById('sidebarToggle').addEventListener('click', () => {
+		sidebar.classList.toggle('collapsed');
+		localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+	});
+})();
+
+/* ════════════════════════════════════════
+   SIMULACIÓN DE DATOS EN VIVO
+════════════════════════════════════════ */
+let liveTick = 0;
+
+function liveUpdate() {
+	liveTick++;
+
+	/* Solicitudes: desplazar buffer y añadir nuevo valor */
+	const lastSolic = chartSolic.data.datasets[0].data.at(-1);
+	const newSolic  = Math.max(10, Math.min(200, Math.round(lastSolic + (Math.random() - 0.47) * 20)));
+	chartSolic.data.datasets[0].data.shift();
+	chartSolic.data.datasets[0].data.push(newSolic);
+	chartSolic.update('none');
+
+	/* Tráfico Gateway */
+	const newIn  = Math.max(0,  Math.min(120, Math.round(chartGW.data.datasets[0].data.at(-1) + (Math.random() - 0.48) * 12)));
+	const newOut = Math.max(0,  Math.min(100, Math.round(chartGW.data.datasets[1].data.at(-1) + (Math.random() - 0.48) * 10)));
+	chartGW.data.datasets[0].data.shift(); chartGW.data.datasets[0].data.push(newIn);
+	chartGW.data.datasets[1].data.shift(); chartGW.data.datasets[1].data.push(newOut);
+	chartGW.update('none');
+
+	/* CPU y RAM cada 3 ticks */
+	if (liveTick % 3 === 0) {
+		const cpuFree = Math.max(10, Math.min(90, Math.round(chartCpu.data.datasets[0].data[0] + (Math.random() - 0.5) * 5)));
+		chartCpu.data.datasets[0].data = [cpuFree, 100 - cpuFree];
+		chartCpu.update();
+		document.getElementById('val-cpu').textContent = cpuFree + '%';
+
+		const ramFree = Math.max(10, Math.min(90, Math.round(chartRam.data.datasets[0].data[0] + (Math.random() - 0.5) * 4)));
+		chartRam.data.datasets[0].data = [ramFree, 100 - ramFree];
+		chartRam.update();
+		document.getElementById('val-ram').textContent = ramFree + '%';
+	}
+
+	/* Timestamp */
+	const secs = liveTick * 3;
+	document.getElementById('last-update').textContent =
+		secs < 60 ? `Actualizado hace ${secs}s` : 'Actualizado recientemente';
+	if (secs >= 60) liveTick = 0;
+}
+
+setInterval(liveUpdate, 3000);
+</script>
+
+</body>
+</html>
