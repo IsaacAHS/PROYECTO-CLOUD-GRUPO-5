@@ -35,6 +35,8 @@
 		}
 		#sidebar.collapsed { width: 0; min-width: 0; border-right-color: transparent; overflow: hidden; }
 
+		.sidebar-backdrop { display: none; }
+
 		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; white-space: nowrap; }
 		.sidebar-brand h1 { font-family: 'Roboto Slab', serif; font-weight: 700; font-size: 1.1em; color: #3d4449; text-transform: uppercase; letter-spacing: 0.075em; margin: 0 0 0.2em; }
 		.sidebar-brand span { font-size: 0.75em; color: #9fa3a6; display: block; }
@@ -211,6 +213,45 @@
 
 		@media (max-width: 1100px) { .config-panel { width: 295px; min-width: 270px; } }
 		@media (max-width: 820px) { .slice-workspace { flex-direction: column; overflow-y: auto; } .config-panel { width: 100%; min-width: unset; max-height: 520px; } .topology-canvas { min-height: 380px; flex: unset; height: 380px; } }
+		@media (max-width: 1024px) {
+			.app-layout { height: 100vh; overflow: hidden; }
+			#sidebar {
+				position: fixed;
+				inset: 3.95em auto 0 0;
+				z-index: 1000;
+				width: 260px;
+				min-width: 260px;
+				max-width: 85vw;
+				height: calc(100vh - 3.95em);
+				transform: translateX(0);
+				box-shadow: 0.5rem 0 1.5rem rgba(0,0,0,0.16);
+				transition: transform 0.28s ease, border-color 0.28s ease;
+			}
+			#sidebar.collapsed {
+				width: 260px;
+				min-width: 260px;
+				transform: translateX(-100%);
+				border-right-color: transparent;
+				box-shadow: none;
+			}
+			.sidebar-backdrop {
+				display: block;
+				position: fixed;
+				inset: 3.95em 0 0 0;
+				z-index: 999;
+				background: rgba(61,68,73,0.35);
+				opacity: 0;
+				pointer-events: none;
+				transition: opacity 0.28s ease;
+			}
+			.sidebar-backdrop.visible {
+				opacity: 1;
+				pointer-events: auto;
+			}
+			.main-content { width: 100%; height: 100vh; overflow: hidden; }
+			.page-body { overflow: auto; padding: 1.25em; }
+			.topbar { position: relative; z-index: 1001; padding: 1em 1.5em; }
+		}
 	</style>
 </head>
 <body>
@@ -240,6 +281,8 @@
 		</ul>
 		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
 	</aside>
+
+	<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
 	<!-- ════ MAIN ════ -->
 	<div class="main-content">
@@ -759,12 +802,29 @@ document.addEventListener('keydown', e => {
 
 (function() {
 	const sidebar = document.getElementById('sidebar');
-	if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
-	document.getElementById('sidebarToggle').addEventListener('click', () => {
+	const toggle = document.getElementById('sidebarToggle');
+	const mobileQuery = window.matchMedia('(max-width: 1024px)');
+
+	function syncSidebar() {
+		if (mobileQuery.matches) {
+			sidebar.classList.add('collapsed');
+			return;
+		}
+		sidebar.classList.toggle('collapsed', localStorage.getItem('sidebarCollapsed') === 'true');
+		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+	}
+
+	syncSidebar();
+	toggle.addEventListener('click', () => {
 		sidebar.classList.toggle('collapsed');
-		localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+		if (!mobileQuery.matches) {
+			localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+		}
 		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
 	});
+
+	if (mobileQuery.addEventListener) mobileQuery.addEventListener('change', syncSidebar);
+	else mobileQuery.addListener(syncSidebar);
 })();
 
 window.addEventListener('resize', () => { if (nodes.length) drawEdges(); });
