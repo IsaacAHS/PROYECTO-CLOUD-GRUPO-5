@@ -46,6 +46,8 @@
 			overflow: hidden;
 		}
 
+		.sidebar-backdrop { display: none; }
+
 		.sidebar-brand { padding: 2em 1.75em 1.5em; border-bottom: solid 4px #f56a6a; white-space: nowrap; }
 
 		.sidebar-brand h1 {
@@ -261,12 +263,44 @@
 		.table-empty i { display: block; font-size: 2.8em; margin-bottom: 0.5em; color: rgba(210,215,217,0.85); }
 
 		@media (max-width: 900px) { .page-body { padding: 1.5em; } }
-		@media (max-width: 680px) {
-			.app-layout { flex-direction: column; height: auto; overflow: auto; }
-			.sidebar { width: 100% !important; min-width: unset !important; height: auto; overflow: visible; }
-			.main-content { overflow: visible; }
+		@media (max-width: 1024px) {
+			.app-layout { height: 100vh; overflow: hidden; }
+			#sidebar {
+				position: fixed;
+				inset: 3.95em auto 0 0;
+				z-index: 1000;
+				width: 260px;
+				min-width: 260px;
+				max-width: 85vw;
+				height: calc(100vh - 3.95em);
+				transform: translateX(0);
+				box-shadow: 0.5rem 0 1.5rem rgba(0,0,0,0.16);
+				transition: transform 0.28s ease, border-color 0.28s ease;
+			}
+			#sidebar.collapsed {
+				width: 260px;
+				min-width: 260px;
+				transform: translateX(-100%);
+				border-right-color: transparent;
+				box-shadow: none;
+			}
+			.sidebar-backdrop {
+				display: block;
+				position: fixed;
+				inset: 3.95em 0 0 0;
+				z-index: 999;
+				background: rgba(61,68,73,0.35);
+				opacity: 0;
+				pointer-events: none;
+				transition: opacity 0.28s ease;
+			}
+			.sidebar-backdrop.visible {
+				opacity: 1;
+				pointer-events: auto;
+			}
+			.main-content { width: 100%; height: 100vh; overflow: hidden; }
 			.page-body { overflow: auto; padding: 1.25em; }
-			.topbar { padding: 1em 1.5em; }
+			.topbar { position: relative; z-index: 1001; padding: 1em 1.5em; }
 		}
 
 	</style>
@@ -298,6 +332,8 @@
 		</ul>
 		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
 	</aside>
+
+	<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
 	<!-- CONTENIDO PRINCIPAL -->
 	<div class="main-content">
@@ -388,11 +424,43 @@ function renderTable() {
 
 (function() {
 	const sidebar = document.getElementById('sidebar');
-	if (localStorage.getItem('sidebarCollapsed') === 'true') sidebar.classList.add('collapsed');
-	document.getElementById('sidebarToggle').addEventListener('click', () => {
-		sidebar.classList.toggle('collapsed');
-		localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+	const toggle = document.getElementById('sidebarToggle');
+	const backdrop = document.getElementById('sidebarBackdrop');
+	const mobileQuery = window.matchMedia('(max-width: 1024px)');
+
+	function setSidebarOpen(open) {
+		sidebar.classList.toggle('collapsed', !open);
+		backdrop.classList.toggle('visible', mobileQuery.matches && open);
+	}
+
+	function closeMobileSidebar() {
+		if (mobileQuery.matches) setSidebarOpen(false);
+	}
+
+	function syncSidebar() {
+		if (mobileQuery.matches) {
+			setSidebarOpen(false);
+			return;
+		}
+		sidebar.classList.toggle('collapsed', localStorage.getItem('sidebarCollapsed') === 'true');
+		backdrop.classList.remove('visible');
+	}
+
+	syncSidebar();
+	toggle.addEventListener('click', () => {
+		const shouldOpen = sidebar.classList.contains('collapsed');
+		setSidebarOpen(shouldOpen);
+		if (!mobileQuery.matches) {
+			localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+		}
 	});
+	backdrop.addEventListener('click', closeMobileSidebar);
+	document.addEventListener('keydown', e => {
+		if (e.key === 'Escape') closeMobileSidebar();
+	});
+
+	if (mobileQuery.addEventListener) mobileQuery.addEventListener('change', syncSidebar);
+	else mobileQuery.addListener(syncSidebar);
 })();
 
 renderTable();
