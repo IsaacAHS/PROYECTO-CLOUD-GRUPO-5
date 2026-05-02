@@ -222,6 +222,19 @@
 		}
 		.vm-node-label i { color: #f56a6a; }
 
+		.btn-rename-node {
+			width: 1.7em; height: 1.7em;
+			border-radius: 0.35em;
+			border: solid 1px rgba(210,215,217,0.75);
+			background: transparent;
+			color: #9fa3a6;
+			display: inline-flex; align-items: center; justify-content: center;
+			font-size: 0.72em;
+			cursor: pointer;
+			transition: background 0.18s, color 0.18s, border-color 0.18s;
+		}
+		.btn-rename-node:hover { background: rgba(245,106,106,0.1); border-color: #f56a6a; color: #f56a6a; }
+
 		.btn-deselect {
 			width: 1.6em; height: 1.6em;
 			border-radius: 50%;
@@ -258,7 +271,9 @@
 			padding: 0; margin: 0; display: flex; align-items: center; justify-content: center;
 		}
 		.img-tab:first-child { border-right: solid 1px rgba(210,215,217,0.75); }
-		.img-tab.active { background: rgba(245,106,106,0.08); color: #f56a6a; }
+		.img-tabs .img-tab.active { background: #f56a6a; color: #fff !important; }
+		.img-tabs .img-tab.active:hover,
+		.img-tabs .img-tab.active:focus { background: #f67878; color: #fff !important; }
 		.img-tab:hover:not(.active) { background: rgba(245,106,106,0.04); }
 
 		.img-upload-field {
@@ -354,7 +369,7 @@
 			display: flex; align-items: center; justify-content: center; gap: 0.5em;
 			height: 3em;
 			background: #f56a6a;
-			color: #fff;
+			color: #fff !important;
 			border: none;
 			border-radius: 0.375em;
 			font-family: 'Roboto Slab', serif;
@@ -367,9 +382,13 @@
 			transition: background 0.2s;
 			padding: 0;
 		}
-		.btn-siguiente:hover { background: #f67878; color: #fff; }
+		.btn-siguiente:hover,
+		.btn-siguiente:focus { background: #f67878; color: #fff !important; }
+		.btn-siguiente i { color: inherit; }
 
 		/* ══ TOPOLOGY CANVAS ══ */
+		.topology-column { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.75em; }
+
 		.topology-canvas { flex: 1; background: #fff; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.375em; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 
 		.canvas-toolbar { padding: 0.6em 1em; border-bottom: solid 1px rgba(210,215,217,0.6); background: #f8f9fa; display: flex; align-items: center; gap: 0.75em; flex-shrink: 0; flex-wrap: wrap; }
@@ -401,7 +420,8 @@
 			transition: background 0.18s, color 0.18s, border-color 0.18s;
 		}
 		.canvas-action-btn:hover { background: rgba(245,106,106,0.07); border-color: rgba(245,106,106,0.4); color: #f56a6a; }
-		.canvas-action-btn.active { background: rgba(245,106,106,0.1); border-color: #f56a6a; color: #f56a6a; }
+		.canvas-action-btn.active { background: #f56a6a; border-color: #f56a6a; color: #fff !important; }
+		.canvas-action-btn.active:hover { background: #f67878; border-color: #f67878; color: #fff !important; }
 		.canvas-action-btn:disabled { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
 		.canvas-action-btn i { font-size: 0.88em; }
 
@@ -456,15 +476,19 @@
 		/* Context menu */
 		.ctx-menu { position: fixed; background: #fff; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.4em; box-shadow: 0 4px 16px rgba(0,0,0,0.12); padding: 0.3em; z-index: 1001; display: none; flex-direction: column; min-width: 145px; }
 		.ctx-menu.open { display: flex; }
+		.ctx-head { font-family: 'Roboto Slab', serif; font-size: 0.62em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9fa3a6; padding: 0.2em 0.5em 0.42em; border-bottom: solid 1px rgba(210,215,217,0.5); margin-bottom: 0.15em; }
 		.ctx-item { display: flex; align-items: center; gap: 0.55em; padding: 0.45em 0.7em; border-radius: 0.3em; cursor: pointer; font-size: 0.82em; font-weight: 600; color: #7f888f; transition: background 0.14s, color 0.14s; }
 		.ctx-item:hover { background: rgba(245,106,106,0.07); color: #f56a6a; }
+		.ctx-item.sel { color: #f56a6a; background: rgba(245,106,106,0.09); }
+		.ctx-item.danger { color: #9fa3a6; margin-top: 0.2em; border-top: solid 1px rgba(210,215,217,0.55); padding-top: 0.6em; }
+		.ctx-item.danger:hover { background: rgba(245,106,106,0.08); color: #f56a6a; }
 		.ctx-item i { width: 1.1em; text-align: center; }
 
 		/* SVG edge selection */
 		.edge-line { cursor: pointer; }
 
 		@media (max-width: 1100px) { .config-panel { width: 295px; min-width: 270px; } }
-		@media (max-width: 820px) { .slice-workspace { flex-direction: column; overflow-y: auto; } .config-panel { width: 100%; min-width: unset; max-height: 500px; } .topology-canvas { min-height: 380px; flex: unset; height: 380px; } }
+		@media (max-width: 820px) { .slice-workspace { flex-direction: column; overflow-y: auto; } .config-panel { width: 100%; min-width: unset; max-height: 500px; } .topology-column { flex: unset; } .topology-canvas { min-height: 380px; flex: unset; height: 380px; } }
 		@media (max-width: 1024px) {
 			.app-layout { height: 100vh; overflow: hidden; }
 			#sidebar {
@@ -508,7 +532,7 @@
 		/* ── Btn Asignar ── */
 		.btn-asignar {
 			display: flex; align-items: center; justify-content: center; gap: 0.5em;
-			width: 100%; height: 2.8em;
+			width: min(220px, 100%); height: 2.8em;
 			background: transparent; color: #4a9fd5;
 			border: solid 2px #4a9fd5; border-radius: 0.375em;
 			font-family: 'Roboto Slab', serif; font-size: 0.72em; font-weight: 700;
@@ -516,6 +540,8 @@
 			transition: background 0.2s; padding: 0;
 		}
 		.btn-asignar:hover { background: rgba(74,159,213,0.08); }
+
+		.asignar-wrapper { display: flex; justify-content: flex-end; flex-shrink: 0; }
 
 		/* ── Modal ── */
 		.modal-overlay {
@@ -717,6 +743,9 @@
 								<div class="vm-node-label">
 									<i class="fas fa-desktop"></i>
 									<span id="vm-node-name">Nodo</span>
+									<button class="btn-rename-node" onclick="renameSelectedNode()" title="Cambiar nombre">
+										<i class="fas fa-pencil-alt"></i>
+									</button>
 								</div>
 								<button class="btn-deselect" onclick="deselectNode()" title="Cerrar">
 									<i class="fas fa-times"></i>
@@ -751,7 +780,7 @@
 								<label>Imagen <span class="req">*</span></label>
 								<div class="img-tabs">
 									<button class="img-tab active" id="tab-select" onclick="setImgMode('select')">Seleccionar</button>
-									<button class="img-tab" id="tab-upload" onclick="setImgMode('upload')">Subir archivo</button>
+									<button class="img-tab" id="tab-upload" onclick="setImgMode('upload')">Subir</button>
 								</div>
 								<div id="img-select-wrap">
 									<select id="nc-imagen" onchange="saveNodeConfig()">
@@ -767,7 +796,7 @@
 								<div id="img-upload-wrap" style="display:none">
 									<div class="img-upload-field">
 										<button class="btn-upload-file" onclick="document.getElementById('nc-imagen-file').click()">
-											<i class="fas fa-upload"></i> Elegir archivo
+											<i class="fas fa-upload"></i> Subir imagen
 										</button>
 										<span class="upload-filename" id="upload-fname">Sin archivo</span>
 										<input type="file" id="nc-imagen-file" accept=".img,.iso,.qcow2" onchange="onFileChange(this)">
@@ -824,66 +853,69 @@
 							Guardar
 						</button>
 					</div>
-					<div id="asignar-wrapper" style="padding: 0 1.2em 1.2em;">
+
+				</div>
+				<!-- /config-panel -->
+
+				<div class="topology-column">
+					<div class="asignar-wrapper" id="asignar-wrapper">
 						<button class="btn-asignar" onclick="openModal()">
 							<i class="fas fa-graduation-cap"></i>
 							Asignar a Curso
 						</button>
 					</div>
 
+					<!-- ── TOPOLOGY CANVAS ── -->
+					<div class="topology-canvas">
+						<div class="canvas-toolbar">
+							<span class="canvas-toolbar-title">Vista de topología</span>
+							<div class="node-legend">
+								<div class="legend-item">
+									<div class="legend-icon li-srv"><i class="fas fa-server"></i></div> Servidor
+								</div>
+								<div class="legend-item">
+									<div class="legend-icon li-pc"><i class="fas fa-desktop"></i></div> Computadora
+								</div>
+								<div class="legend-item">
+									<div class="legend-icon li-rt"><i class="fas fa-random"></i></div> Router
+								</div>
+								<div class="legend-item">
+									<div class="legend-icon li-sw"><i class="fas fa-sitemap"></i></div> Switch
+								</div>
+							</div>
+							<div class="canvas-actions">
+								<button class="canvas-action-btn" id="btn-add-node" onclick="addStandaloneNode()" title="Agregar nodo individual">
+									<i class="fas fa-plus"></i> Nodo
+								</button>
+								<button class="canvas-action-btn" id="btn-connect" onclick="toggleLinkMode()" title="Modo conectar nodos">
+									<i class="fas fa-link"></i> Conectar
+								</button>
+								<button class="canvas-action-btn" id="btn-del-node" onclick="deleteSelectedItem()" disabled title="Eliminar selección">
+									<i class="fas fa-trash-alt"></i> Eliminar
+								</button>
+							</div>
+						</div>
+
+						<div class="link-banner" id="link-banner">
+							<i class="fas fa-link"></i>
+							Modo conectar: haz clic en el nodo origen, luego en el destino. Presiona ESC para cancelar.
+						</div>
+
+						<div class="canvas-hint" style="padding:0.3em 1em; font-size:0.7em; color:#9fa3a6; border-bottom: solid 1px rgba(210,215,217,0.4); background:#fafbfc; flex-shrink:0;">
+							<i class="fas fa-info-circle"></i>
+							Clic: configurar VM &middot; Doble clic: cambiar tipo &middot; Ctrl+arrastrar: mover grupo &middot; Clic derecho: cambiar icono o eliminar
+						</div>
+
+						<div class="canvas-area" id="canvas-area">
+							<svg id="topo-svg"></svg>
+							<div class="canvas-empty" id="canvas-empty">
+								<i class="fas fa-project-diagram"></i>
+								<p>Agrega una topología o un nodo<br>individual para comenzar.</p>
+							</div>
+						</div>
+					</div>
+					<!-- /topology-canvas -->
 				</div>
-				<!-- /config-panel -->
-
-				<!-- ── TOPOLOGY CANVAS ── -->
-				<div class="topology-canvas">
-					<div class="canvas-toolbar">
-						<span class="canvas-toolbar-title">Vista de topología</span>
-						<div class="node-legend">
-							<div class="legend-item">
-								<div class="legend-icon li-srv"><i class="fas fa-server"></i></div> Servidor
-							</div>
-							<div class="legend-item">
-								<div class="legend-icon li-pc"><i class="fas fa-desktop"></i></div> Computadora
-							</div>
-							<div class="legend-item">
-								<div class="legend-icon li-rt"><i class="fas fa-random"></i></div> Router
-							</div>
-							<div class="legend-item">
-								<div class="legend-icon li-sw"><i class="fas fa-sitemap"></i></div> Switch
-							</div>
-						</div>
-						<div class="canvas-actions">
-							<button class="canvas-action-btn" id="btn-add-node" onclick="addStandaloneNode()" title="Agregar nodo individual">
-								<i class="fas fa-plus"></i> Nodo
-							</button>
-							<button class="canvas-action-btn" id="btn-connect" onclick="toggleLinkMode()" title="Modo conectar nodos">
-								<i class="fas fa-link"></i> Conectar
-							</button>
-							<button class="canvas-action-btn" id="btn-del-node" onclick="deleteSelectedNode()" disabled title="Eliminar nodo seleccionado">
-								<i class="fas fa-trash-alt"></i> Eliminar
-							</button>
-						</div>
-					</div>
-
-					<div class="link-banner" id="link-banner">
-						<i class="fas fa-link"></i>
-						Modo conectar: haz clic en el nodo origen, luego en el destino. Presiona ESC para cancelar.
-					</div>
-
-					<div class="canvas-hint" style="padding:0.3em 1em; font-size:0.7em; color:#9fa3a6; border-bottom: solid 1px rgba(210,215,217,0.4); background:#fafbfc; flex-shrink:0;">
-						<i class="fas fa-info-circle"></i>
-						Clic: configurar VM &middot; Doble clic: cambiar tipo &middot; Ctrl+arrastrar: mover grupo &middot; Clic derecho: eliminar nodo
-					</div>
-
-					<div class="canvas-area" id="canvas-area">
-						<svg id="topo-svg"></svg>
-						<div class="canvas-empty" id="canvas-empty">
-							<i class="fas fa-project-diagram"></i>
-							<p>Agrega una topología o un nodo<br>individual para comenzar.</p>
-						</div>
-					</div>
-				</div>
-				<!-- /topology-canvas -->
 
 			</div>
 		</div>
@@ -909,8 +941,28 @@
 
 <!-- Context menu (right-click) -->
 <div class="ctx-menu" id="ctx-menu">
-	<div class="ctx-item" id="ctx-delete" onclick="deleteCtxNode()">
+	<div class="ctx-head">Cambiar icono</div>
+	<div class="ctx-item" data-type="srv" onclick="setCtxNodeType('srv')">
+		<i class="fas fa-server" style="color:#f56a6a"></i> Servidor
+	</div>
+	<div class="ctx-item" data-type="pc" onclick="setCtxNodeType('pc')">
+		<i class="fas fa-desktop" style="color:#4a9fd5"></i> Computadora
+	</div>
+	<div class="ctx-item" data-type="rt" onclick="setCtxNodeType('rt')">
+		<i class="fas fa-random" style="color:#44b078"></i> Router
+	</div>
+	<div class="ctx-item" data-type="sw" onclick="setCtxNodeType('sw')">
+		<i class="fas fa-sitemap" style="color:#a060c8"></i> Switch
+	</div>
+	<div class="ctx-item danger" id="ctx-delete" onclick="deleteCtxNode()">
 		<i class="fas fa-trash-alt"></i> Eliminar nodo
+	</div>
+</div>
+
+<!-- Edge context menu (right-click) -->
+<div class="ctx-menu" id="edge-ctx-menu">
+	<div class="ctx-item danger" onclick="deleteCtxEdge()">
+		<i class="fas fa-unlink"></i> Eliminar enlace
 	</div>
 </div>
 
@@ -978,8 +1030,10 @@ let edges = [];
 let nodeConfigs = {};
 let topoSeq = 0, nodeSeq = 0, edgeSeq = 0, ruleSeq = 0;
 let selectedNodeId = null;
+let selectedEdgeId = null;
 let popoverNodeId = null;
 let ctxNodeId = null;
+let ctxEdgeId = null;
 let linkMode = false;
 let linkSourceId = null;
 
@@ -1085,7 +1139,7 @@ function rebuildTopoGroup(entry, preservePositions) {
 		const el = document.getElementById('node-' + n.id);
 		if (el) el.remove();
 	});
-	edges = edges.filter(e => !existing.some(n => n.id === e.from || n.id === e.to));
+	edges = edges.filter(e => !existing.some(n => n.id === e.from || n.id === e.to || (e.bus && e.busNodes && e.busNodes.some(bn => bn.id === n.id))));
 	nodes = nodes.filter(n => n.topoId !== entry.id);
 
 	// Create new nodes
@@ -1115,6 +1169,7 @@ function rebuildAllTopos() {
 		});
 	});
 	edges = edges.filter(e => {
+		if (e.bus) return false;
 		const fromNd = nodes.find(n => n.id === e.from);
 		return fromNd && fromNd.topoId === null;
 	});
@@ -1155,7 +1210,7 @@ function removeTopoNodes(topoId) {
 	topoNodes.forEach(n => {
 		const el = document.getElementById('node-' + n.id);
 		if (el) el.remove();
-		edges = edges.filter(e => e.from !== n.id && e.to !== n.id);
+		edges = edges.filter(e => e.from !== n.id && e.to !== n.id && !(e.bus && e.busNodes && e.busNodes.some(bn => bn.id === n.id)));
 	});
 	nodes = nodes.filter(n => n.topoId !== topoId);
 }
@@ -1218,17 +1273,23 @@ function buildEdgesForGroup(type, arr) {
 ════════════════════ */
 function drawEdges() {
 	const svg = document.getElementById('topo-svg');
+	if (selectedEdgeId && !edges.some(e => e.id === selectedEdgeId)) {
+		selectedEdgeId = null;
+		if (!selectedNodeId) document.getElementById('btn-del-node').disabled = true;
+	}
 	const nm = {};
 	nodes.forEach(n => nm[n.id] = n);
 	let html = '';
 
 	edges.forEach(e => {
+		const selected = e.id === selectedEdgeId;
 		if (e.bus) {
 			const xs = e.busNodes.map(n => n.x);
 			const ys = e.busNodes.map(n => n.y);
 			const busY = (Math.min(...ys) + Math.max(...ys)) / 2;
 			const minX = Math.min(...xs), maxX = Math.max(...xs);
-			html += `<line x1="${minX}" y1="${busY}" x2="${maxX}" y2="${busY}" stroke="${TOPO_COLORS.bus}" stroke-width="3" stroke-dasharray="7,4" pointer-events="none"/>`;
+			html += `<line x1="${minX}" y1="${busY}" x2="${maxX}" y2="${busY}" stroke="${selected ? '#f56a6a' : TOPO_COLORS.bus}" stroke-width="${selected ? 5 : 3}" stroke-dasharray="7,4" pointer-events="none"/>`;
+			html += `<line x1="${minX}" y1="${busY}" x2="${maxX}" y2="${busY}" stroke="transparent" stroke-width="16" class="edge-line" data-edge-id="${e.id}" style="cursor:pointer"/>`;
 			e.busNodes.forEach(nd => {
 				html += `<line x1="${nd.x}" y1="${nd.y}" x2="${nd.x}" y2="${busY}" stroke="${TOPO_COLORS.bus}" stroke-width="1.8" opacity="0.7" pointer-events="none"/>`;
 			});
@@ -1236,21 +1297,38 @@ function drawEdges() {
 			const a = nm[e.from], b = nm[e.to];
 			if (a && b) {
 				const color = TOPO_COLORS[e.topo] || 'rgba(160,160,160,0.5)';
-				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${color}" stroke-width="2.2" pointer-events="none"/>`;
+				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${selected ? '#f56a6a' : color}" stroke-width="${selected ? 4.2 : 2.2}" pointer-events="none"/>`;
 				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="transparent" stroke-width="12" class="edge-line" data-edge-id="${e.id}" style="cursor:pointer"/>`;
 			}
 		}
 	});
 
 	svg.innerHTML = html;
+	bindEdgeEvents();
+}
+
+function bindEdgeEvents() {
+	document.querySelectorAll('.edge-line').forEach(line => {
+		line.addEventListener('click', e => {
+			e.stopPropagation();
+			if (linkMode) return;
+			selectEdge(Number(line.dataset.edgeId));
+		});
+		line.addEventListener('contextmenu', e => {
+			e.preventDefault();
+			e.stopPropagation();
+			showEdgeCtxMenu(Number(line.dataset.edgeId), e.clientX, e.clientY);
+		});
+	});
 }
 
 /* ════════════════════
    NODE ELEMENTS
 ════════════════════ */
-function nodeInner(type) {
+function nodeInner(nd) {
+	const type = nd.nodeType;
 	const t = NODE_TYPES[type];
-	return `<i class="fas ${t.icon}"></i><span class="node-lbl">${t.label}</span>`;
+	return `<i class="fas ${t.icon}"></i><span class="node-lbl">${nd.name || t.label}</span>`;
 }
 
 function createNodeEl(nd) {
@@ -1259,7 +1337,7 @@ function createNodeEl(nd) {
 	div.id = `node-${nd.id}`;
 	div.style.left = nd.x + 'px';
 	div.style.top  = nd.y + 'px';
-	div.innerHTML  = nodeInner(nd.nodeType);
+	div.innerHTML  = nodeInner(nd);
 
 	// Single click: select / link
 	div.addEventListener('click', e => {
@@ -1293,7 +1371,7 @@ function updateNodeEl(nd) {
 	if (!el) return;
 	el.className = `topo-node nt-${nd.nodeType}`;
 	if (nd.id === selectedNodeId) el.classList.add('selected');
-	el.innerHTML = nodeInner(nd.nodeType);
+	el.innerHTML = nodeInner(nd);
 }
 
 /* ════════════════════
@@ -1348,6 +1426,7 @@ function makeDraggable(el, nd) {
    NODE SELECTION
 ════════════════════ */
 function selectNode(id) {
+	deselectEdge();
 	// deselect previous
 	if (selectedNodeId) {
 		const prev = document.getElementById('node-' + selectedNodeId);
@@ -1373,6 +1452,20 @@ function deselectNode() {
 	document.getElementById('vm-config').style.display = 'none';
 }
 
+function selectEdge(id) {
+	deselectNode();
+	selectedEdgeId = id;
+	document.getElementById('btn-del-node').disabled = false;
+	drawEdges();
+}
+
+function deselectEdge() {
+	if (!selectedEdgeId) return;
+	selectedEdgeId = null;
+	if (!selectedNodeId) document.getElementById('btn-del-node').disabled = true;
+	drawEdges();
+}
+
 /* ════════════════════
    NODE VM CONFIG
 ════════════════════ */
@@ -1388,7 +1481,7 @@ function renderNodeConfig() {
 
 	document.getElementById('vm-empty').style.display = 'none';
 	document.getElementById('vm-config').style.display = '';
-	document.getElementById('vm-node-name').textContent = `Nodo ${nd.id}`;
+	document.getElementById('vm-node-name').textContent = getNodeDisplayName(nd);
 
 	document.getElementById('nc-flavor').value = cfg.flavor || '';
 	document.getElementById('nc-disco').value  = cfg.disco  || '';
@@ -1419,6 +1512,22 @@ function renderNodeConfig() {
 			rulesList.appendChild(row);
 		});
 	}
+}
+
+function getNodeDisplayName(nd) {
+	return nd.name || `Nodo ${nd.id}`;
+}
+
+function renameSelectedNode() {
+	const nd = nodes.find(n => n.id === selectedNodeId);
+	if (!nd) return;
+	const nextName = prompt('Nuevo nombre del nodo', getNodeDisplayName(nd));
+	if (nextName === null) return;
+	const cleanName = nextName.trim();
+	if (!cleanName) return;
+	nd.name = cleanName;
+	document.getElementById('vm-node-name').textContent = getNodeDisplayName(nd);
+	updateNodeEl(nd);
 }
 
 function saveNodeConfig() {
@@ -1536,6 +1645,7 @@ function deleteNode(id) {
 	const el = document.getElementById('node-' + id);
 	if (el) el.remove();
 	edges = edges.filter(e => e.from !== id && e.to !== id && !(e.bus && e.busNodes && e.busNodes.some(n => n.id === id)));
+	if (selectedEdgeId && !edges.some(e => e.id === selectedEdgeId)) selectedEdgeId = null;
 	nodes = nodes.filter(n => n.id !== id);
 	delete nodeConfigs[id];
 	if (selectedNodeId === id) deselectNode();
@@ -1545,6 +1655,21 @@ function deleteNode(id) {
 
 function deleteSelectedNode() {
 	if (selectedNodeId) deleteNode(selectedNodeId);
+}
+
+function deleteEdge(id) {
+	edges = edges.filter(e => e.id !== id);
+	if (selectedEdgeId === id) selectedEdgeId = null;
+	if (!selectedNodeId) document.getElementById('btn-del-node').disabled = true;
+	drawEdges();
+}
+
+function deleteSelectedItem() {
+	if (selectedNodeId) {
+		deleteNode(selectedNodeId);
+		return;
+	}
+	if (selectedEdgeId) deleteEdge(selectedEdgeId);
 }
 
 /* ════════════════════
@@ -1622,7 +1747,12 @@ function setNodeType(type) {
 ════════════════════ */
 function showCtxMenu(nodeId, cx, cy) {
 	ctxNodeId = nodeId;
+	selectNode(nodeId);
+	document.getElementById('node-popover').classList.remove('open');
+	document.getElementById('edge-ctx-menu').classList.remove('open');
 	const menu = document.getElementById('ctx-menu');
+	const nd = nodes.find(n => n.id === nodeId);
+	menu.querySelectorAll('.ctx-item[data-type]').forEach(o => o.classList.toggle('sel', nd && o.dataset.type === nd.nodeType));
 	menu.style.left = cx + 'px';
 	menu.style.top  = cy + 'px';
 	menu.classList.add('open');
@@ -1633,10 +1763,43 @@ function showCtxMenu(nodeId, cx, cy) {
 	});
 }
 
+function setCtxNodeType(type) {
+	if (!ctxNodeId) return;
+	const nd = nodes.find(n => n.id === ctxNodeId);
+	if (nd) {
+		nd.nodeType = type;
+		updateNodeEl(nd);
+	}
+	document.getElementById('ctx-menu').classList.remove('open');
+	ctxNodeId = null;
+}
+
 function deleteCtxNode() {
 	if (ctxNodeId) deleteNode(ctxNodeId);
 	document.getElementById('ctx-menu').classList.remove('open');
 	ctxNodeId = null;
+}
+
+function showEdgeCtxMenu(edgeId, cx, cy) {
+	ctxEdgeId = edgeId;
+	selectEdge(edgeId);
+	document.getElementById('node-popover').classList.remove('open');
+	document.getElementById('ctx-menu').classList.remove('open');
+	const menu = document.getElementById('edge-ctx-menu');
+	menu.style.left = cx + 'px';
+	menu.style.top  = cy + 'px';
+	menu.classList.add('open');
+	requestAnimationFrame(() => {
+		const r = menu.getBoundingClientRect();
+		if (r.right  > window.innerWidth  - 8) menu.style.left = (cx - r.width)  + 'px';
+		if (r.bottom > window.innerHeight - 8) menu.style.top  = (cy - r.height) + 'px';
+	});
+}
+
+function deleteCtxEdge() {
+	if (ctxEdgeId) deleteEdge(ctxEdgeId);
+	document.getElementById('edge-ctx-menu').classList.remove('open');
+	ctxEdgeId = null;
 }
 
 /* ════════════════════
@@ -1655,39 +1818,62 @@ document.addEventListener('click', e => {
 		document.getElementById('node-popover').classList.remove('open');
 	if (!e.target.closest('#ctx-menu') && !e.target.closest('.topo-node'))
 		document.getElementById('ctx-menu').classList.remove('open');
+	if (!e.target.closest('#edge-ctx-menu') && !e.target.closest('.edge-line'))
+		document.getElementById('edge-ctx-menu').classList.remove('open');
 });
 
 document.addEventListener('keydown', e => {
 	if (e.key === 'Escape') {
 		if (linkMode) { toggleLinkMode(); }
+		deselectEdge();
 		deselectNode();
 	}
-	if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId && !e.target.matches('input,select,textarea')) {
-		deleteSelectedNode();
+	if ((e.key === 'Delete' || e.key === 'Backspace') && (selectedNodeId || selectedEdgeId) && !e.target.matches('input,select,textarea')) {
+		deleteSelectedItem();
 	}
 });
 
 (function() {
 	const sidebar = document.getElementById('sidebar');
 	const toggle = document.getElementById('sidebarToggle');
+	const backdrop = document.getElementById('sidebarBackdrop');
 	const mobileQuery = window.matchMedia('(max-width: 1024px)');
+
+	function refreshCanvas() {
+		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+	}
+
+	function setSidebarOpen(open) {
+		sidebar.classList.toggle('collapsed', !open);
+		backdrop.classList.toggle('visible', mobileQuery.matches && open);
+		refreshCanvas();
+	}
+
+	function closeMobileSidebar() {
+		if (mobileQuery.matches) setSidebarOpen(false);
+	}
 
 	function syncSidebar() {
 		if (mobileQuery.matches) {
-			sidebar.classList.add('collapsed');
+			setSidebarOpen(false);
 			return;
 		}
 		sidebar.classList.toggle('collapsed', localStorage.getItem('sidebarCollapsed') === 'true');
-		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+		backdrop.classList.remove('visible');
+		refreshCanvas();
 	}
 
 	syncSidebar();
 	toggle.addEventListener('click', () => {
-		sidebar.classList.toggle('collapsed');
+		const shouldOpen = sidebar.classList.contains('collapsed');
+		setSidebarOpen(shouldOpen);
 		if (!mobileQuery.matches) {
 			localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
 		}
-		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+	});
+	backdrop.addEventListener('click', closeMobileSidebar);
+	document.addEventListener('keydown', e => {
+		if (e.key === 'Escape') closeMobileSidebar();
 	});
 
 	if (mobileQuery.addEventListener) mobileQuery.addEventListener('change', syncSidebar);
@@ -1702,7 +1888,10 @@ window.addEventListener('resize', () => {
 document.getElementById('canvas-area').addEventListener('click', e => {
 	if (!e.target.closest('.topo-node')) {
 		if (linkMode) cancelLink();
-		else deselectNode();
+		else {
+			deselectEdge();
+			deselectNode();
+		}
 	}
 });
 

@@ -71,15 +71,25 @@
 
 	// Sidebar.
 		var $sidebar = $('#sidebar'),
-			$sidebar_inner = $sidebar.children('.inner');
+			$sidebar_inner = $sidebar.children('.inner'),
+			$sidebar_overlay = $('<div id="sidebar-overlay" />').appendTo($body);
+
+		var updateSidebarOverlay = function() {
+			if (breakpoints.active('>large') || $sidebar.hasClass('inactive'))
+				$sidebar_overlay.removeClass('active');
+			else
+				$sidebar_overlay.addClass('active');
+		};
 
 		// Inactive by default on <= large.
 			breakpoints.on('<=large', function() {
 				$sidebar.addClass('inactive');
+				updateSidebarOverlay();
 			});
 
 			breakpoints.on('>large', function() {
 				$sidebar.removeClass('inactive');
+				updateSidebarOverlay();
 			});
 
 		// Hack: Workaround for Chrome/Android scrollbar position bug.
@@ -99,6 +109,7 @@
 
 					// Toggle.
 						$sidebar.toggleClass('inactive');
+						updateSidebarOverlay();
 
 				});
 
@@ -126,6 +137,7 @@
 
 					// Hide sidebar.
 						$sidebar.addClass('inactive');
+						updateSidebarOverlay();
 
 					// Redirect to href.
 						setTimeout(function() {
@@ -160,6 +172,24 @@
 
 					// Deactivate.
 						$sidebar.addClass('inactive');
+						updateSidebarOverlay();
+
+				});
+
+			// Hide panel on backdrop click/tap.
+				$sidebar_overlay.on('click touchend', function(event) {
+
+					// >large? Bail.
+						if (breakpoints.active('>large'))
+							return;
+
+					// Prevent default.
+						event.preventDefault();
+						event.stopPropagation();
+
+					// Deactivate.
+						$sidebar.addClass('inactive');
+						updateSidebarOverlay();
 
 				});
 

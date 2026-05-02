@@ -118,6 +118,10 @@
 			margin-left: (_size(sidebar-width) * -1);
 		}
 
+		&-overlay {
+			display: none;
+		}
+
 		@include breakpoint('<=xlarge') {
 			$pad: 1.5em / 0.9;
 
@@ -152,6 +156,25 @@
 		}
 
 		@include breakpoint('<=large') {
+			&-overlay {
+				background: rgba(61, 68, 73, 0.35);
+				display: block;
+				height: 100%;
+				left: 0;
+				opacity: 0;
+				pointer-events: none;
+				position: fixed;
+				top: 0;
+				@include vendor('transition', 'opacity 0.5s ease');
+				width: 100%;
+				z-index: (_misc(z-index-base) - 1);
+
+				&.active {
+					opacity: 1;
+					pointer-events: auto;
+				}
+			}
+
 			box-shadow: 0 0 5em 0 rgba(0, 0, 0, 0.175);
 			height: 100%;
 			left: 0;

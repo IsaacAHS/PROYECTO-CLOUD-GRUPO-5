@@ -803,24 +803,44 @@ document.addEventListener('keydown', e => {
 (function() {
 	const sidebar = document.getElementById('sidebar');
 	const toggle = document.getElementById('sidebarToggle');
+	const backdrop = document.getElementById('sidebarBackdrop');
 	const mobileQuery = window.matchMedia('(max-width: 1024px)');
+
+	function refreshCanvas() {
+		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+	}
+
+	function setSidebarOpen(open) {
+		sidebar.classList.toggle('collapsed', !open);
+		backdrop.classList.toggle('visible', mobileQuery.matches && open);
+		refreshCanvas();
+	}
+
+	function closeMobileSidebar() {
+		if (mobileQuery.matches) setSidebarOpen(false);
+	}
 
 	function syncSidebar() {
 		if (mobileQuery.matches) {
-			sidebar.classList.add('collapsed');
+			setSidebarOpen(false);
 			return;
 		}
 		sidebar.classList.toggle('collapsed', localStorage.getItem('sidebarCollapsed') === 'true');
-		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+		backdrop.classList.remove('visible');
+		refreshCanvas();
 	}
 
 	syncSidebar();
 	toggle.addEventListener('click', () => {
-		sidebar.classList.toggle('collapsed');
+		const shouldOpen = sidebar.classList.contains('collapsed');
+		setSidebarOpen(shouldOpen);
 		if (!mobileQuery.matches) {
 			localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
 		}
-		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+	});
+	backdrop.addEventListener('click', closeMobileSidebar);
+	document.addEventListener('keydown', e => {
+		if (e.key === 'Escape') closeMobileSidebar();
 	});
 
 	if (mobileQuery.addEventListener) mobileQuery.addEventListener('change', syncSidebar);
