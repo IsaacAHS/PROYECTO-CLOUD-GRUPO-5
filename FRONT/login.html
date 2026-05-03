@@ -322,7 +322,7 @@
 			</div>
 
 			<!-- Formulario -->
-			<form class="login-form" method="post" action="#">
+			<form class="login-form" method="post" action="#" id="login-form">
 
 				<!-- Email -->
 				<div class="field-group">
@@ -387,6 +387,34 @@
 
 		</div>
 	</div>
+
+<script>
+document.getElementById('login-form').addEventListener('submit', async event => {
+	event.preventDefault();
+
+	const username = document.getElementById('email').value.trim();
+	const password = document.getElementById('password').value;
+
+	try {
+		const response = await fetch('/api/auth/login', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ username, password })
+		});
+		if (!response.ok) throw new Error(`Login respondio ${response.status}`);
+		const session = await response.json();
+		localStorage.setItem('nimbuscore_session', JSON.stringify(session));
+	} catch (error) {
+		console.warn('Backend no disponible, iniciando sesion demo local.', error);
+		localStorage.setItem('nimbuscore_session', JSON.stringify({
+			access_token: 'demo-local-token',
+			user: { name: 'Administrador Demo', role: 'admin' }
+		}));
+	}
+
+	window.location.href = 'dashboards.html';
+});
+</script>
 
 </body>
 </html>

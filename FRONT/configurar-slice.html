@@ -643,7 +643,7 @@
 				<a href="#"><i class="fas fa-users-cog"></i> Gestión de usuarios</a>
 			</li>
 		</ul>
-		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
+		<div class="sidebar-footer">&copy; 2026 NimbusCore</div>
 	</aside>
 
 	<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
@@ -2014,19 +2014,86 @@ const TOPO_COLORS_CUSTOM = Object.assign({}, TOPO_COLORS, { custom: 'rgba(120,12
 	}
 })();
 
-/* ════════════════════
-   GUARDAR SLICE (create mode)
-════════════════════ */
-function guardarSlice() {
-	const nombre = (document.getElementById('nombre-slice').value || '').trim();
-	if (!nombre) { alert('Por favor ingresa un nombre para el slice.'); return; }
+function serializeNodeConfig(cfg) {
+	cfg = cfg || defaultConfig();
+	return {
+		flavor: cfg.flavor || '',
+		disco: cfg.disco || '',
+		imagen: cfg.imagen || '',
+		imagenMode: cfg.imagenMode || 'select',
+		imagenFile: cfg.imagenFile || null,
+		llaves: cfg.llaves || '',
+		seguridad: Array.from(cfg.secChips || []),
+		reglas: (cfg.rules || []).map(r => ({ proto: r.proto, port: r.port }))
+	};
+}
+
+function buildSlicePayload(nombre) {
+	return {
+		nombre,
+		zona: document.getElementById('zona').value || 'openstack-zone-1',
+		curso_id: ctxCourseId,
+		topologias: topoEntries
+			.filter(t => t.type)
+			.map(t => ({ type: t.type, count: Number(t.count) || 0 })),
+		nodos: nodes.map(n => ({
+			id: n.id,
+			nombre: getNodeDisplayName(n),
+			tipo: n.nodeType,
+			topologia_id: n.topoId,
+			x: Math.round(n.x),
+			y: Math.round(n.y),
+			configuracion: serializeNodeConfig(nodeConfigs[n.id])
+		})),
+		enlaces: edges.map(e => e.bus
+			? { id: e.id, tipo: 'bus', nodos: e.busNodes.map(n => n.id), topologia: e.topo }
+			: { id: e.id, tipo: 'directo', desde: e.from, hacia: e.to, topologia: e.topo })
+	};
+}
+
+async function saveSliceInApi(payload) {
+	const url = ctxIsEdit && ctxSliceId ? `/api/slices/${encodeURIComponent(ctxSliceId)}` : '/api/slices';
+	const method = ctxIsEdit && ctxSliceId ? 'PUT' : 'POST';
+	const response = await fetch(url, {
+		method,
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(payload)
+	});
+	if (!response.ok) throw new Error(`API ${method} ${url} respondio ${response.status}`);
+	return response.json();
+}
+
+async function deploySliceInApi(sliceId) {
+	const response = await fetch(`/api/slices/${encodeURIComponent(sliceId)}/deploy`, { method: 'POST' });
+	if (!response.ok) throw new Error(`No se pudo desplegar el slice ${sliceId}`);
+	return response.json();
+}
+
+function saveSliceFallback(nombre) {
 	if (!ctxIsEdit) {
-		/* Save new slice to localStorage */
-		const slices = JSON.parse(localStorage.getItem('cloud5_slices') || '[]');
+		const slices = JSON.parse(localStorage.getItem('nimbuscore_slices') || '[]');
 		const newId  = 'new_' + Date.now();
 		slices.push({ id: newId, nombre });
-		localStorage.setItem('cloud5_slices', JSON.stringify(slices));
+		localStorage.setItem('nimbuscore_slices', JSON.stringify(slices));
 	}
+}
+
+/* ════════════════════
+   GUARDAR SLICE
+════════════════════ */
+async function guardarSlice() {
+	const nombre = (document.getElementById('nombre-slice').value || '').trim();
+	if (!nombre) { alert('Por favor ingresa un nombre para el slice.'); return; }
+
+	try {
+		const saved = await saveSliceInApi(buildSlicePayload(nombre));
+		const deployment = await deploySliceInApi(saved.id);
+		localStorage.setItem('nimbuscore_last_deployment', JSON.stringify(deployment));
+	} catch (error) {
+		console.warn('Backend no disponible, usando almacenamiento local demo.', error);
+		saveSliceFallback(nombre);
+	}
+
 	window.location.href = ctxBackUrl;
 }
 
@@ -2071,11 +2138,11 @@ function saveAssignment() {
 	const nombre = document.getElementById('modal-nombre').value.trim() ||
 	               (document.getElementById('nombre-slice').value || '').trim() ||
 	               (ctxIsEdit ? `Slice ${ctxSliceId}` : 'Nuevo Slice');
-	const assignments = JSON.parse(localStorage.getItem('cloud5_assignments') || '[]');
+	const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
 	const sid = ctxIsEdit ? ctxSliceId : ('new_' + Date.now());
 	const filtered = assignments.filter(a => String(a.sliceId) !== String(sid));
 	filtered.push({ sliceId: sid, sliceName: nombre, courseId: selectedModalCourse.id, courseNom: selectedModalCourse.nom });
-	localStorage.setItem('cloud5_assignments', JSON.stringify(filtered));
+	localStorage.setItem('nimbuscore_assignments', JSON.stringify(filtered));
 	closeModal();
 	window.location.href = `detalle-curso.html?id=${encodeURIComponent(selectedModalCourse.id)}&nombre=${encodeURIComponent(selectedModalCourse.nom)}`;
 }

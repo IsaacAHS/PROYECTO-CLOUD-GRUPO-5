@@ -364,7 +364,7 @@
 				<a href="#"><i class="fas fa-users-cog"></i> Gestión de usuarios</a>
 			</li>
 		</ul>
-		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
+		<div class="sidebar-footer">&copy; 2026 NimbusCore</div>
 	</aside>
 
 	<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
@@ -455,7 +455,7 @@ function fmt(s) {
 
 function renderTable() {
 	/* Load assigned slices for this course */
-	const assignments = JSON.parse(localStorage.getItem('cloud5_assignments') || '[]');
+	const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
 	const assigned = assignments.filter(a => a.courseId === courseId);
 
 	/* Merge with demo slices (demo slices get generic names; assigned ones use their real name) */

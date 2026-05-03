@@ -1,0 +1,54 @@
+services:
+  frontend:
+    build:
+      context: ./FRONT
+    container_name: nimbuscore-frontend
+    ports:
+      - "8081:80"
+
+  backend:
+    build:
+      context: ./BACKEND
+    container_name: nimbuscore-backend
+    environment:
+      NIMBUSCORE_JOB_DIR: /jobs
+    ports:
+      - "8000:8000"
+    volumes:
+      - nimbuscore_jobs:/jobs
+
+  worker:
+    build:
+      context: ./WORKER
+    container_name: nimbuscore-worker
+    environment:
+      NIMBUSCORE_JOB_DIR: /jobs
+      NIMBUSCORE_RUN_DIR: /script-runs
+      NIMBUSCORE_SCRIPT_DRY_RUN: "false"
+      NIMBUSCORE_HEADNODE_IP: 10.0.10.3
+      NIMBUSCORE_COMPUTE_IPS: 10.0.10.1
+      NIMBUSCORE_REMOTE_SCRIPTS_DIR: /home/ubuntu/script_runner
+      NIMBUSCORE_SSH_OPTS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+      NIMBUSCORE_VLAN_BASE: 100
+      NIMBUSCORE_VNC_BASE: 5901
+      NIMBUSCORE_CIDR_BASE: 10
+    depends_on:
+      - backend
+    volumes:
+      - nimbuscore_jobs:/jobs
+      - ./SCRIPT_RUNS:/script-runs
+      - ${NIMBUSCORE_SSH_DIR:-/home/ubuntu/.ssh}:/root/.ssh:ro
+
+  api-gateway:
+    image: nginx:1.27-alpine
+    container_name: nimbuscore-api-gateway
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./API_Gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  nimbuscore_jobs:

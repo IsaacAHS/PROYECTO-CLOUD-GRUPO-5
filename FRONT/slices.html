@@ -330,7 +330,7 @@
 				<a href="#"><i class="fas fa-users-cog"></i> Gestión de usuarios</a>
 			</li>
 		</ul>
-		<div class="sidebar-footer">&copy; 2026 Cloud Grupo 5</div>
+		<div class="sidebar-footer">&copy; 2026 NimbusCore</div>
 	</aside>
 
 	<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
@@ -387,15 +387,31 @@ const SLICES_DEMO = [
 	{ id: '4', nombre: 'Topología Lineal Demo' },
 ];
 
-function getUnassigned() {
-	const assignments = JSON.parse(localStorage.getItem('cloud5_assignments') || '[]');
+function getLocalUnassigned() {
+	const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
 	const assignedIds = new Set(assignments.map(a => String(a.sliceId)));
-	const userSlices  = JSON.parse(localStorage.getItem('cloud5_slices') || '[]');
+	const userSlices  = JSON.parse(localStorage.getItem('nimbuscore_slices') || '[]');
 	return [...SLICES_DEMO, ...userSlices].filter(s => !assignedIds.has(String(s.id)));
 }
 
-function renderTable() {
-	const unassigned = getUnassigned();
+async function getUnassigned() {
+	try {
+		const response = await fetch('/api/slices');
+		if (!response.ok) throw new Error(`API respondio ${response.status}`);
+		const apiSlices = await response.json();
+		const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
+		const assignedIds = new Set(assignments.map(a => String(a.sliceId)));
+		return apiSlices
+			.map(s => ({ id: s.id, nombre: s.nombre, estado: s.estado }))
+			.filter(s => !assignedIds.has(String(s.id)));
+	} catch (error) {
+		console.warn('Backend no disponible, usando slices locales demo.', error);
+		return getLocalUnassigned();
+	}
+}
+
+async function renderTable() {
+	const unassigned = await getUnassigned();
 	const tbody = document.getElementById('slices-tbody');
 	if (!unassigned.length) {
 		tbody.innerHTML = `
@@ -411,7 +427,7 @@ function renderTable() {
 		<tr>
 			<td>
 				<span class="slice-name">${s.nombre}</span>
-				<span class="badge-unassigned">Sin asignar</span>
+				<span class="badge-unassigned">${s.estado || 'Sin asignar'}</span>
 			</td>
 			<td class="col-center">
 				<a href="configurar-slice.html?slice=${s.id}&slicenombre=${encodeURIComponent(s.nombre)}" class="btn-action btn-edit" title="Editar slice">
