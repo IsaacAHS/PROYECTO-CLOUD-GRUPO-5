@@ -12,10 +12,20 @@ services:
     container_name: nimbuscore-backend
     environment:
       NIMBUSCORE_JOB_DIR: /jobs
+      NIMBUSCORE_KEYPAIR_DIR: /keypairs
+      NIMBUSCORE_IMAGE_CATALOG_PATH: /data/images.json
+      NIMBUSCORE_SLICE_STORE_PATH: /data/slices.json
+      NIMBUSCORE_DEPLOYMENT_STORE_PATH: /data/deployments.json
+      NIMBUSCORE_SLICE_TEMPLATE_STORE_PATH: /data/slice_templates.json
+      NIMBUSCORE_ACADEMIC_STORE_PATH: /data/academic.json
+      NIMBUSCORE_VM_INVENTORY_PATH: /script-runs/vm_inventory.json
     ports:
       - "8000:8000"
     volumes:
       - nimbuscore_jobs:/jobs
+      - ${NIMBUSCORE_KEYPAIR_DIR:-/home/ubuntu/nimbuscore-keys}:/keypairs
+      - ./BACKEND_DATA:/data
+      - ./SCRIPT_RUNS:/script-runs:ro
 
   worker:
     build:
@@ -24,14 +34,23 @@ services:
     environment:
       NIMBUSCORE_JOB_DIR: /jobs
       NIMBUSCORE_RUN_DIR: /script-runs
+      NIMBUSCORE_VM_INVENTORY_PATH: /script-runs/vm_inventory.json
       NIMBUSCORE_SCRIPT_DRY_RUN: "false"
-      NIMBUSCORE_HEADNODE_IP: 10.0.10.3
-      NIMBUSCORE_COMPUTE_IPS: 10.0.10.1
+      NIMBUSCORE_HEADNODE_IP: "${NIMBUSCORE_HEADNODE_IP:-10.0.10.4}"
+      NIMBUSCORE_COMPUTE_IPS: "${NIMBUSCORE_COMPUTE_IPS:-10.0.10.1,10.0.10.2,10.0.10.3}"
       NIMBUSCORE_REMOTE_SCRIPTS_DIR: /home/ubuntu/script_runner
+      NIMBUSCORE_KEYPAIR_DIR: "${NIMBUSCORE_KEYPAIR_DIR:-/home/ubuntu/nimbuscore-keys}"
+      NIMBUSCORE_OVS_UPLINKS: "${NIMBUSCORE_OVS_UPLINKS:-ens4}"
       NIMBUSCORE_SSH_OPTS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+      NIMBUSCORE_CONSOLE_USER: "${NIMBUSCORE_CONSOLE_USER:-nimbus}"
+      NIMBUSCORE_CONSOLE_PASSWORD: "${NIMBUSCORE_CONSOLE_PASSWORD:-NimbusCore123}"
+      NIMBUSCORE_ENABLE_PASSWORD_LOGIN: "${NIMBUSCORE_ENABLE_PASSWORD_LOGIN:-true}"
       NIMBUSCORE_VLAN_BASE: 100
+      NIMBUSCORE_VLAN_BLOCK_SIZE: 100
       NIMBUSCORE_VNC_BASE: 5901
+      NIMBUSCORE_VNC_BLOCK_SIZE: 100
       NIMBUSCORE_CIDR_BASE: 10
+      NIMBUSCORE_CIDR_BLOCK_SIZE: 20
     depends_on:
       - backend
     volumes:

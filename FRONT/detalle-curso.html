@@ -247,6 +247,8 @@
 		.status-dot.running { background: #44b078; box-shadow: 0 0 0 3px rgba(68,176,120,0.2); }
 		.status-dot.stopped { background: #f5a623; }
 		.status-dot.off     { background: #c0c4c8; }
+		.status-dot.busy    { background: #4a9fd5; box-shadow: 0 0 0 3px rgba(74,159,213,0.18); }
+		.status-dot.error   { background: #f56a6a; box-shadow: 0 0 0 3px rgba(245,106,106,0.18); }
 
 		.slice-name { font-weight: 600; color: #3d4449; }
 
@@ -258,11 +260,14 @@
 		}
 		.timer.paused { color: #f5a623; }
 		.timer.off     { color: #9fa3a6; }
+		.timer.busy    { color: #4a9fd5; }
+		.timer.error   { color: #f56a6a; }
 
 		.ctrl-btns { display: inline-flex; gap: 0.35em; align-items: center; }
 
 		.btn-ctrl {
-			width: 2.3em; height: 2.3em;
+			width: auto; min-width: 2.7em; height: 2.3em;
+			padding: 0 0.75em;
 			border-radius: 0.35em;
 			border: solid 1px rgba(210,215,217,0.75);
 			background: transparent;
@@ -270,14 +275,17 @@
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
-			font-size: 0.8em;
+			gap: 0.45em;
+			font-size: 0.72em;
+			font-weight: 700;
 			cursor: pointer;
 			transition: background 0.18s, border-color 0.18s, color 0.18s;
+			white-space: nowrap;
 		}
+		.btn-ctrl:disabled { opacity: 0.45; cursor: not-allowed; }
 
-		.btn-ctrl.btn-play:hover, .btn-ctrl.btn-play.on    { background: rgba(68,176,120,0.12); border-color: #44b078; color: #44b078; }
-		.btn-ctrl.btn-stop:hover, .btn-ctrl.btn-stop.on    { background: rgba(245,166,35,0.12); border-color: #f5a623; color: #f5a623; }
-		.btn-ctrl.btn-power:hover, .btn-ctrl.btn-power.on  { background: rgba(245,106,106,0.12); border-color: #f56a6a; color: #f56a6a; }
+		.btn-ctrl.btn-deploy:hover, .btn-ctrl.btn-deploy.on { background: rgba(68,176,120,0.12); border-color: #44b078; color: #44b078; }
+		.btn-ctrl.btn-destroy:hover, .btn-ctrl.btn-destroy.on { background: rgba(245,106,106,0.12); border-color: #f56a6a; color: #f56a6a; }
 
 		.btn-action {
 			display: inline-flex;
@@ -397,7 +405,7 @@
 				</div>
 				<a href="configurar-slice.html" class="btn-crear">
 					<i class="fas fa-plus"></i>
-					Crear Nuevo Slice
+					Asignar Slice
 				</a>
 			</div>
 
@@ -406,8 +414,8 @@
 					<thead>
 						<tr>
 							<th id="col-slices">Slices</th>
-							<th>Tiempo de vida</th>
-							<th class="col-center">Prender / Apagar</th>
+							<th>Estado</th>
+							<th class="col-center">Acciones</th>
 							<th class="col-center">Ver</th>
 						</tr>
 					</thead>
@@ -431,20 +439,9 @@ document.getElementById('badge-id').textContent   = courseId;
 document.getElementById('page-title').textContent = `Slices — ${courseNom}`;
 document.getElementById('col-slices').textContent = `Slices — ${courseNom}`;
 
-/* Set crear link with course context */
-document.querySelector('.btn-crear').href =
-	`configurar-slice.html?curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}`;
+document.querySelector('.btn-crear').href = 'slices.html';
 
-const NUM_SLICES = 5;
-const INIT_STATES = ['running', 'running', 'stopped', 'off', 'running'];
-const INIT_TIMES  = [5412, 2873, 1440, 0, 9001];
-
-const slices = Array.from({ length: NUM_SLICES }, (_, i) => ({
-	id:    i + 1,
-	name: `Slice ${i + 1}`,
-	state: INIT_STATES[i],
-	secs:  INIT_TIMES[i]
-}));
+let slices = [];
 
 function fmt(s) {
 	const h = Math.floor(s / 3600);
@@ -453,77 +450,185 @@ function fmt(s) {
 	return [h, m, sec].map(n => String(n).padStart(2, '0')).join(':');
 }
 
-function renderTable() {
-	/* Load assigned slices for this course */
-	const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
-	const assigned = assignments.filter(a => a.courseId === courseId);
+function stateFromBackend(estado) {
+	const normalized = String(estado || '').toUpperCase();
+	if (normalized === 'ACTIVO') return 'running';
+	if (normalized === 'DESPLEGANDO' || normalized === 'DESTRUYENDO') return 'busy';
+	if (normalized === 'ERROR') return 'error';
+	return 'off';
+}
 
-	/* Merge with demo slices (demo slices get generic names; assigned ones use their real name) */
-	const assignedRows = assigned.map((a, i) => ({
-		id: 'a' + i,
-		name: a.sliceName,
-		state: 'off',
-		secs: 0,
-		isAssigned: true,
-	}));
+function stateLabel(slice) {
+	const estado = String(slice.backendEstado || '').toUpperCase();
+	if (estado === 'ACTIVO') return 'Activo';
+	if (estado === 'DESPLEGANDO') return 'Desplegando';
+	if (estado === 'DESTRUYENDO') return 'Destruyendo';
+	if (estado === 'DESTRUIDO') return 'Destruido';
+	if (estado === 'ERROR') return 'Error';
+	if (estado === 'ASIGNADO') return 'Asignado';
+	return estado ? estado.charAt(0) + estado.slice(1).toLowerCase() : 'Pendiente';
+}
 
-	const allSlices = [
-		...slices,         /* existing demo slices */
-		...assignedRows,   /* newly assigned ones */
-	];
+async function loadCourseSlices() {
+	try {
+		const response = await fetch('/api/slices');
+		if (!response.ok) throw new Error(`API respondio ${response.status}`);
+		const apiSlices = await response.json();
+		return apiSlices
+			.filter(slice => String(slice.curso_id || '') === String(courseId))
+			.map((slice, index) => ({
+				id: slice.id,
+				name: slice.nombre,
+				alumno: slice.alumno_nombre || '',
+				backendEstado: slice.estado || 'ASIGNADO',
+				state: stateFromBackend(slice.estado),
+				hasInventory: !!(slice.vm_inventory && (slice.vm_inventory.vms || []).length),
+				secs: 0,
+				isAssigned: true,
+				index,
+			}));
+	} catch (error) {
+		console.warn('Backend no disponible, usando asignaciones locales.', error);
+		const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
+		return assignments
+			.filter(a => a.courseId === courseId)
+			.map((a, i) => ({
+				id: 'a' + i,
+				name: a.sliceName,
+				alumno: a.studentName || '',
+				backendEstado: 'LOCAL',
+				state: 'off',
+				hasInventory: false,
+				secs: 0,
+				isAssigned: true,
+			}));
+	}
+}
 
+async function renderTable() {
+	slices = await loadCourseSlices();
 	const tbody = document.getElementById('slices-tbody');
-	tbody.innerHTML = allSlices.map(s => `
+	if (!slices.length) {
+		tbody.innerHTML = `
+			<tr>
+				<td colspan="4" style="text-align:center;padding:3em 1.5em;color:#9fa3a6">
+					<i class="fas fa-layer-group" style="display:block;font-size:2.4em;margin-bottom:0.5em;color:rgba(210,215,217,0.85)"></i>
+					Este curso todavía no tiene slices asignados.
+				</td>
+			</tr>`;
+		return;
+	}
+	tbody.innerHTML = slices.map(s => `
 		<tr id="tr-${s.id}">
 			<td>
 				<span class="status-dot ${s.state}" id="dot-${s.id}"></span>
 				<span class="slice-name">${s.name}</span>
+				${s.alumno ? `<span style="font-size:0.78em;color:#9fa3a6;margin-left:0.75em">${s.alumno}</span>` : ''}
 			</td>
 			<td>
-				<span class="timer ${s.state === 'stopped' ? 'paused' : s.state === 'off' ? 'off' : ''}"
-				      id="timer-${s.id}">${s.state === 'off' ? '00:00:00' : fmt(s.secs)}</span>
+				<span class="timer ${s.state === 'busy' ? 'busy' : s.state === 'error' ? 'error' : s.state === 'off' ? 'off' : ''}"
+				      id="status-${s.id}">${stateLabel(s)}</span>
 			</td>
 			<td class="col-center">
 				<div class="ctrl-btns">
-					<button class="btn-ctrl btn-play ${s.state === 'running' ? 'on' : ''}"
-					        onclick="ctrlSlice('${s.id}','play')" title="Iniciar">
+					<button class="btn-ctrl btn-deploy ${s.state === 'running' ? 'on' : ''}"
+					        onclick="deploySlice('${s.id}')" title="Desplegar o encender VMs" ${s.state === 'running' || s.state === 'busy' ? 'disabled' : ''}>
 						<i class="fas fa-play"></i>
+						Desplegar
 					</button>
-					<button class="btn-ctrl btn-stop ${s.state === 'stopped' ? 'on' : ''}"
-					        onclick="ctrlSlice('${s.id}','stop')" title="Detener">
-						<i class="fas fa-stop"></i>
-					</button>
-					<button class="btn-ctrl btn-power ${s.state === 'off' ? 'on' : ''}"
-					        onclick="ctrlSlice('${s.id}','off')" title="Apagar">
+					<button class="btn-ctrl btn-destroy ${s.state === 'off' ? 'on' : ''}"
+					        onclick="destroySlice('${s.id}')" title="Apagar y destruir VMs" ${s.state === 'off' || s.state === 'busy' ? 'disabled' : ''}>
 						<i class="fas fa-power-off"></i>
+						Apagar
 					</button>
 				</div>
 			</td>
 			<td class="col-center">
-				${s.isAssigned ? `<span style="font-size:0.78em;color:#9fa3a6">—</span>` :
-				`<a href="ver-slice.html?slice=${s.id}&curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}"
+				<a href="ver-slice.html?slice=${s.id}&curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}"
 				   class="btn-action btn-view" title="Ver slice">
 					<i class="fas fa-eye"></i>
-				</a>`}
+				</a>
 			</td>
 		</tr>
 	`).join('');
 }
 
-function ctrlSlice(id, action) {
-	const s = slices.find(x => String(x.id) === String(id));
+function findSlice(id) {
+	return slices.find(x => String(x.id) === String(id));
+}
+
+function setSlicePending(id, label) {
+	const s = findSlice(id);
 	if (!s) return;
-	s.state = action === 'play' ? 'running' : action === 'stop' ? 'stopped' : 'off';
-	if (s.state === 'off') s.secs = 0;
+	s.state = 'busy';
+	s.backendEstado = label;
 	const row = document.getElementById('tr-' + id);
-	row.querySelector('.btn-play').classList.toggle('on',  s.state === 'running');
-	row.querySelector('.btn-stop').classList.toggle('on',  s.state === 'stopped');
-	row.querySelector('.btn-power').classList.toggle('on', s.state === 'off');
+	if (!row) return;
+	row.querySelectorAll('.btn-ctrl').forEach(btn => { btn.disabled = true; });
 	const dot = document.getElementById('dot-' + id);
 	dot.className = `status-dot ${s.state}`;
-	const timer = document.getElementById('timer-' + id);
-	timer.className = `timer${s.state === 'stopped' ? ' paused' : s.state === 'off' ? ' off' : ''}`;
-	if (s.state === 'off') timer.textContent = '00:00:00';
+	const status = document.getElementById('status-' + id);
+	status.className = 'timer busy';
+	status.textContent = label === 'DESTRUYENDO' ? 'Destruyendo' : 'Desplegando';
+}
+
+async function requestSliceJob(id, action) {
+	const response = await fetch(`/api/slices/${encodeURIComponent(id)}/${action}`, { method: 'POST' });
+	if (!response.ok) {
+		let detail = `API respondio ${response.status}`;
+		try {
+			const payload = await response.json();
+			detail = payload.detail || detail;
+		} catch (_) {}
+		throw new Error(detail);
+	}
+	return response.json();
+}
+
+async function pollDeployment(jobId) {
+	for (let attempt = 0; attempt < 120; attempt++) {
+		await new Promise(resolve => setTimeout(resolve, 2500));
+		const response = await fetch(`/api/deployments/${encodeURIComponent(jobId)}`);
+		if (!response.ok) continue;
+		const deployment = await response.json();
+		if (deployment.status === 'SUCCESS') {
+			await renderTable();
+			return deployment;
+		}
+		if (deployment.status === 'FAILED') {
+			await renderTable();
+			throw new Error(deployment.message || 'El job fallo');
+		}
+	}
+	await renderTable();
+	throw new Error('El job sigue en ejecucion. Revisa los logs del worker.');
+}
+
+async function deploySlice(id) {
+	try {
+		setSlicePending(id, 'DESPLEGANDO');
+		const deployment = await requestSliceJob(id, 'deploy');
+		await pollDeployment(deployment.id);
+	} catch (error) {
+		console.error('No se pudo desplegar el slice.', error);
+		alert(`No se pudo desplegar el slice: ${error.message}`);
+		await renderTable();
+	}
+}
+
+async function destroySlice(id) {
+	const s = findSlice(id);
+	if (!s) return;
+	if (!confirm(`Se apagaran y eliminaran las VMs de "${s.name}". ¿Continuar?`)) return;
+	try {
+		setSlicePending(id, 'DESTRUYENDO');
+		const deployment = await requestSliceJob(id, 'destroy');
+		await pollDeployment(deployment.id);
+	} catch (error) {
+		console.error('No se pudo apagar el slice.', error);
+		alert(`No se pudo apagar el slice: ${error.message}`);
+		await renderTable();
+	}
 }
 
 function tick() {

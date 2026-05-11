@@ -1,5 +1,36 @@
 from typing import Any
 
+from app.services.image_catalog import image_details
+
+
+FLAVORS = {
+    "m1.tiny": {"vcpus": 1, "ram_mb": 512},
+    "m1.small": {"vcpus": 1, "ram_mb": 2048},
+    "m1.medium": {"vcpus": 2, "ram_mb": 4096},
+    "m1.large": {"vcpus": 4, "ram_mb": 8192},
+    "m1.xlarge": {"vcpus": 8, "ram_mb": 16384},
+}
+
+def flavor_details(flavor_name: str | None) -> dict[str, int | str]:
+    name = flavor_name or "m1.small"
+    spec = FLAVORS.get(name, FLAVORS["m1.small"])
+    return {"name": name, **spec}
+
+
+def disk_gb_from_config(value: Any) -> int:
+    try:
+        disk_gb = int(value or 20)
+    except (TypeError, ValueError):
+        disk_gb = 20
+    return max(disk_gb, 1)
+
+
+def topology_node_index(node_id: str) -> int:
+    try:
+        return int(node_id.rsplit("-n", 1)[1])
+    except (IndexError, ValueError):
+        return 0
+
 
 def build_script_variables(
     slice_item: dict[str, Any], placements: list[dict[str, Any]]
@@ -10,14 +41,24 @@ def build_script_variables(
     for index, node in enumerate(slice_item.get("nodos") or []):
         cfg = node.get("configuracion") or {}
         placement = placement_by_node.get(node["id"], {})
+        flavor = flavor_details(cfg.get("flavor"))
+        image = image_details(cfg.get("imagen"))
 
         instances.append(
             {
                 "name": f"{slice_item['id']}-{node.get('nombre') or node['id']}",
                 "node_id": node["id"],
                 "node_type": node.get("tipo", "srv"),
-                "image": cfg.get("imagen") or "ubuntu-22",
-                "flavor": cfg.get("flavor") or "m1.small",
+                "topology_id": node.get("topologia_id"),
+                "topology_node_index": topology_node_index(node["id"]),
+                "image": image["id"],
+                "image_name": image["name"],
+                "image_url": image["url"],
+                "image_download_method": image.get("download_method", "auto"),
+                "flavor": flavor["name"],
+                "vcpus": flavor["vcpus"],
+                "ram_mb": flavor["ram_mb"],
+                "disk_gb": disk_gb_from_config(cfg.get("disco")),
                 "key_pair": cfg.get("llaves") or "default-key",
                 "security_ports": cfg.get("seguridad") or ["22", "443"],
                 "custom_rules": cfg.get("reglas") or [],

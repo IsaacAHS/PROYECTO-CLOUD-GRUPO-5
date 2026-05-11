@@ -118,6 +118,13 @@
 		.field input[type="text"], .field input[type="number"] { padding: 0 0.85em; background-image: none; }
 		.field select:focus, .field input:focus { border-color: #f56a6a; box-shadow: 0 0 0 1px #f56a6a; }
 
+		.keypair-row { display: grid; grid-template-columns: minmax(0, 1fr) 2.35em; gap: 0.45em; align-items: center; }
+		.keypair-row select { min-width: 0; }
+		.btn-create-keypair { width: 2.35em; height: 2.35em; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.35em; background: transparent; color: #7f888f; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.18s, color 0.18s, border-color 0.18s; }
+		.btn-create-keypair:hover { background: rgba(245,106,106,0.08); border-color: #f56a6a; color: #f56a6a; }
+		.btn-create-keypair:disabled { opacity: 0.55; cursor: not-allowed; }
+		.keypair-help { margin-top: 0.35em; font-size: 0.72em; color: #9fa3a6; line-height: 1.45; }
+
 		/* ── Topo Table ── */
 		.topo-table-wrap { margin-bottom: 0.75em; }
 
@@ -424,6 +431,19 @@
 		.canvas-action-btn.active:hover { background: #f67878; border-color: #f67878; color: #fff !important; }
 		.canvas-action-btn:disabled { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
 		.canvas-action-btn i { font-size: 0.88em; }
+		body.review-mode .btn-add-topo,
+		body.review-mode .btn-del-topo,
+		body.review-mode .btn-rename-node,
+		body.review-mode .btn-create-keypair,
+		body.review-mode .btn-add-rule,
+		body.review-mode .btn-del-rule,
+		body.review-mode .img-tab,
+		body.review-mode .btn-upload-file {
+			opacity: 0.48;
+			cursor: not-allowed;
+		}
+		body.review-mode .topo-node { cursor: pointer; }
+		body.review-mode .edge-line { cursor: default !important; }
 
 		/* Link mode banner */
 		.link-banner {
@@ -451,6 +471,8 @@
 		.topo-node:hover { box-shadow: 0 3px 14px rgba(0,0,0,0.13); z-index: 10; }
 		.topo-node.selected { box-shadow: 0 0 0 3px rgba(245,106,106,0.35), 0 3px 14px rgba(0,0,0,0.13); z-index: 15; }
 		.topo-node.link-source { box-shadow: 0 0 0 3px rgba(74,159,213,0.5); z-index: 15; }
+		.topo-node.invalid { box-shadow: 0 0 0 3px rgba(245,106,106,0.28), 0 3px 14px rgba(0,0,0,0.12); border-color: #f56a6a; }
+		.topo-node.invalid::after { content: "!"; position: absolute; top: -0.55em; right: -0.55em; width: 1.35em; height: 1.35em; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #f56a6a; color: #fff; border: solid 2px #fff; font-size: 0.72em; font-weight: 700; line-height: 1; }
 		.topo-node i { font-size: 1.3em; line-height: 1; pointer-events: none; }
 		.node-lbl { font-size: 8.5px; font-weight: 700; font-family: 'Roboto Slab', serif; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1; pointer-events: none; }
 
@@ -543,79 +565,6 @@
 
 		.asignar-wrapper { display: flex; justify-content: flex-end; flex-shrink: 0; }
 
-		/* ── Modal ── */
-		.modal-overlay {
-			display: none; position: fixed; inset: 0;
-			background: rgba(0,0,0,0.45); z-index: 2000;
-			align-items: center; justify-content: center;
-		}
-		.modal-overlay.open { display: flex; }
-		.modal {
-			background: #fff; border-radius: 0.5em;
-			width: 500px; max-width: 95vw;
-			box-shadow: 0 8px 40px rgba(0,0,0,0.2);
-			display: flex; flex-direction: column; max-height: 90vh;
-		}
-		.modal-header {
-			padding: 1.1em 1.4em; border-bottom: solid 1px rgba(210,215,217,0.75);
-			display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
-		}
-		.modal-header h3 {
-			font-family: 'Roboto Slab', serif; font-size: 0.9em; font-weight: 700;
-			color: #3d4449; text-transform: uppercase; letter-spacing: 0.06em; margin: 0;
-		}
-		.modal-close {
-			width: 2em; height: 2em; border-radius: 50%; padding: 0;
-			border: solid 1px rgba(210,215,217,0.75); background: transparent; color: #9fa3a6;
-			display: flex; align-items: center; justify-content: center;
-			font-size: 0.85em; cursor: pointer; transition: background 0.18s, color 0.18s;
-		}
-		.modal-close:hover { background: rgba(245,106,106,0.1); color: #f56a6a; border-color: #f56a6a; }
-		.modal-body { padding: 1.4em; overflow-y: auto; flex: 1; }
-		.modal-field { margin-bottom: 1.1em; }
-		.modal-field label { display: block; font-size: 0.84em; font-weight: 600; color: #3d4449; margin-bottom: 0.38em; }
-		.modal-field input[type="text"] {
-			display: block; width: 100%; height: 2.45em; padding: 0 0.85em;
-			border: solid 1px rgba(210,215,217,0.75); border-radius: 0.35em;
-			font-family: 'Open Sans', sans-serif; font-size: 0.88em; color: #3d4449;
-			outline: none; background: #fff; transition: border-color 0.2s, box-shadow 0.2s;
-		}
-		.modal-field input[type="text"]:focus { border-color: #f56a6a; box-shadow: 0 0 0 1px #f56a6a; }
-		.modal-course-list { border: solid 1px rgba(210,215,217,0.75); border-radius: 0.375em; overflow: hidden; }
-		.modal-course-item {
-			display: flex; align-items: center; gap: 0.75em;
-			padding: 0.8em 1em; border-bottom: solid 1px rgba(210,215,217,0.4);
-			cursor: pointer; transition: background 0.15s;
-		}
-		.modal-course-item:last-child { border-bottom: none; }
-		.modal-course-item:hover { background: rgba(245,106,106,0.05); }
-		.modal-course-item.selected { background: rgba(245,106,106,0.08); }
-		.modal-course-badge {
-			display: inline-block; background: rgba(245,106,106,0.1); color: #f56a6a;
-			font-family: 'Roboto Slab', serif; font-size: 0.7em; font-weight: 700;
-			padding: 0.2em 0.55em; border-radius: 0.25em; letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0;
-		}
-		.modal-course-name { font-size: 0.86em; font-weight: 600; color: #3d4449; }
-		.modal-course-item.selected .modal-course-name { color: #f56a6a; }
-		.modal-footer {
-			padding: 1.1em 1.4em; border-top: solid 1px rgba(210,215,217,0.75);
-			display: flex; gap: 0.75em; justify-content: flex-end; flex-shrink: 0;
-		}
-		.modal-btn-cancel {
-			display: inline-flex; align-items: center; justify-content: center; padding: 0 1.5em;
-			height: 2.7em; background: transparent; color: #9fa3a6;
-			border: solid 1px rgba(210,215,217,0.75); border-radius: 0.375em;
-			font-family: 'Roboto Slab', serif; font-size: 0.74em; font-weight: 700;
-			text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; transition: background 0.2s;
-		}
-		.modal-btn-cancel:hover { background: rgba(61,68,73,0.05); }
-		.modal-btn-save {
-			display: inline-flex; align-items: center; justify-content: center; gap: 0.4em; padding: 0 1.75em;
-			height: 2.7em; background: #f56a6a; color: #fff; border: none; border-radius: 0.375em;
-			font-family: 'Roboto Slab', serif; font-size: 0.74em; font-weight: 700;
-			text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; transition: background 0.2s;
-		}
-		.modal-btn-save:hover { background: #f67878; }
 	</style>
 </head>
 <body>
@@ -784,13 +733,7 @@
 								</div>
 								<div id="img-select-wrap">
 									<select id="nc-imagen" onchange="saveNodeConfig()">
-										<option value="">— Seleccionar imagen —</option>
-										<option value="ubuntu-22">Ubuntu 22.04 LTS</option>
-										<option value="ubuntu-20">Ubuntu 20.04 LTS</option>
-										<option value="debian-12">Debian 12</option>
-										<option value="centos-9">CentOS Stream 9</option>
-										<option value="windows-2022">Windows Server 2022</option>
-										<option value="fedora-38">Fedora 38</option>
+										<option value="">Cargando imágenes...</option>
 									</select>
 								</div>
 								<div id="img-upload-wrap" style="display:none">
@@ -806,13 +749,15 @@
 
 							<div class="field">
 								<label>Par de llaves <span class="req">*</span></label>
-								<select id="nc-llaves" onchange="saveNodeConfig()">
-									<option value="">— Seleccionar par de llaves —</option>
-									<option value="key-prod">key-prod</option>
-									<option value="key-dev">key-dev</option>
-									<option value="key-admin">key-admin</option>
-									<option value="key-testing">key-testing</option>
-								</select>
+								<div class="keypair-row">
+									<select id="nc-llaves" onchange="saveNodeConfig()">
+										<option value="">Cargando llaves...</option>
+									</select>
+									<button type="button" class="btn-create-keypair" id="btn-create-keypair" onclick="createKeypair()" title="Crear par de llaves">
+										<i class="fas fa-key"></i>
+									</button>
+								</div>
+								<div class="keypair-help" id="keypair-help">Solo se listan llaves publicas existentes en el backend.</div>
 							</div>
 
 							<div class="field" style="margin-bottom:0.5em">
@@ -859,7 +804,7 @@
 
 				<div class="topology-column">
 					<div class="asignar-wrapper" id="asignar-wrapper">
-						<button class="btn-asignar" onclick="openModal()">
+						<button class="btn-asignar" onclick="assignTemplateToCourse()">
 							<i class="fas fa-graduation-cap"></i>
 							Asignar a Curso
 						</button>
@@ -966,32 +911,6 @@
 	</div>
 </div>
 
-<!-- ── Modal: Asignar a Curso ── -->
-<div class="modal-overlay" id="modal-overlay">
-	<div class="modal">
-		<div class="modal-header">
-			<h3><i class="fas fa-graduation-cap" style="color:#f56a6a;margin-right:0.4em"></i> Asignar a Curso</h3>
-			<button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-		</div>
-		<div class="modal-body">
-			<div class="modal-field">
-				<label>Nombre del slice</label>
-				<input type="text" id="modal-nombre" placeholder="Nombre del slice..." />
-			</div>
-			<div class="modal-field" style="margin-bottom:0">
-				<label>Seleccionar curso</label>
-				<div class="modal-course-list" id="modal-course-list"></div>
-			</div>
-		</div>
-		<div class="modal-footer">
-			<button class="modal-btn-cancel" onclick="closeModal()">Cancelar</button>
-			<button class="modal-btn-save" onclick="saveAssignment()">
-				<i class="fas fa-check"></i> Guardar
-			</button>
-		</div>
-	</div>
-</div>
-
 <script>
 /* ── Module-scope context (set by initContext) ── */
 let ctxIsEdit = false;
@@ -999,6 +918,7 @@ let ctxSliceId = null;
 let ctxCourseId = null;
 let ctxCourseNom = '';
 let ctxBackUrl = 'slices.html';
+let ctxReviewOnly = false;
 
 /* ════════════════════
    DATA
@@ -1009,6 +929,13 @@ const TOPO_META = {
 	anillo: { icon: 'fa-sync-alt', label: 'Anillo' },
 	bus:    { icon: 'fa-bars',     label: 'Bus'    }
 };
+
+const REQUIRED_VM_FIELDS = [
+	{ key: 'flavor', label: 'flavor' },
+	{ key: 'disco', label: 'disco' },
+	{ key: 'imagen', label: 'imagen' },
+	{ key: 'llaves', label: 'par de llaves' }
+];
 
 const NODE_TYPES = {
 	srv: { icon: 'fa-server',  label: 'SRV' },
@@ -1036,11 +963,16 @@ let ctxNodeId = null;
 let ctxEdgeId = null;
 let linkMode = false;
 let linkSourceId = null;
+let availableKeypairs = [];
+let keypairsLoaded = false;
+let availableImages = [];
+let imagesLoaded = false;
 
 /* ════════════════════
    TOPOLOGY TABLE
 ════════════════════ */
 function addTopoEntry(type, count) {
+	if (ctxReviewOnly) return;
 	const id = ++topoSeq;
 	const entry = { id, type: type || '', count: count || 3 };
 	topoEntries.push(entry);
@@ -1050,6 +982,7 @@ function addTopoEntry(type, count) {
 }
 
 function removeTopoEntry(id) {
+	if (ctxReviewOnly) return;
 	removeTopoNodes(id);
 	topoEntries = topoEntries.filter(e => e.id !== id);
 	renderTopoTable();
@@ -1062,6 +995,7 @@ function removeTopoEntry(id) {
 }
 
 function onTopoTypeChange(id, val) {
+	if (ctxReviewOnly) return;
 	const entry = topoEntries.find(e => e.id === id);
 	if (!entry) return;
 	entry.type = val;
@@ -1070,6 +1004,7 @@ function onTopoTypeChange(id, val) {
 }
 
 function onTopoCountChange(id, val) {
+	if (ctxReviewOnly) return;
 	const entry = topoEntries.find(e => e.id === id);
 	if (!entry) return;
 	const n = Math.max(2, Math.min(30, parseInt(val) || 2));
@@ -1081,14 +1016,16 @@ function onTopoCountChange(id, val) {
 
 function renderTopoTable() {
 	const tbody = document.getElementById('topo-tbody');
+	const disabled = ctxReviewOnly ? 'disabled' : '';
 	if (!topoEntries.length) {
 		tbody.innerHTML = `<tr id="topo-empty-row"><td colspan="3"><div class="topo-empty-hint">Sin topologías — agrega una</div></td></tr>`;
+		syncReviewModeControls();
 		return;
 	}
 	tbody.innerHTML = topoEntries.map(e => `
 		<tr>
 			<td>
-				<select onchange="onTopoTypeChange(${e.id}, this.value)">
+				<select onchange="onTopoTypeChange(${e.id}, this.value)" ${disabled}>
 					<option value="">— Tipo —</option>
 					<option value="arbol"  ${e.type==='arbol' ?'selected':''}>Árbol</option>
 					<option value="lineal" ${e.type==='lineal'?'selected':''}>Lineal</option>
@@ -1098,15 +1035,16 @@ function renderTopoTable() {
 			</td>
 			<td>
 				<input type="number" id="ncount-${e.id}" value="${e.count}" min="2" max="30"
-					onchange="onTopoCountChange(${e.id}, this.value)" />
+					onchange="onTopoCountChange(${e.id}, this.value)" ${disabled} />
 			</td>
 			<td>
-				<button class="btn-del-topo" onclick="removeTopoEntry(${e.id})" title="Eliminar topología">
+				<button class="btn-del-topo" onclick="removeTopoEntry(${e.id})" title="Eliminar topología" ${disabled}>
 					<i class="fas fa-times"></i>
 				</button>
 			</td>
 		</tr>
 	`).join('');
+	syncReviewModeControls();
 }
 
 /* ════════════════════
@@ -1311,12 +1249,13 @@ function bindEdgeEvents() {
 	document.querySelectorAll('.edge-line').forEach(line => {
 		line.addEventListener('click', e => {
 			e.stopPropagation();
-			if (linkMode) return;
+			if (ctxReviewOnly || linkMode) return;
 			selectEdge(Number(line.dataset.edgeId));
 		});
 		line.addEventListener('contextmenu', e => {
 			e.preventDefault();
 			e.stopPropagation();
+			if (ctxReviewOnly) return;
 			showEdgeCtxMenu(Number(line.dataset.edgeId), e.clientX, e.clientY);
 		});
 	});
@@ -1342,7 +1281,7 @@ function createNodeEl(nd) {
 	// Single click: select / link
 	div.addEventListener('click', e => {
 		e.stopPropagation();
-		if (linkMode) {
+		if (linkMode && !ctxReviewOnly) {
 			handleLinkClick(nd.id);
 		} else {
 			selectNode(nd.id);
@@ -1352,6 +1291,7 @@ function createNodeEl(nd) {
 	// Double click: change type
 	div.addEventListener('dblclick', e => {
 		e.stopPropagation();
+		if (ctxReviewOnly) return;
 		showNodeTypePopover(nd.id, e.clientX, e.clientY);
 	});
 
@@ -1359,6 +1299,7 @@ function createNodeEl(nd) {
 	div.addEventListener('contextmenu', e => {
 		e.preventDefault();
 		e.stopPropagation();
+		if (ctxReviewOnly) return;
 		showCtxMenu(nd.id, e.clientX, e.clientY);
 	});
 
@@ -1371,6 +1312,7 @@ function updateNodeEl(nd) {
 	if (!el) return;
 	el.className = `topo-node nt-${nd.nodeType}`;
 	if (nd.id === selectedNodeId) el.classList.add('selected');
+	if (nodeHasMissingConfig(nd.id)) el.classList.add('invalid');
 	el.innerHTML = nodeInner(nd);
 }
 
@@ -1379,6 +1321,7 @@ function updateNodeEl(nd) {
 ════════════════════ */
 function makeDraggable(el, nd) {
 	el.addEventListener('mousedown', e => {
+		if (ctxReviewOnly) return;
 		if (e.button !== 0) return;
 		e.preventDefault();
 		const ox = nd.x, oy = nd.y, sx = e.clientX, sy = e.clientY;
@@ -1437,7 +1380,7 @@ function selectNode(id) {
 	const el = document.getElementById('node-' + id);
 	if (el) el.classList.add('selected');
 
-	document.getElementById('btn-del-node').disabled = false;
+	document.getElementById('btn-del-node').disabled = ctxReviewOnly;
 	renderNodeConfig();
 }
 
@@ -1453,6 +1396,7 @@ function deselectNode() {
 }
 
 function selectEdge(id) {
+	if (ctxReviewOnly) return;
 	deselectNode();
 	selectedEdgeId = id;
 	document.getElementById('btn-del-node').disabled = false;
@@ -1485,11 +1429,11 @@ function renderNodeConfig() {
 
 	document.getElementById('nc-flavor').value = cfg.flavor || '';
 	document.getElementById('nc-disco').value  = cfg.disco  || '';
-	document.getElementById('nc-llaves').value = cfg.llaves || '';
+	renderKeypairOptions(cfg.llaves || '');
 
 	// Image mode
 	setImgMode(cfg.imagenMode || 'select', false);
-	document.getElementById('nc-imagen').value = cfg.imagen || '';
+	renderImageOptions(cfg.imagen || '');
 	document.getElementById('upload-fname').textContent = cfg.imagenFile ? cfg.imagenFile : 'Sin archivo';
 
 	// Security chips
@@ -1512,6 +1456,7 @@ function renderNodeConfig() {
 			rulesList.appendChild(row);
 		});
 	}
+	syncReviewModeControls();
 }
 
 function getNodeDisplayName(nd) {
@@ -1519,6 +1464,7 @@ function getNodeDisplayName(nd) {
 }
 
 function renameSelectedNode() {
+	if (ctxReviewOnly) return;
 	const nd = nodes.find(n => n.id === selectedNodeId);
 	if (!nd) return;
 	const nextName = prompt('Nuevo nombre del nodo', getNodeDisplayName(nd));
@@ -1531,15 +1477,186 @@ function renameSelectedNode() {
 }
 
 function saveNodeConfig() {
+	if (ctxReviewOnly) return;
 	if (!selectedNodeId) return;
 	const cfg = nodeConfigs[selectedNodeId] || (nodeConfigs[selectedNodeId] = defaultConfig());
 	cfg.flavor = document.getElementById('nc-flavor').value;
 	cfg.disco  = document.getElementById('nc-disco').value;
 	cfg.llaves = document.getElementById('nc-llaves').value;
 	cfg.imagen = document.getElementById('nc-imagen').value;
+	updateNodeValidationState(selectedNodeId);
+}
+
+function renderImageOptions(preferredValue) {
+	const select = document.getElementById('nc-imagen');
+	if (!select) return;
+
+	const currentValue = preferredValue !== undefined ? preferredValue : select.value;
+	select.innerHTML = '';
+
+	const placeholder = document.createElement('option');
+	placeholder.value = '';
+	placeholder.textContent = imagesLoaded && availableImages.length === 0
+		? 'No hay imágenes disponibles'
+		: '— Seleccionar imagen —';
+	select.appendChild(placeholder);
+
+	availableImages.forEach(image => {
+		const option = document.createElement('option');
+		option.value = image.id;
+		option.textContent = image.label || image.name || image.id;
+		select.appendChild(option);
+	});
+
+	if (currentValue && !availableImages.some(image => image.id === currentValue)) {
+		const option = document.createElement('option');
+		option.value = currentValue;
+		option.textContent = imagesLoaded ? `${currentValue} (no disponible)` : currentValue;
+		select.appendChild(option);
+	}
+
+	select.value = currentValue || '';
+}
+
+async function loadImages(preferredValue) {
+	try {
+		const response = await fetch('/api/images');
+		if (!response.ok) throw new Error(`API /images respondio ${response.status}`);
+		availableImages = await response.json();
+		imagesLoaded = true;
+	} catch (error) {
+		console.warn('No se pudieron cargar imagenes.', error);
+		availableImages = [];
+		imagesLoaded = true;
+	}
+
+	const selectedValue = preferredValue !== undefined
+		? preferredValue
+		: (selectedNodeId && nodeConfigs[selectedNodeId] ? nodeConfigs[selectedNodeId].imagen : '');
+	renderImageOptions(selectedValue || '');
+	if (selectedNodeId) updateNodeValidationState(selectedNodeId);
+	nodes.forEach(nd => updateNodeValidationState(nd.id));
+	syncReviewModeControls();
+}
+
+function renderKeypairOptions(preferredValue) {
+	const select = document.getElementById('nc-llaves');
+	const help = document.getElementById('keypair-help');
+	if (!select) return;
+
+	const currentValue = preferredValue !== undefined ? preferredValue : select.value;
+	select.innerHTML = '';
+
+	const placeholder = document.createElement('option');
+	placeholder.value = '';
+	placeholder.textContent = keypairsLoaded && availableKeypairs.length === 0
+		? 'No hay llaves creadas'
+		: '— Seleccionar par de llaves —';
+	select.appendChild(placeholder);
+
+	availableKeypairs.forEach(keypair => {
+		const option = document.createElement('option');
+		option.value = keypair.name;
+		option.textContent = keypair.name;
+		select.appendChild(option);
+	});
+
+	if (availableKeypairs.some(keypair => keypair.name === currentValue)) {
+		select.value = currentValue;
+	} else if (currentValue && ctxReviewOnly) {
+		const option = document.createElement('option');
+		option.value = currentValue;
+		option.textContent = `${currentValue} (no disponible)`;
+		select.appendChild(option);
+		select.value = currentValue;
+	} else {
+		select.value = '';
+	}
+
+	if (help) {
+		help.textContent = keypairsLoaded && availableKeypairs.length === 0
+			? 'No hay llaves disponibles. Crea una para poder desplegar VMs.'
+			: 'Solo se listan llaves publicas existentes en el backend.';
+	}
+}
+
+async function loadKeypairs(preferredValue) {
+	try {
+		const response = await fetch('/api/keypairs');
+		if (!response.ok) throw new Error(`API /keypairs respondio ${response.status}`);
+		availableKeypairs = await response.json();
+		keypairsLoaded = true;
+	} catch (error) {
+		console.warn('No se pudieron cargar keypairs.', error);
+		availableKeypairs = [];
+		keypairsLoaded = true;
+	}
+
+	const selectedValue = preferredValue !== undefined
+		? preferredValue
+		: (selectedNodeId && nodeConfigs[selectedNodeId] ? nodeConfigs[selectedNodeId].llaves : '');
+	renderKeypairOptions(selectedValue || '');
+	if (selectedNodeId) updateNodeValidationState(selectedNodeId);
+	nodes.forEach(nd => updateNodeValidationState(nd.id));
+	syncReviewModeControls();
+}
+
+async function createKeypair() {
+	if (ctxReviewOnly) return;
+	const rawName = prompt('Nombre del nuevo par de llaves', 'key-dev');
+	if (rawName === null) return;
+
+	const name = rawName.trim();
+	if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(name)) {
+		alert('Nombre invalido. Usa letras, numeros, punto, guion o guion bajo.');
+		return;
+	}
+
+	const button = document.getElementById('btn-create-keypair');
+	if (button) button.disabled = true;
+
+	try {
+		const response = await fetch('/api/keypairs', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name })
+		});
+		if (!response.ok) {
+			const detail = await response.json().catch(() => ({}));
+			throw new Error(detail.detail || `API /keypairs respondio ${response.status}`);
+		}
+
+		const keypair = await response.json();
+		downloadPrivateKey(keypair.name, keypair.private_key);
+		await loadKeypairs(keypair.name);
+
+		if (selectedNodeId) {
+			document.getElementById('nc-llaves').value = keypair.name;
+			saveNodeConfig();
+		}
+
+		alert(`Par de llaves ${keypair.name} creado. Se descargo la llave privada; guardala como secreto.`);
+	} catch (error) {
+		alert(`No se pudo crear el par de llaves: ${error.message}`);
+	} finally {
+		if (button) button.disabled = false;
+	}
+}
+
+function downloadPrivateKey(name, privateKey) {
+	const blob = new Blob([privateKey], { type: 'application/x-pem-file' });
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = `${name}.pem`;
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	URL.revokeObjectURL(url);
 }
 
 function setImgMode(mode, doSave) {
+	if (ctxReviewOnly && doSave !== false) return;
 	if (doSave !== false && selectedNodeId) {
 		const cfg = nodeConfigs[selectedNodeId];
 		if (cfg) cfg.imagenMode = mode;
@@ -1551,6 +1668,7 @@ function setImgMode(mode, doSave) {
 }
 
 function onFileChange(input) {
+	if (ctxReviewOnly) return;
 	const fname = input.files[0] ? input.files[0].name : 'Sin archivo';
 	document.getElementById('upload-fname').textContent = fname;
 	if (selectedNodeId) {
@@ -1560,6 +1678,7 @@ function onFileChange(input) {
 }
 
 function toggleChip(el, port) {
+	if (ctxReviewOnly) return;
 	el.classList.toggle('active');
 	if (selectedNodeId) {
 		const cfg = nodeConfigs[selectedNodeId];
@@ -1570,6 +1689,7 @@ function toggleChip(el, port) {
 }
 
 function addRule() {
+	if (ctxReviewOnly) return;
 	if (!selectedNodeId) return;
 	const cfg = nodeConfigs[selectedNodeId] || (nodeConfigs[selectedNodeId] = defaultConfig());
 	const id = ++ruleSeq;
@@ -1601,6 +1721,7 @@ function makeRuleRow(id, proto, port) {
 }
 
 function updateRule(id, field, val) {
+	if (ctxReviewOnly) return;
 	if (!selectedNodeId) return;
 	const cfg = nodeConfigs[selectedNodeId];
 	if (!cfg) return;
@@ -1609,6 +1730,7 @@ function updateRule(id, field, val) {
 }
 
 function removeRule(id) {
+	if (ctxReviewOnly) return;
 	if (selectedNodeId) {
 		const cfg = nodeConfigs[selectedNodeId];
 		if (cfg) cfg.rules = cfg.rules.filter(r => r.id !== id);
@@ -1624,6 +1746,7 @@ function removeRule(id) {
    ADD STANDALONE NODE
 ════════════════════ */
 function addStandaloneNode() {
+	if (ctxReviewOnly) return;
 	const area = document.getElementById('canvas-area');
 	const W = area.offsetWidth  || 600;
 	const H = area.offsetHeight || 400;
@@ -1642,6 +1765,7 @@ function addStandaloneNode() {
    DELETE NODE
 ════════════════════ */
 function deleteNode(id) {
+	if (ctxReviewOnly) return;
 	const el = document.getElementById('node-' + id);
 	if (el) el.remove();
 	edges = edges.filter(e => e.from !== id && e.to !== id && !(e.bus && e.busNodes && e.busNodes.some(n => n.id === id)));
@@ -1665,6 +1789,7 @@ function deleteEdge(id) {
 }
 
 function deleteSelectedItem() {
+	if (ctxReviewOnly) return;
 	if (selectedNodeId) {
 		deleteNode(selectedNodeId);
 		return;
@@ -1676,6 +1801,7 @@ function deleteSelectedItem() {
    LINK MODE
 ════════════════════ */
 function toggleLinkMode() {
+	if (ctxReviewOnly) return;
 	linkMode = !linkMode;
 	const btn = document.getElementById('btn-connect');
 	const banner = document.getElementById('link-banner');
@@ -1685,6 +1811,7 @@ function toggleLinkMode() {
 }
 
 function handleLinkClick(nodeId) {
+	if (ctxReviewOnly) return;
 	if (!linkSourceId) {
 		linkSourceId = nodeId;
 		const el = document.getElementById('node-' + nodeId);
@@ -1716,6 +1843,7 @@ function cancelLink() {
    NODE TYPE POPOVER
 ════════════════════ */
 function showNodeTypePopover(nodeId, cx, cy) {
+	if (ctxReviewOnly) return;
 	popoverNodeId = nodeId;
 	const nd = nodes.find(n => n.id === nodeId);
 	if (!nd) return;
@@ -1732,6 +1860,7 @@ function showNodeTypePopover(nodeId, cx, cy) {
 }
 
 function setNodeType(type) {
+	if (ctxReviewOnly) return;
 	if (!popoverNodeId) return;
 	const nd = nodes.find(n => n.id === popoverNodeId);
 	if (nd) {
@@ -1746,6 +1875,7 @@ function setNodeType(type) {
    CONTEXT MENU
 ════════════════════ */
 function showCtxMenu(nodeId, cx, cy) {
+	if (ctxReviewOnly) return;
 	ctxNodeId = nodeId;
 	selectNode(nodeId);
 	document.getElementById('node-popover').classList.remove('open');
@@ -1764,6 +1894,7 @@ function showCtxMenu(nodeId, cx, cy) {
 }
 
 function setCtxNodeType(type) {
+	if (ctxReviewOnly) return;
 	if (!ctxNodeId) return;
 	const nd = nodes.find(n => n.id === ctxNodeId);
 	if (nd) {
@@ -1775,12 +1906,14 @@ function setCtxNodeType(type) {
 }
 
 function deleteCtxNode() {
+	if (ctxReviewOnly) return;
 	if (ctxNodeId) deleteNode(ctxNodeId);
 	document.getElementById('ctx-menu').classList.remove('open');
 	ctxNodeId = null;
 }
 
 function showEdgeCtxMenu(edgeId, cx, cy) {
+	if (ctxReviewOnly) return;
 	ctxEdgeId = edgeId;
 	selectEdge(edgeId);
 	document.getElementById('node-popover').classList.remove('open');
@@ -1797,6 +1930,7 @@ function showEdgeCtxMenu(edgeId, cx, cy) {
 }
 
 function deleteCtxEdge() {
+	if (ctxReviewOnly) return;
 	if (ctxEdgeId) deleteEdge(ctxEdgeId);
 	document.getElementById('edge-ctx-menu').classList.remove('open');
 	ctxEdgeId = null;
@@ -1899,9 +2033,231 @@ document.getElementById('canvas-area').addEventListener('click', e => {
 const TOPO_COLORS_CUSTOM = Object.assign({}, TOPO_COLORS, { custom: 'rgba(120,120,120,0.5)' });
 
 /* ════════════════════
+   REVIEW / PERSISTED SLICE HYDRATION
+════════════════════ */
+function syncReviewModeControls() {
+	if (!ctxReviewOnly) return;
+
+	document.body.classList.add('review-mode');
+	document.querySelectorAll([
+		'#nombre-slice',
+		'#zona',
+		'#topo-tbody select',
+		'#topo-tbody input',
+		'#topo-tbody button',
+		'.btn-add-topo',
+		'#btn-add-node',
+		'#btn-connect',
+		'#btn-del-node',
+		'#vm-config select',
+		'#vm-config input',
+		'#btn-create-keypair',
+		'.btn-rename-node',
+		'#tab-select',
+		'#tab-upload',
+		'.btn-upload-file',
+		'.btn-add-rule',
+		'.btn-del-rule',
+	].join(',')).forEach(el => {
+		if (el) el.disabled = true;
+	});
+
+	document.querySelectorAll('#nc-chips .sec-chip').forEach(chip => {
+		chip.style.pointerEvents = 'none';
+	});
+}
+
+function applyReviewMode() {
+	ctxReviewOnly = true;
+	document.body.classList.add('review-mode');
+	const hint = document.querySelector('.canvas-hint');
+	if (hint) {
+		hint.innerHTML = '<i class="fas fa-info-circle"></i> Modo revisión: selecciona un nodo para ver la configuración de su VM.';
+	}
+	linkMode = false;
+	linkSourceId = null;
+	document.getElementById('btn-connect').classList.remove('active');
+	document.getElementById('link-banner').classList.remove('visible');
+	syncReviewModeControls();
+}
+
+function clearEditorState() {
+	document.querySelectorAll('.topo-node').forEach(el => el.remove());
+	document.getElementById('topo-svg').innerHTML = '';
+	document.getElementById('node-popover').classList.remove('open');
+	document.getElementById('ctx-menu').classList.remove('open');
+	document.getElementById('edge-ctx-menu').classList.remove('open');
+
+	topoEntries = [];
+	nodes = [];
+	edges = [];
+	nodeConfigs = {};
+	topoSeq = 0;
+	nodeSeq = 0;
+	edgeSeq = 0;
+	ruleSeq = 0;
+	selectedNodeId = null;
+	selectedEdgeId = null;
+	popoverNodeId = null;
+	ctxNodeId = null;
+	ctxEdgeId = null;
+	linkMode = false;
+	linkSourceId = null;
+
+	renderTopoTable();
+	document.getElementById('btn-del-node').disabled = true;
+	document.getElementById('vm-empty').style.display = '';
+	document.getElementById('vm-config').style.display = 'none';
+	updateCanvasEmpty();
+}
+
+function hasNumericValue(value) {
+	return value !== undefined && value !== null && value !== '' && Number.isFinite(Number(value));
+}
+
+function normalizeNodeConfig(raw) {
+	const cfg = raw && typeof raw === 'object' ? raw : {};
+	const security = Array.isArray(cfg.seguridad)
+		? cfg.seguridad
+		: (Array.isArray(cfg.secChips) ? cfg.secChips : ['443']);
+
+	return {
+		flavor: cfg.flavor || '',
+		disco: cfg.disco !== undefined && cfg.disco !== null ? String(cfg.disco) : '',
+		imagen: cfg.imagen || '',
+		imagenMode: cfg.imagenMode || 'select',
+		imagenFile: cfg.imagenFile || null,
+		llaves: cfg.llaves || '',
+		secChips: new Set(security.map(String)),
+		rules: (cfg.reglas || cfg.rules || []).map(r => ({
+			id: ++ruleSeq,
+			proto: r.proto || 'TCP',
+			port: r.port || ''
+		}))
+	};
+}
+
+function makeNodeFromSaved(saved) {
+	const id = String(saved.id || `standalone-${++nodeSeq}`);
+	return {
+		id,
+		x: hasNumericValue(saved.x) ? Number(saved.x) : 120 + (nodes.length * 50),
+		y: hasNumericValue(saved.y) ? Number(saved.y) : 120,
+		nodeType: saved.tipo || saved.nodeType || 'srv',
+		topoId: saved.topologia_id !== undefined ? saved.topologia_id : (saved.topoId ?? null),
+		name: saved.nombre || saved.name || ''
+	};
+}
+
+function applySavedNodeData(savedNodes) {
+	const byId = new Map(savedNodes.map(n => [String(n.id), n]));
+	const area = document.getElementById('canvas-area');
+
+	nodes.forEach(nd => {
+		const saved = byId.get(String(nd.id));
+		if (!saved) return;
+		nd.name = saved.nombre || saved.name || nd.name;
+		nd.nodeType = saved.tipo || saved.nodeType || nd.nodeType;
+		if (hasNumericValue(saved.x)) nd.x = Number(saved.x);
+		if (hasNumericValue(saved.y)) nd.y = Number(saved.y);
+		nodeConfigs[nd.id] = normalizeNodeConfig(saved.configuracion);
+		const el = document.getElementById('node-' + nd.id);
+		if (el) {
+			el.style.left = nd.x + 'px';
+			el.style.top = nd.y + 'px';
+		}
+		updateNodeEl(nd);
+	});
+
+	savedNodes.forEach(saved => {
+		const id = String(saved.id || '');
+		if (!id || nodes.some(n => String(n.id) === id)) return;
+		const nd = makeNodeFromSaved(saved);
+		nodeConfigs[nd.id] = normalizeNodeConfig(saved.configuracion);
+		const el = createNodeEl(nd);
+		area.appendChild(el);
+		nodes.push(nd);
+		updateNodeEl(nd);
+	});
+}
+
+function applySavedEdges(savedEdges) {
+	if (!Array.isArray(savedEdges) || savedEdges.length === 0) return;
+	edges = [];
+	edgeSeq = 0;
+
+	savedEdges.forEach(saved => {
+		const id = hasNumericValue(saved.id) ? Number(saved.id) : ++edgeSeq;
+		edgeSeq = Math.max(edgeSeq, id);
+		if (saved.tipo === 'bus' && Array.isArray(saved.nodos)) {
+			const busNodes = saved.nodos
+				.map(nodeId => nodes.find(n => String(n.id) === String(nodeId)))
+				.filter(Boolean);
+			if (busNodes.length > 1) {
+				edges.push({ id, bus: true, busNodes, topo: saved.topologia || saved.topo || 'bus' });
+			}
+			return;
+		}
+
+		const from = saved.desde || saved.from;
+		const to = saved.hacia || saved.to;
+		if (from && to && nodes.some(n => String(n.id) === String(from)) && nodes.some(n => String(n.id) === String(to))) {
+			edges.push({ id, from: String(from), to: String(to), topo: saved.topologia || saved.topo || 'custom' });
+		}
+	});
+}
+
+function updateReviewLabels(sliceName) {
+	const cleanName = sliceName || (ctxSliceId ? `Slice ${ctxSliceId}` : 'Slice');
+	document.getElementById('page-heading').textContent = `Revisar ${cleanName}`;
+	document.title = `Revisar ${cleanName}`;
+	const current = document.querySelector('#topbar-breadcrumb .current');
+	if (current) current.textContent = `Revisar ${cleanName}`;
+}
+
+function hydrateSliceForReview(slice) {
+	clearEditorState();
+
+	const sliceName = slice.nombre || '';
+	updateReviewLabels(sliceName);
+	document.getElementById('nombre-slice').value = sliceName;
+	document.getElementById('zona').value = slice.zona || '';
+
+	(slice.topologias || []).forEach((topology, index) => {
+		const rawId = topology.id !== undefined ? topology.id : index + 1;
+		const id = hasNumericValue(rawId) ? Number(rawId) : ++topoSeq;
+		topoSeq = Math.max(topoSeq, id);
+		topoEntries.push({
+			id,
+			type: topology.type || topology.tipo || '',
+			count: Math.max(2, Number(topology.count || topology.nodos || 2))
+		});
+	});
+
+	renderTopoTable();
+	rebuildAllTopos();
+	applySavedNodeData(Array.isArray(slice.nodos) ? slice.nodos : []);
+	applySavedEdges(slice.enlaces);
+	drawEdges();
+	updateCanvasEmpty();
+	nodes.forEach(nd => updateNodeValidationState(nd.id));
+	if (nodes.length > 0) selectNode(nodes[0].id);
+	syncReviewModeControls();
+}
+
+async function loadSliceForReview(sliceId) {
+	let response = await fetch(`/api/slice-templates/${encodeURIComponent(sliceId)}`);
+	if (response.ok) return response.json();
+
+	response = await fetch(`/api/slices/${encodeURIComponent(sliceId)}`);
+	if (!response.ok) throw new Error(`API /slice-templates/${sliceId} y /slices/${sliceId} no encontraron el slice`);
+	return response.json();
+}
+
+/* ════════════════════
    URL PARAM CONTEXT
 ════════════════════ */
-(function initContext() {
+(async function initContext() {
 	const p          = new URLSearchParams(window.location.search);
 	const sliceId    = p.get('slice');
 	const sliceNom   = decodeURIComponent(p.get('slicenombre') || '');
@@ -1925,19 +2281,19 @@ const TOPO_COLORS_CUSTOM = Object.assign({}, TOPO_COLORS, { custom: 'rgba(120,12
 			<span class="sep"><i class="fas fa-chevron-right"></i></span>
 			<a href="${detailUrl}">${courseNom}</a>
 			<span class="sep"><i class="fas fa-chevron-right"></i></span>
-			<span class="current">${isEdit ? `Editar ${sliceLabel}` : 'Nuevo Slice'}</span>`;
+			<span class="current">${isEdit ? `Revisar ${sliceLabel}` : 'Nuevo Slice'}</span>`;
 	} else if (isEdit) {
 		bc.innerHTML = `
 			<a href="slices.html"><i class="fas fa-layer-group"></i> Slices</a>
 			<span class="sep"><i class="fas fa-chevron-right"></i></span>
-			<span class="current">Editar ${sliceLabel}</span>`;
+			<span class="current">Revisar ${sliceLabel}</span>`;
 	}
 
 	/* ── Heading ── */
 	if (isEdit) {
-		document.getElementById('page-heading').textContent = `Editar ${sliceLabel}`;
+		document.getElementById('page-heading').textContent = `Revisar ${sliceLabel}`;
 		document.getElementById('page-label').textContent = courseNom || 'Slices';
-		document.title = `Editar ${sliceLabel}`;
+		document.title = `Revisar ${sliceLabel}`;
 	}
 
 	/* ── Set module-scope context ── */
@@ -1955,8 +2311,7 @@ const TOPO_COLORS_CUSTOM = Object.assign({}, TOPO_COLORS, { custom: 'rgba(120,12
 	const footer = document.getElementById('config-footer');
 	if (isEdit) {
 		footer.innerHTML = `
-			<a href="${ctxBackUrl}" class="btn-guardar"><i class="fas fa-arrow-left"></i> Cancelar</a>
-			<button onclick="guardarSlice()" class="btn-siguiente"><i class="fas fa-save"></i> Guardar cambios</button>`;
+			<a href="${ctxBackUrl}" class="btn-guardar"><i class="fas fa-arrow-left"></i> Volver</a>`;
 	} else if (courseId) {
 		footer.querySelector('a.btn-guardar').href = ctxBackUrl;
 	}
@@ -1967,52 +2322,27 @@ const TOPO_COLORS_CUSTOM = Object.assign({}, TOPO_COLORS, { custom: 'rgba(120,12
 		if (aw) aw.style.display = 'none';
 	}
 
-	/* ── Slice name pre-fill in edit mode ── */
+	/* ── Slice name pre-fill in review mode ── */
 	if (isEdit && sliceLabel) {
 		const nombreEl = document.getElementById('nombre-slice');
 		if (nombreEl) nombreEl.value = sliceLabel;
 	}
 
-	/* ── Pre-populate demo data in edit mode ── */
+	/* ── Load persisted slice in review mode ── */
 	if (isEdit) {
-		const DEMO_SLICES = {
-			'1': { zona: 'us-east-1a', topos: [{ type: 'lineal', count: 4 }] },
-			'2': { zona: 'us-east-1b', topos: [{ type: 'arbol',  count: 5 }] },
-			'3': { zona: 'us-west-2a', topos: [{ type: 'arbol',  count: 7 }, { type: 'lineal', count: 3 }] },
-			'4': { zona: 'eu-west-1a', topos: [{ type: 'lineal', count: 6 }] },
-		};
-		const DEMO_NODE_CFGS = [
-			{ flavor: 'm1.small',  disco: '20',  imagen: 'ubuntu-22',   llaves: 'key-dev',   secChips: ['22','80'],        rules: [] },
-			{ flavor: 'm1.medium', disco: '50',  imagen: 'ubuntu-22',   llaves: 'key-prod',  secChips: ['22','443'],       rules: [] },
-			{ flavor: 'm1.large',  disco: '100', imagen: 'debian-12',   llaves: 'key-admin', secChips: ['443','icmp'],     rules: [{ proto: 'TCP', port: '8080' }] },
-			{ flavor: 'm1.xlarge', disco: '200', imagen: 'centos-9',    llaves: 'key-prod',  secChips: ['22','80','443'],  rules: [] },
-			{ flavor: 'm1.medium', disco: '50',  imagen: 'ubuntu-20',   llaves: 'key-dev',   secChips: ['22'],             rules: [] },
-			{ flavor: 'm1.small',  disco: '20',  imagen: 'fedora-38',   llaves: 'key-testing',secChips: ['80','443'],      rules: [] },
-			{ flavor: 'm1.large',  disco: '100', imagen: 'windows-2022',llaves: 'key-admin', secChips: ['443'],            rules: [{ proto: 'TCP', port: '3389' }] },
-		];
-		const demo = DEMO_SLICES[sliceId];
-		if (demo) {
-			document.getElementById('zona').value = demo.zona;
-			demo.topos.forEach(t => addTopoEntry(t.type, t.count));
-			/* fill each node's VM config with rotating demo values */
-			let cfgIdx = 0;
-			Object.keys(nodeConfigs).forEach(id => {
-				const src = DEMO_NODE_CFGS[cfgIdx % DEMO_NODE_CFGS.length];
-				cfgIdx++;
-				nodeConfigs[id] = {
-					flavor: src.flavor,
-					disco: src.disco,
-					imagen: src.imagen,
-					imagenMode: 'select',
-					imagenFile: null,
-					llaves: src.llaves,
-					secChips: new Set(src.secChips),
-					rules: src.rules.map(r => ({ ...r, id: ++ruleSeq })),
-				};
-			});
+		applyReviewMode();
+		try {
+			const persistedSlice = await loadSliceForReview(sliceId);
+			hydrateSliceForReview(persistedSlice);
+		} catch (error) {
+			console.warn('No se pudo cargar el slice persistido.', error);
+			alert(`No se pudo cargar la configuración guardada del slice: ${error.message}`);
 		}
 	}
-})();
+	})();
+
+	loadImages();
+	loadKeypairs();
 
 function serializeNodeConfig(cfg) {
 	cfg = cfg || defaultConfig();
@@ -2028,6 +2358,72 @@ function serializeNodeConfig(cfg) {
 	};
 }
 
+function missingVmFields(nodeId) {
+	const cfg = nodeConfigs[nodeId];
+	if (!cfg) return REQUIRED_VM_FIELDS.map(f => f.label);
+	return REQUIRED_VM_FIELDS
+		.filter(f => {
+			const value = String(cfg[f.key] || '').trim();
+			if (!value) return true;
+			if (f.key === 'imagen') {
+				return imagesLoaded && cfg.imagenMode !== 'upload' && !availableImages.some(image => image.id === value);
+			}
+			if (f.key === 'llaves') {
+				return !availableKeypairs.some(keypair => keypair.name === value);
+			}
+			return false;
+		})
+		.map(f => f.label);
+}
+
+function nodeHasMissingConfig(nodeId) {
+	return missingVmFields(nodeId).length > 0;
+}
+
+function updateNodeValidationState(nodeId) {
+	const el = document.getElementById('node-' + nodeId);
+	if (!el) return;
+	el.classList.toggle('invalid', nodeHasMissingConfig(nodeId));
+}
+
+function clearValidationMarkers() {
+	document.querySelectorAll('.topo-node.invalid').forEach(el => el.classList.remove('invalid'));
+}
+
+function validateSliceBeforeSave() {
+	const errors = [];
+	const runnableTopologies = topoEntries.filter(t => t.type && Number(t.count) > 0);
+
+	if (runnableTopologies.length === 0) {
+		errors.push({ message: 'Agrega al menos una topología con cantidad de nodos mayor a 0.' });
+	}
+
+	nodes.forEach(nd => {
+		const missing = missingVmFields(nd.id);
+		if (missing.length > 0) {
+			errors.push({
+				nodeId: nd.id,
+				message: `${getNodeDisplayName(nd)}: falta ${missing.join(', ')}.`
+			});
+		}
+	});
+
+	clearValidationMarkers();
+	errors.filter(e => e.nodeId).forEach(e => updateNodeValidationState(e.nodeId));
+
+	if (errors.length === 0) return true;
+
+	const firstNodeError = errors.find(e => e.nodeId);
+	if (firstNodeError) {
+		selectNode(firstNodeError.nodeId);
+		const firstEl = document.getElementById('node-' + firstNodeError.nodeId);
+		if (firstEl) firstEl.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+	}
+
+	alert('Completa la configuración antes de guardar:\n\n' + errors.map(e => `- ${e.message}`).join('\n'));
+	return false;
+}
+
 function buildSlicePayload(nombre) {
 	return {
 		nombre,
@@ -2035,7 +2431,7 @@ function buildSlicePayload(nombre) {
 		curso_id: ctxCourseId,
 		topologias: topoEntries
 			.filter(t => t.type)
-			.map(t => ({ type: t.type, count: Number(t.count) || 0 })),
+			.map(t => ({ id: t.id, type: t.type, count: Number(t.count) || 0 })),
 		nodos: nodes.map(n => ({
 			id: n.id,
 			nombre: getNodeDisplayName(n),
@@ -2052,7 +2448,7 @@ function buildSlicePayload(nombre) {
 }
 
 async function saveSliceInApi(payload) {
-	const url = ctxIsEdit && ctxSliceId ? `/api/slices/${encodeURIComponent(ctxSliceId)}` : '/api/slices';
+	const url = ctxIsEdit && ctxSliceId ? `/api/slice-templates/${encodeURIComponent(ctxSliceId)}` : '/api/slice-templates';
 	const method = ctxIsEdit && ctxSliceId ? 'PUT' : 'POST';
 	const response = await fetch(url, {
 		method,
@@ -2063,32 +2459,34 @@ async function saveSliceInApi(payload) {
 	return response.json();
 }
 
-async function deploySliceInApi(sliceId) {
-	const response = await fetch(`/api/slices/${encodeURIComponent(sliceId)}/deploy`, { method: 'POST' });
-	if (!response.ok) throw new Error(`No se pudo desplegar el slice ${sliceId}`);
-	return response.json();
-}
-
 function saveSliceFallback(nombre) {
-	if (!ctxIsEdit) {
-		const slices = JSON.parse(localStorage.getItem('nimbuscore_slices') || '[]');
-		const newId  = 'new_' + Date.now();
-		slices.push({ id: newId, nombre });
-		localStorage.setItem('nimbuscore_slices', JSON.stringify(slices));
+	const templates = JSON.parse(localStorage.getItem('nimbuscore_slice_templates') || '[]');
+	if (ctxIsEdit && ctxSliceId) {
+		const idx = templates.findIndex(item => String(item.id) === String(ctxSliceId));
+		if (idx >= 0) templates[idx] = { ...templates[idx], ...buildSlicePayload(nombre), estado: 'PLANTILLA' };
+		localStorage.setItem('nimbuscore_slice_templates', JSON.stringify(templates));
+		return;
 	}
+	const newId  = 'tpl_local_' + Date.now();
+	templates.push({ id: newId, ...buildSlicePayload(nombre), estado: 'PLANTILLA' });
+	localStorage.setItem('nimbuscore_slice_templates', JSON.stringify(templates));
 }
 
 /* ════════════════════
    GUARDAR SLICE
 ════════════════════ */
 async function guardarSlice() {
+	if (ctxReviewOnly) {
+		window.location.href = ctxBackUrl;
+		return;
+	}
 	const nombre = (document.getElementById('nombre-slice').value || '').trim();
 	if (!nombre) { alert('Por favor ingresa un nombre para el slice.'); return; }
+	if (!validateSliceBeforeSave()) return;
 
 	try {
 		const saved = await saveSliceInApi(buildSlicePayload(nombre));
-		const deployment = await deploySliceInApi(saved.id);
-		localStorage.setItem('nimbuscore_last_deployment', JSON.stringify(deployment));
+		localStorage.setItem('nimbuscore_last_template', JSON.stringify(saved));
 	} catch (error) {
 		console.warn('Backend no disponible, usando almacenamiento local demo.', error);
 		saveSliceFallback(nombre);
@@ -2097,59 +2495,28 @@ async function guardarSlice() {
 	window.location.href = ctxBackUrl;
 }
 
-/* ════════════════════
-   MODAL — ASIGNAR A CURSO
-════════════════════ */
-const DEMO_COURSES = [
-	{ id: 'TEL141', nom: 'Ingeniería de Redes Cloud' },
-	{ id: 'TEL142', nom: 'Comunicaciones Móviles' },
-	{ id: 'TEL143', nom: 'Trabajo de Tesis 1' },
-	{ id: 'TEL144', nom: 'Formulación y Evaluación de Proyectos de Telecomunicaciones' },
-	{ id: 'TEL221', nom: 'Infraestructura de Redes de Telecomunicaciones' },
-];
-let selectedModalCourse = null;
+async function assignTemplateToCourse() {
+	const nombre = (document.getElementById('nombre-slice').value || '').trim();
+	if (!nombre) { alert('Por favor ingresa un nombre para la plantilla.'); return; }
+	if (!validateSliceBeforeSave()) return;
 
-function openModal() {
-	const nameEl = document.getElementById('nombre-slice');
-	document.getElementById('modal-nombre').value = nameEl ? nameEl.value.trim() : '';
-	const list = document.getElementById('modal-course-list');
-	list.innerHTML = DEMO_COURSES.map(c => `
-		<div class="modal-course-item" id="mc-${c.id}" onclick="selectModalCourse('${c.id}','${c.nom.replace(/'/g,"\\'")}')">
-			<span class="modal-course-badge">${c.id}</span>
-			<span class="modal-course-name">${c.nom}</span>
-		</div>`).join('');
-	selectedModalCourse = null;
-	document.getElementById('modal-overlay').classList.add('open');
+	let templateId = ctxIsEdit ? ctxSliceId : null;
+	try {
+		if (!templateId) {
+			const saved = await saveSliceInApi(buildSlicePayload(nombre));
+			templateId = saved.id;
+			localStorage.setItem('nimbuscore_last_template', JSON.stringify(saved));
+		}
+	} catch (error) {
+		console.warn('Backend no disponible para guardar plantilla antes de asignar.', error);
+		alert('No se pudo guardar la plantilla en el backend. Revisa la API antes de asignarla a un curso.');
+		return;
+	}
+
+	window.location.href =
+		`asignar-slice.html?template=${encodeURIComponent(templateId)}&slicenombre=${encodeURIComponent(nombre)}`;
 }
 
-function closeModal() {
-	document.getElementById('modal-overlay').classList.remove('open');
-	selectedModalCourse = null;
-}
-
-function selectModalCourse(id, nom) {
-	selectedModalCourse = { id, nom };
-	document.querySelectorAll('.modal-course-item').forEach(el =>
-		el.classList.toggle('selected', el.id === 'mc-' + id));
-}
-
-function saveAssignment() {
-	if (!selectedModalCourse) { alert('Por favor selecciona un curso.'); return; }
-	const nombre = document.getElementById('modal-nombre').value.trim() ||
-	               (document.getElementById('nombre-slice').value || '').trim() ||
-	               (ctxIsEdit ? `Slice ${ctxSliceId}` : 'Nuevo Slice');
-	const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
-	const sid = ctxIsEdit ? ctxSliceId : ('new_' + Date.now());
-	const filtered = assignments.filter(a => String(a.sliceId) !== String(sid));
-	filtered.push({ sliceId: sid, sliceName: nombre, courseId: selectedModalCourse.id, courseNom: selectedModalCourse.nom });
-	localStorage.setItem('nimbuscore_assignments', JSON.stringify(filtered));
-	closeModal();
-	window.location.href = `detalle-curso.html?id=${encodeURIComponent(selectedModalCourse.id)}&nombre=${encodeURIComponent(selectedModalCourse.nom)}`;
-}
-
-document.getElementById('modal-overlay').addEventListener('click', e => {
-	if (e.target === document.getElementById('modal-overlay')) closeModal();
-});
 </script>
 
 </body>

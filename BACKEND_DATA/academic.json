@@ -1,0 +1,41 @@
+{
+  "updated_at": "2026-05-11T00:00:00+00:00",
+  "courses": [
+    {
+      "id": "TEL141",
+      "nombre": "Ingenieria de Redes Cloud",
+      "alumnos": [
+        {
+          "id": "TEL141-A01",
+          "nombre": "Ana Torres"
+        },
+        {
+          "id": "TEL141-A02",
+          "nombre": "Bruno Diaz"
+        },
+        {
+          "id": "TEL141-A03",
+          "nombre": "Carla Rojas"
+        }
+      ]
+    },
+    {
+      "id": "TEL142",
+      "nombre": "Comunicaciones Moviles",
+      "alumnos": [
+        {
+          "id": "TEL142-A01",
+          "nombre": "Diego Vargas"
+        },
+        {
+          "id": "TEL142-A02",
+          "nombre": "Elena Ramos"
+        },
+        {
+          "id": "TEL142-A03",
+          "nombre": "Fernando Silva"
+        }
+      ]
+    }
+  ]
+}

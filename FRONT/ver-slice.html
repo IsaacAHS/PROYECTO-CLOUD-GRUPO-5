@@ -157,6 +157,18 @@
 		.sec-rule-port { flex: 1; font-size: 0.82em; color: #7f888f; }
 		.rules-empty { padding: 0.7em; text-align: center; font-size: 0.76em; color: #9fa3a6; }
 
+		.runtime-box { margin-top: 0.85em; border: solid 1px rgba(210,215,217,0.75); border-radius: 0.35em; background: #fafbfc; overflow: hidden; }
+		.runtime-head { padding: 0.5em 0.75em; background: #f5f6f7; border-bottom: solid 1px rgba(210,215,217,0.6); font-family: 'Roboto Slab', serif; font-size: 0.66em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #3d4449; display: flex; align-items: center; gap: 0.45em; }
+		.runtime-head i { color: #f56a6a; }
+		.runtime-body { padding: 0.7em 0.75em; font-size: 0.75em; color: #7f888f; }
+		.runtime-row { display: flex; justify-content: space-between; gap: 0.75em; padding: 0.2em 0; border-bottom: solid 1px rgba(210,215,217,0.35); }
+		.runtime-row:last-child { border-bottom: none; }
+		.runtime-row span:first-child { color: #9fa3a6; white-space: nowrap; }
+		.runtime-row strong { color: #3d4449; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+		.runtime-nic { margin-top: 0.55em; padding-top: 0.55em; border-top: solid 1px rgba(210,215,217,0.55); }
+		.runtime-nic-title { font-weight: 700; color: #3d4449; margin-bottom: 0.2em; }
+		.runtime-empty { color: #9fa3a6; text-align: center; padding: 0.35em 0; }
+
 		/* ── Acciones del slice ── */
 		.config-footer { padding: 1em 1.2em 1.2em; margin-top: auto; }
 		.actions-label { font-family: 'Roboto Slab', serif; font-size: 0.65em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: #9fa3a6; margin-bottom: 0.7em; display: block; }
@@ -429,6 +441,11 @@
 									<div class="rules-empty" id="rules-empty">Sin reglas personalizadas</div>
 								</div>
 							</div>
+
+							<div class="runtime-box" id="vm-runtime">
+								<div class="runtime-head"><i class="fas fa-server"></i> Inventario real</div>
+								<div class="runtime-body runtime-empty">Sin datos de ejecución para este nodo.</div>
+							</div>
 						</div>
 					</div>
 
@@ -483,10 +500,10 @@
 					<div class="canvas-footer-bar">
 						<span class="canvas-footer-label">
 							<i class="fas fa-info-circle"></i>
-							Para modificar la topología o configuración usa el editor.
+							Para revisar la configuración completa usa la vista de configuración.
 						</span>
 						<a id="edit-link" href="configurar-slice.html" class="btn-editar">
-							<i class="fas fa-pencil-alt"></i> Editar
+							<i class="fas fa-eye"></i> Revisar configuración
 						</a>
 					</div>
 				</div>
@@ -563,6 +580,8 @@ let nodes = [], edges = [], topoEntries = [];
 let selectedNodeId = null;
 let nodeConfigs = {};
 let edgeSeq = 0;
+let vmInventory = [];
+let inventoryStatus = null;
 
 /* ════════════════════
    RENDER TOPO READ-ONLY LIST
@@ -610,7 +629,7 @@ function buildCanvas(topos) {
 
 		for (let i = 0; i < t.count; i++) {
 			const id = `t${ti}-n${i}`;
-			const nd = { id, x: positions[i].x, y: positions[i].y, nodeType: 'srv', topoIdx: ti };
+			const nd = { id, x: positions[i].x, y: positions[i].y, nodeType: 'srv', topoIdx: ti, topoId: t.id ?? ti + 1, topoNodeIndex: i, name: '' };
 			if (!nodeConfigs[id]) nodeConfigs[id] = getNodeConfig(id, ti, i);
 			const el = createNodeEl(nd);
 			area.appendChild(el);
@@ -629,6 +648,51 @@ function getNodeConfig(id, ti, i) {
 	const key  = keys[(ti * 7 + i) % keys.length];
 	const src  = DEMO_NODE_CONFIG[key];
 	return { flavor: src.flavor, disco: src.disco, imagen: src.imagen, llaves: src.llaves, chips: new Set(src.chips), rules: src.rules.map(r => ({ ...r })) };
+}
+
+function normalizeNodeConfig(raw) {
+	const cfg = raw && typeof raw === 'object' ? raw : {};
+	const security = Array.isArray(cfg.seguridad)
+		? cfg.seguridad
+		: (Array.isArray(cfg.secChips) ? cfg.secChips : []);
+	return {
+		flavor: cfg.flavor || '',
+		disco: cfg.disco !== undefined && cfg.disco !== null ? String(cfg.disco) : '',
+		imagen: cfg.imagen || '',
+		llaves: cfg.llaves || '',
+		chips: new Set(security.map(String)),
+		rules: (cfg.reglas || cfg.rules || []).map(r => ({
+			proto: r.proto || 'TCP',
+			port: r.port || ''
+		}))
+	};
+}
+
+function ensureSelectOption(selectId, value, label) {
+	if (!value) return;
+	const select = document.getElementById(selectId);
+	if (!select || Array.from(select.options).some(opt => opt.value === value)) return;
+	const option = document.createElement('option');
+	option.value = value;
+	option.textContent = label || value;
+	select.appendChild(option);
+}
+
+function applySavedNodeData(savedNodes) {
+	const byId = new Map((savedNodes || []).map(n => [String(n.id), n]));
+	nodes.forEach(nd => {
+		const saved = byId.get(String(nd.id));
+		if (!saved) return;
+		nd.name = saved.nombre || saved.name || nd.name || '';
+		nd.nodeType = saved.tipo || saved.nodeType || nd.nodeType;
+		nodeConfigs[nd.id] = normalizeNodeConfig(saved.configuracion);
+		const el = document.getElementById('node-' + nd.id);
+		if (el) el.innerHTML = nodeInner(nd.nodeType);
+	});
+}
+
+function nodeDisplayName(nd) {
+	return nd.name || `Nodo ${nd.id}`;
 }
 
 function calcLayout(type, n, W, PAD, startY, midY, regionH) {
@@ -692,7 +756,7 @@ function drawEdges() {
 }
 
 function nodeInner(type) {
-	const t = NODE_TYPES[type];
+	const t = NODE_TYPES[type] || NODE_TYPES.srv;
 	return `<i class="fas ${t.icon}"></i><span class="node-lbl">${t.label}</span>`;
 }
 
@@ -748,11 +812,16 @@ function renderNodeConfig() {
 	const nd = nodes.find(n => n.id === selectedNodeId);
 	if (!nd) { deselectNode(); return; }
 
-	const cfg = nodeConfigs[selectedNodeId];
+	const cfg = nodeConfigs[selectedNodeId] || getNodeConfig(selectedNodeId, nd.topoIdx || 0, nd.topoNodeIndex || 0);
+	nodeConfigs[selectedNodeId] = cfg;
 	document.getElementById('vm-empty').style.display  = 'none';
 	document.getElementById('vm-config').style.display = '';
-	document.getElementById('vm-node-name').textContent = `Nodo ${nd.id}`;
+	document.getElementById('vm-node-name').textContent = nodeDisplayName(nd);
 
+	ensureSelectOption('nc-flavor', cfg.flavor, cfg.flavor);
+	ensureSelectOption('nc-disco', cfg.disco, `${cfg.disco} GB`);
+	ensureSelectOption('nc-imagen', cfg.imagen, cfg.imagen);
+	ensureSelectOption('nc-llaves', cfg.llaves, cfg.llaves);
 	document.getElementById('nc-flavor').value = cfg.flavor || '';
 	document.getElementById('nc-disco').value  = cfg.disco  || '';
 	document.getElementById('nc-imagen').value = cfg.imagen || '';
@@ -778,6 +847,50 @@ function renderNodeConfig() {
 			list.appendChild(row);
 		});
 	}
+
+	renderRuntimeInfo(nd);
+}
+
+function findInventoryForNode(nd) {
+	return vmInventory.find(vm => String(vm.node_id || '') === String(nd.id))
+		|| vmInventory.find(vm =>
+			Number(vm.topology_index) === Number(nd.topoIdx)
+			&& Number(vm.vm_index) === Number(nd.topoNodeIndex + 1)
+		);
+}
+
+function renderRuntimeInfo(nd) {
+	const box = document.getElementById('vm-runtime');
+	const inv = findInventoryForNode(nd);
+	if (!box) return;
+	if (!inv) {
+		box.innerHTML = `
+			<div class="runtime-head"><i class="fas fa-server"></i> Inventario real</div>
+			<div class="runtime-body runtime-empty">Sin datos de ejecución para este nodo.</div>`;
+		return;
+	}
+
+	const nicsHtml = (inv.nics || []).map(nic => `
+		<div class="runtime-nic">
+			<div class="runtime-nic-title">${nic.name || `eth${nic.index}`} · VLAN ${nic.vlan_id}</div>
+			<div class="runtime-row"><span>MAC</span><strong>${nic.mac || '—'}</strong></div>
+			<div class="runtime-row"><span>TAP</span><strong>${nic.tap || '—'}</strong></div>
+			<div class="runtime-row"><span>DHCP</span><strong>${nic.cidr || '—'}</strong></div>
+			<div class="runtime-row"><span>Namespace</span><strong>${nic.dhcp_namespace || '—'}</strong></div>
+		</div>`).join('');
+
+	box.innerHTML = `
+		<div class="runtime-head"><i class="fas fa-server"></i> Inventario real ${inventoryStatus ? `· ${inventoryStatus}` : ''}</div>
+		<div class="runtime-body">
+			<div class="runtime-row"><span>VM</span><strong>${inv.name || inv.id || '—'}</strong></div>
+			<div class="runtime-row"><span>Estado</span><strong>${inv.status || '—'}</strong></div>
+			<div class="runtime-row"><span>Worker</span><strong>${inv.worker_ip || '—'}</strong></div>
+			<div class="runtime-row"><span>VNC</span><strong>${inv.vnc_target || (inv.vnc_port ? `${inv.worker_ip}:${inv.vnc_port}` : '—')}</strong></div>
+			<div class="runtime-row"><span>Flavor</span><strong>${inv.vcpus || '—'} vCPU · ${inv.ram_mb || '—'} MB · ${inv.disk_gb || '—'} GB</strong></div>
+			<div class="runtime-row"><span>Imagen</span><strong>${inv.image_name || inv.image || '—'}</strong></div>
+			<div class="runtime-row"><span>Llave</span><strong>${inv.key_pair || '—'}</strong></div>
+			${nicsHtml || '<div class="runtime-empty">Sin NICs registradas.</div>'}
+		</div>`;
 }
 
 /* ════════════════════
@@ -849,20 +962,53 @@ document.addEventListener('keydown', e => {
 
 window.addEventListener('resize', () => { if (nodes.length) drawEdges(); });
 
-/* ════════════════════
-   INIT: load demo data
-════════════════════ */
-(function init() {
+function applySlice(slice) {
+	const topologies = (slice.topologias || []).map((topology, index) => ({
+		id: topology.id !== undefined ? topology.id : index + 1,
+		type: topology.type || topology.tipo || 'lineal',
+		count: Number(topology.count || topology.nodos || 0)
+	})).filter(t => t.type && t.count > 0);
+
+	const title = slice.nombre || sliceNom;
+	document.title = `${title} — ${courseNom}`;
+	document.getElementById('bc-slice').textContent = title;
+	document.getElementById('page-title').textContent = title;
+	document.getElementById('edit-link').href =
+		`configurar-slice.html?slice=${slice.id || sliceId}&curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}&slicenombre=${encodeURIComponent(title)}`;
+
+	ensureSelectOption('zona', slice.zona || '', slice.zona || '');
+	document.getElementById('zona').value = slice.zona || '';
+	renderTopoList(topologies);
+	buildCanvas(topologies);
+	applySavedNodeData(Array.isArray(slice.nodos) ? slice.nodos : []);
+	drawEdges();
+
+	const inventory = slice.vm_inventory || {};
+	vmInventory = Array.isArray(inventory.vms) ? inventory.vms : [];
+	inventoryStatus = inventory.status || null;
+}
+
+function applyDemoSlice() {
 	const demo = DEMO_SLICES[sliceId] || DEMO_SLICES['1'];
-
-	/* Zona */
 	document.getElementById('zona').value = demo.zona;
-
-	/* Topo read-only list */
 	renderTopoList(demo.topos);
-
-	/* Canvas */
 	buildCanvas(demo.topos);
+	vmInventory = [];
+	inventoryStatus = null;
+}
+
+/* ════════════════════
+   INIT: load persisted data
+════════════════════ */
+(async function init() {
+	try {
+		const response = await fetch(`/api/slices/${encodeURIComponent(sliceId)}`);
+		if (!response.ok) throw new Error(`API /slices/${sliceId} respondio ${response.status}`);
+		applySlice(await response.json());
+	} catch (error) {
+		console.warn('No se pudo cargar el slice desde API, usando datos demo.', error);
+		applyDemoSlice();
+	}
 })();
 </script>
 

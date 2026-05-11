@@ -9,6 +9,7 @@ DHCP_FLAG="${3:-}"
 DHCP_START="${4:-}"
 DHCP_END="${5:-}"
 OVS_NAME="${NIMBUSCORE_OVS_NAME:-br-int}"
+OVS_UPLINKS="${NIMBUSCORE_OVS_UPLINKS:-}"
 
 if [ -z "$VLAN_ID" ] || [ -z "$CIDR" ] || [ -z "$DHCP_FLAG" ]; then
     echo "Uso: $0 <VLAN_ID> <CIDR> <dhcp|nodhcp> [DHCP_RANGE_START] [DHCP_RANGE_END]"
@@ -32,10 +33,25 @@ NS_NAME="dhcp-ns-vlan${VLAN_ID}"
 VETH_HOST="veth-h-${VLAN_ID}"
 VETH_NS="veth-ns-${VLAN_ID}"
 DNSMASQ_PID="/var/run/dnsmasq-${NS_NAME}.pid"
+DNSMASQ_LEASES="/var/lib/misc/dnsmasq-${NS_NAME}.leases"
 
 echo "[create_network_vlan] VLAN=$VLAN_ID CIDR=$CIDR GW=$GW_IP OVS=$OVS_NAME"
 
-sudo ovs-vsctl --may-exist add-br "$OVS_NAME"
+ensure_ovs_ready() {
+    sudo ovs-vsctl --may-exist add-br "$OVS_NAME"
+    sudo ip link set "$OVS_NAME" up
+
+    for IFACE in $OVS_UPLINKS; do
+        if ip link show "$IFACE" >/dev/null 2>&1; then
+            sudo ip link set "$IFACE" up
+            sudo ovs-vsctl --may-exist add-port "$OVS_NAME" "$IFACE"
+        else
+            echo "[create_network_vlan] WARN: uplink OVS no existe en este host: $IFACE"
+        fi
+    done
+}
+
+ensure_ovs_ready
 sudo ovs-vsctl --may-exist add-port "$OVS_NAME" "$IFACE_NAME" \
     -- set interface "$IFACE_NAME" type=internal \
     -- set port "$IFACE_NAME" tag="$VLAN_ID"
@@ -83,11 +99,14 @@ if [ "$DHCP_FLAG" = "dhcp" ]; then
         --conf-file=/dev/null \
         --interface="$VETH_NS" \
         --bind-interfaces \
+        --dhcp-authoritative \
         --dhcp-range="${DHCP_START},${DHCP_END},12h" \
         --dhcp-option=3,"$GW_IP" \
         --dhcp-option=6,8.8.8.8 \
         --no-resolv \
         --pid-file="$DNSMASQ_PID" \
+        --dhcp-leasefile="$DNSMASQ_LEASES" \
+        --log-dhcp \
         --log-facility="/var/log/dnsmasq-${NS_NAME}.log"
 fi
 

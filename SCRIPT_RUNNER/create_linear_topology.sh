@@ -25,23 +25,66 @@
 # ──────────────────────────────────────────────
 # Configuración del clúster
 # ──────────────────────────────────────────────
-HEADNODE_IP="${NIMBUSCORE_HEADNODE_IP:-10.0.10.3}"        # IP de server3 (headnode) en la red de acceso
-IFS=',' read -r -a COMPUTE_IPS <<< "${NIMBUSCORE_COMPUTE_IPS:-10.0.10.1,10.0.10.2}"
+HEADNODE_IP="${NIMBUSCORE_HEADNODE_IP:-10.0.10.4}"        # IP de server4 (headnode) en la red de acceso
+IFS=',' read -r -a COMPUTE_IPS <<< "${NIMBUSCORE_COMPUTE_IPS:-10.0.10.1,10.0.10.2,10.0.10.3}"
 OVS_NAME="${NIMBUSCORE_OVS_NAME:-br-int}"
+OVS_UPLINKS="${NIMBUSCORE_OVS_UPLINKS:-ens4}"
 SSH_USER="${NIMBUSCORE_SSH_USER:-ubuntu}"
 SCRIPTS_DIR="${NIMBUSCORE_REMOTE_SCRIPTS_DIR:-/home/ubuntu/script_runner}"
 SSH_OPTS="${NIMBUSCORE_SSH_OPTS:--o StrictHostKeyChecking=accept-new}"
 HEADNODE_LOCAL="${NIMBUSCORE_HEADNODE_LOCAL:-true}"
+KEYPAIR_DIR="${NIMBUSCORE_KEYPAIR_DIR:-/home/ubuntu/nimbuscore-keys}"
+CONSOLE_USER="${NIMBUSCORE_CONSOLE_USER:-nimbus}"
+CONSOLE_PASSWORD="${NIMBUSCORE_CONSOLE_PASSWORD:-NimbusCore123}"
+ENABLE_PASSWORD_LOGIN="${NIMBUSCORE_ENABLE_PASSWORD_LOGIN:-true}"
+DEFAULT_VM_SPEC="${NIMBUSCORE_DEFAULT_VM_SPEC:-1:2048:20}"
+IFS=';' read -r -a VM_SPECS <<< "${NIMBUSCORE_TOPOLOGY_VM_SPECS:-}"
+IFS=';' read -r -a IMAGE_SPECS <<< "${NIMBUSCORE_TOPOLOGY_IMAGE_SPECS:-}"
+IFS=';' read -r -a KEYPAIR_SPECS <<< "${NIMBUSCORE_TOPOLOGY_KEYPAIR_SPECS:-}"
+
+vm_spec_for_index() {
+    local index="$1"
+    local spec="${VM_SPECS[$index]:-$DEFAULT_VM_SPEC}"
+    local vcpus ram_mb disk_gb
+    IFS=':' read -r vcpus ram_mb disk_gb <<< "$spec"
+    echo "${vcpus:-1} ${ram_mb:-2048} ${disk_gb:-20}"
+}
+
+image_spec_for_index() {
+    local index="$1"
+    local spec="${IMAGE_SPECS[$index]:-}"
+    local image_name image_url download_method
+    IFS='|' read -r image_name image_url download_method <<< "$spec"
+    echo "${image_name:-cirros-0-6-2} ${image_url:-https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img} ${download_method:-auto}"
+}
+
+keypair_spec_for_index() {
+    local index="$1"
+    local keypair="${KEYPAIR_SPECS[$index]:-default-key}"
+    echo "${keypair:-default-key}"
+}
+
+public_key_b64_for_keypair() {
+    local keypair="$1"
+    local public_key_path="${KEYPAIR_DIR}/${keypair}.pub"
+
+    if [ -f "$public_key_path" ]; then
+        base64 -w 0 "$public_key_path"
+    else
+        echo ""
+    fi
+}
 
 run_headnode_script() {
     local script_name="$1"
     shift
 
     if [ "$HEADNODE_LOCAL" = "true" ]; then
-        sudo bash "${SCRIPTS_DIR}/${script_name}" "$@"
+        sudo env NIMBUSCORE_OVS_NAME="$OVS_NAME" NIMBUSCORE_OVS_UPLINKS="$OVS_UPLINKS" \
+            bash "${SCRIPTS_DIR}/${script_name}" "$@"
     else
         ssh ${SSH_OPTS} ${SSH_USER}@${HEADNODE_IP} \
-            "bash ${SCRIPTS_DIR}/${script_name} $*"
+            "NIMBUSCORE_OVS_NAME='$OVS_NAME' NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' bash ${SCRIPTS_DIR}/${script_name} $*"
     fi
 }
 
@@ -127,13 +170,20 @@ for (( i=0; i<N_VMS; i++ )); do
     [ "$i" -lt "$((N_VMS-1))" ] && RIGHT_VLAN=$(( VLAN_BASE + i ))
 
     echo "  → VM $VM_IDX/$N_VMS : $VM_NAME | servidor $COMPUTE_IP | VNC $VNC_PORT"
+    read -r VM_VCPUS VM_RAM_MB VM_DISK_GB <<< "$(vm_spec_for_index "$i")"
+    read -r VM_IMAGE_NAME VM_IMAGE_URL VM_IMAGE_DOWNLOAD_METHOD <<< "$(image_spec_for_index "$i")"
+    VM_KEYPAIR_NAME="$(keypair_spec_for_index "$i")"
+    VM_PUBLIC_KEY_B64="$(public_key_b64_for_keypair "$VM_KEYPAIR_NAME")"
+    echo "    Flavor efectivo: ${VM_VCPUS} vCPU | ${VM_RAM_MB} MB RAM | ${VM_DISK_GB} GB disco"
+    echo "    Imagen: ${VM_IMAGE_NAME} (${VM_IMAGE_URL})"
+    echo "    Par de llaves: ${VM_KEYPAIR_NAME}"
 
     VM_VLANS=()
     [ -n "$RIGHT_VLAN" ] && VM_VLANS+=("$RIGHT_VLAN")
     [ -n "$LEFT_VLAN" ] && VM_VLANS+=("$LEFT_VLAN")
 
     ssh ${SSH_OPTS} ${SSH_USER}@${COMPUTE_IP} \
-        "bash ${SCRIPTS_DIR}/create_vm.sh $VM_NAME $OVS_NAME $VNC_PORT ${VM_VLANS[*]}"
+        "NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' NIMBUSCORE_VM_VCPUS=$VM_VCPUS NIMBUSCORE_VM_RAM_MB=$VM_RAM_MB NIMBUSCORE_VM_DISK_GB=$VM_DISK_GB NIMBUSCORE_BASE_IMAGE_NAME='$VM_IMAGE_NAME' NIMBUSCORE_BASE_IMAGE_URL='$VM_IMAGE_URL' NIMBUSCORE_BASE_IMAGE_DOWNLOAD_METHOD='$VM_IMAGE_DOWNLOAD_METHOD' NIMBUSCORE_CONSOLE_USER='$CONSOLE_USER' NIMBUSCORE_CONSOLE_PASSWORD='$CONSOLE_PASSWORD' NIMBUSCORE_ENABLE_PASSWORD_LOGIN='$ENABLE_PASSWORD_LOGIN' NIMBUSCORE_KEYPAIR_NAME='$VM_KEYPAIR_NAME' NIMBUSCORE_PUBLIC_KEY_B64='$VM_PUBLIC_KEY_B64' bash ${SCRIPTS_DIR}/create_vm.sh $VM_NAME $OVS_NAME $VNC_PORT ${VM_VLANS[*]}"
 
     if [ $? -ne 0 ]; then
         echo "  [ERROR] Fallo al crear VM $VM_NAME en $COMPUTE_IP. Abortando."

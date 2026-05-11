@@ -1,0 +1,45 @@
+{
+  "updated_at": "2026-05-10T00:00:00+00:00",
+  "images": [
+    {
+      "id": "cirros",
+      "name": "cirros-0.6.2",
+      "label": "Cirros 0.6.2",
+      "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",
+      "download_method": "auto",
+      "active": true
+    },
+    {
+      "id": "ubuntu-22",
+      "name": "ubuntu-22.04-jammy",
+      "label": "Ubuntu 22.04 LTS",
+      "url": "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img",
+      "download_method": "auto",
+      "active": true
+    },
+    {
+      "id": "ubuntu-20",
+      "name": "ubuntu-20.04-focal",
+      "label": "Ubuntu 20.04 LTS",
+      "url": "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img",
+      "download_method": "auto",
+      "active": true
+    },
+    {
+      "id": "ubuntu-20-drive",
+      "name": "focal-server-cloudimg-amd64.img",
+      "label": "Ubuntu 20.04 Focal (Google Drive)",
+      "url": "https://drive.usercontent.google.com/download?id=169719Mq3URSPKf2y6x-uAJ0vluH31i5n&export=download&confirm=t",
+      "download_method": "wget-no-check-certificate",
+      "active": true
+    },
+    {
+      "id": "debian-12",
+      "name": "debian-12-bookworm",
+      "label": "Debian 12",
+      "url": "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2",
+      "download_method": "auto",
+      "active": true
+    }
+  ]
+}

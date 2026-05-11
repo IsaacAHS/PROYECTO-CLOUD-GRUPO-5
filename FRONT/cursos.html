@@ -379,11 +379,11 @@
 			<div class="section-header">
 				<div class="section-header-left">
 					<h2>Listado de Cursos</h2>
-					<p>Administra los cursos registrados en la plataforma.</p>
+					<p>Por ahora existen 2 cursos base, cada uno con 3 alumnos persistidos en JSON.</p>
 				</div>
-				<a href="crear-curso.html" class="btn-crear">
-					<i class="fas fa-plus"></i>
-					Crear Nuevo Curso
+				<a href="#" class="btn-crear" style="pointer-events:none;opacity:0.55">
+					<i class="fas fa-lock"></i>
+					Creación pendiente
 				</a>
 			</div>
 
@@ -396,68 +396,7 @@
 							<th class="col-action">Eliminar</th>
 						</tr>
 					</thead>
-					<tbody>
-						<tr>
-							<td>
-								<span class="curso-code">TEL141</span>
-								<a href="detalle-curso.html?id=TEL141&nombre=Ingenier%C3%ADa+de+Redes+Cloud" class="curso-nombre">Ingeniería de Redes Cloud</a>
-							</td>
-							<td class="col-action">
-								<a href="crear-curso.html?edit=1&id=TEL141&nombre=Ingenier%C3%ADa%20de%20Redes%20Cloud" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-						<tr>
-							<td>
-								<span class="curso-code">TEL142</span>
-								<a href="detalle-curso.html?id=TEL142&nombre=Comunicaciones+M%C3%B3viles" class="curso-nombre">Comunicaciones Móviles</a>
-							</td>
-							<td class="col-action">
-								<a href="crear-curso.html?edit=1&id=TEL142&nombre=Comunicaciones%20M%C3%B3viles" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-						<tr>
-							<td>
-								<span class="curso-code">TEL143</span>
-								<a href="detalle-curso.html?id=TEL143&nombre=Trabajo+de+Tesis+1" class="curso-nombre">Trabajo de Tesis 1</a>
-							</td>
-							<td class="col-action">
-								<a href="crear-curso.html?edit=1&id=TEL143&nombre=Trabajo%20de%20Tesis%201" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-						<tr>
-							<td>
-								<span class="curso-code">TEL144</span>
-								<a href="detalle-curso.html?id=TEL144&nombre=Formulaci%C3%B3n+y+Evaluaci%C3%B3n+de+Proyectos" class="curso-nombre">Formulación y Evaluación de Proyectos de Telecomunicaciones</a>
-							</td>
-							<td class="col-action">
-								<a href="crear-curso.html?edit=1&id=TEL144&nombre=Formulaci%C3%B3n%20y%20Evaluaci%C3%B3n%20de%20Proyectos%20de%20Telecomunicaciones" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-						<tr>
-							<td>
-								<span class="curso-code">TEL221</span>
-								<a href="detalle-curso.html?id=TEL221&nombre=Infraestructura+de+Redes+de+Telecomunicaciones" class="curso-nombre">Infraestructura de Redes de Telecomunicaciones</a>
-							</td>
-							<td class="col-action">
-								<a href="crear-curso.html?edit=1&id=TEL221&nombre=Infraestructura%20de%20Redes%20de%20Telecomunicaciones" class="btn-action btn-edit" title="Editar curso"><i class="fas fa-pencil-alt"></i></a>
-							</td>
-							<td class="col-action">
-								<a href="#" class="btn-action btn-delete" title="Eliminar curso"><i class="fas fa-trash-alt"></i></a>
-							</td>
-						</tr>
-					</tbody>
+					<tbody id="cursos-tbody"></tbody>
 				</table>
 			</div>
 
@@ -467,6 +406,58 @@
 </div>
 
 <script>
+const FALLBACK_COURSES = [
+	{
+		id: 'TEL141',
+		nombre: 'Ingeniería de Redes Cloud',
+		alumnos: [
+			{ id: 'TEL141-A01', nombre: 'Ana Torres' },
+			{ id: 'TEL141-A02', nombre: 'Bruno Díaz' },
+			{ id: 'TEL141-A03', nombre: 'Carla Rojas' },
+		],
+	},
+	{
+		id: 'TEL142',
+		nombre: 'Comunicaciones Móviles',
+		alumnos: [
+			{ id: 'TEL142-A01', nombre: 'Diego Vargas' },
+			{ id: 'TEL142-A02', nombre: 'Elena Ramos' },
+			{ id: 'TEL142-A03', nombre: 'Fernando Silva' },
+		],
+	},
+];
+
+async function loadCourses() {
+	try {
+		const response = await fetch('/api/cursos');
+		if (!response.ok) throw new Error(`API respondio ${response.status}`);
+		return response.json();
+	} catch (error) {
+		console.warn('Backend no disponible, usando cursos base.', error);
+		return FALLBACK_COURSES;
+	}
+}
+
+async function renderCourses() {
+	const courses = await loadCourses();
+	const tbody = document.getElementById('cursos-tbody');
+	tbody.innerHTML = courses.map(course => `
+		<tr>
+			<td>
+				<span class="curso-code">${course.id}</span>
+				<a href="detalle-curso.html?id=${encodeURIComponent(course.id)}&nombre=${encodeURIComponent(course.nombre)}" class="curso-nombre">${course.nombre}</a>
+				<span style="font-size:0.78em;color:#9fa3a6;margin-left:0.75em">${(course.alumnos || []).length} alumnos</span>
+			</td>
+			<td class="col-action">
+				<span class="btn-action btn-edit" title="Edición de cursos pendiente"><i class="fas fa-lock"></i></span>
+			</td>
+			<td class="col-action">
+				<span class="btn-action btn-delete" title="Eliminación de cursos pendiente"><i class="fas fa-lock"></i></span>
+			</td>
+		</tr>
+	`).join('');
+}
+
 (function() {
 	const sidebar = document.getElementById('sidebar');
 	const toggle = document.getElementById('sidebarToggle');
@@ -507,6 +498,8 @@
 	if (mobileQuery.addEventListener) mobileQuery.addEventListener('change', syncSidebar);
 	else mobileQuery.addListener(syncSidebar);
 })();
+
+renderCourses();
 </script>
 
 </body>

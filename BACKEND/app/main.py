@@ -1,4 +1,10 @@
+import os
+import re
+import subprocess
+import tempfile
+from copy import deepcopy
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -6,12 +12,24 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from app.services.academic_store import get_course, load_courses
 from app.services.job_store import read_job, write_job
+from app.services.image_catalog import list_images, upsert_image
 from app.services.script_payload import build_script_variables
+from app.services.slice_store import (
+    load_deployments,
+    load_slices,
+    save_deployments,
+    save_slices,
+)
+from app.services.slice_template_store import read_templates, write_templates
+from app.services.vm_inventory_store import inventory_for_slice
 from app.services.vm_placement import place_vms
 
 
 app = FastAPI(title="NimbusCore API", version="0.1.0")
+KEYPAIR_DIR = Path(os.getenv("NIMBUSCORE_KEYPAIR_DIR", "/keypairs"))
+KEYPAIR_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,6 +46,29 @@ def now_iso() -> str:
 
 def app_log(message: str) -> None:
     print(f"[{now_iso()}] {message}", flush=True)
+
+
+def ensure_keypair_dir() -> None:
+    KEYPAIR_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def validate_keypair_name(name: str) -> str:
+    clean_name = name.strip()
+    if not KEYPAIR_NAME_RE.match(clean_name):
+        raise HTTPException(
+            status_code=400,
+            detail="Nombre invalido. Usa letras, numeros, punto, guion o guion bajo.",
+        )
+    return clean_name
+
+
+def keypair_item(public_key_path: Path) -> dict[str, str]:
+    public_key = public_key_path.read_text(encoding="utf-8").strip()
+    return {
+        "name": public_key_path.stem,
+        "public_key": public_key,
+        "path": str(public_key_path),
+    }
 
 
 class LoginRequest(BaseModel):
@@ -53,28 +94,50 @@ class SliceUpdate(BaseModel):
     curso_id: str | None = None
 
 
-COURSES = [
-    {"id": "TEL141", "nombre": "Ingenieria de Redes Cloud"},
-    {"id": "TEL142", "nombre": "Comunicaciones Moviles"},
-    {"id": "TEL143", "nombre": "Trabajo de Tesis 1"},
-]
+class KeypairCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
 
-SLICES: dict[str, dict[str, Any]] = {
-    "slice-demo-1": {
-        "id": "slice-demo-1",
-        "nombre": "Slice de Red A",
-        "zona": "openstack-zone-1",
-        "estado": "CREADO",
-        "curso_id": None,
-        "topologias": [{"type": "lineal", "count": 4}],
-        "nodos": [],
-        "enlaces": [],
-        "created_at": now_iso(),
-        "updated_at": now_iso(),
+
+class ImageCreate(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=128)
+    label: str | None = None
+    url: str = Field(min_length=1)
+    download_method: str = "auto"
+    active: bool = True
+
+
+class AssignTemplateRequest(BaseModel):
+    course_id: str = Field(min_length=1)
+
+
+SLICES: dict[str, dict[str, Any]] = load_slices()
+DEPLOYMENTS: dict[str, dict[str, Any]] = load_deployments()
+SLICE_TEMPLATES: dict[str, dict[str, Any]] = read_templates()
+
+
+def empty_inventory(slice_id: str, status: str = "PENDING") -> dict[str, Any]:
+    return {
+        "slice_id": slice_id,
+        "status": status,
+        "vms": [],
+        "networks": [],
+        "topologies": [],
     }
-}
 
-DEPLOYMENTS: dict[str, dict[str, Any]] = {}
+
+def get_runtime_inventory(slice_id: str) -> dict[str, Any] | None:
+    return inventory_for_slice(slice_id)
+
+
+def enrich_slice(item: dict[str, Any]) -> dict[str, Any]:
+    enriched = dict(item)
+    inventory = get_runtime_inventory(str(item["id"])) or item.get("vm_inventory")
+    if inventory:
+        enriched["vm_inventory"] = inventory
+        enriched["vms"] = inventory.get("vms", [])
+        enriched["runtime_status"] = inventory.get("status")
+    return enriched
 
 
 @app.get("/health")
@@ -99,13 +162,216 @@ def login(payload: LoginRequest) -> dict[str, Any]:
 
 
 @app.get("/cursos")
-def list_courses() -> list[dict[str, str]]:
-    return COURSES
+def list_courses() -> list[dict[str, Any]]:
+    return load_courses()
+
+
+@app.get("/cursos/{course_id}")
+def get_course_detail(course_id: str) -> dict[str, Any]:
+    course = get_course(course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso no encontrado")
+    return course
+
+
+@app.get("/cursos/{course_id}/alumnos")
+def list_course_students(course_id: str) -> list[dict[str, Any]]:
+    course = get_course(course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso no encontrado")
+    return course.get("alumnos", [])
+
+
+@app.get("/keypairs")
+def list_keypairs() -> list[dict[str, str]]:
+    ensure_keypair_dir()
+    keypairs = []
+    for public_key_path in sorted(KEYPAIR_DIR.glob("*.pub")):
+        if public_key_path.is_file():
+            keypairs.append(keypair_item(public_key_path))
+    return keypairs
+
+
+@app.post("/keypairs", status_code=201)
+def create_keypair(payload: KeypairCreate) -> dict[str, str]:
+    ensure_keypair_dir()
+    name = validate_keypair_name(payload.name)
+    public_key_path = KEYPAIR_DIR / f"{name}.pub"
+
+    if public_key_path.exists():
+        raise HTTPException(status_code=409, detail="El par de llaves ya existe")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        private_key_path = Path(tmp_dir) / name
+        try:
+            subprocess.run(
+                [
+                    "ssh-keygen",
+                    "-t",
+                    "ecdsa",
+                    "-b",
+                    "256",
+                    "-f",
+                    str(private_key_path),
+                    "-N",
+                    "",
+                    "-C",
+                    name,
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="ssh-keygen no esta instalado en el backend",
+            ) from exc
+        except subprocess.CalledProcessError as exc:
+            raise HTTPException(status_code=500, detail=exc.stderr.strip()) from exc
+
+        generated_public_key_path = Path(f"{private_key_path}.pub")
+        public_key = generated_public_key_path.read_text(encoding="utf-8")
+        private_key = private_key_path.read_text(encoding="utf-8")
+
+    public_key_path.write_text(public_key, encoding="utf-8")
+    public_key_path.chmod(0o644)
+    app_log(f"keypair creado name={name} public_key={public_key_path}")
+
+    return {
+        "name": name,
+        "public_key": public_key.strip(),
+        "private_key": private_key,
+    }
+
+
+@app.get("/images")
+def get_images() -> list[dict[str, Any]]:
+    return list_images()
+
+
+@app.post("/images", status_code=201)
+def create_image(payload: ImageCreate) -> dict[str, Any]:
+    try:
+        image = upsert_image(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    app_log(f"imagen registrada id={image['id']} method={image['download_method']}")
+    return image
+
+
+@app.get("/slice-templates")
+def list_slice_templates() -> list[dict[str, Any]]:
+    return list(SLICE_TEMPLATES.values())
+
+
+@app.post("/slice-templates", status_code=201)
+def create_slice_template(payload: SliceCreate) -> dict[str, Any]:
+    template_id = f"tpl-{uuid4().hex[:8]}"
+    item = {
+        "id": template_id,
+        "nombre": payload.nombre,
+        "zona": payload.zona,
+        "estado": "PLANTILLA",
+        "curso_id": payload.curso_id,
+        "topologias": payload.topologias,
+        "nodos": payload.nodos,
+        "enlaces": payload.enlaces,
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    SLICE_TEMPLATES[template_id] = item
+    write_templates(SLICE_TEMPLATES)
+    app_log(f"template creado id={template_id} nombre={payload.nombre!r}")
+    return item
+
+
+@app.get("/slice-templates/{template_id}")
+def get_slice_template(template_id: str) -> dict[str, Any]:
+    item = SLICE_TEMPLATES.get(template_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+    return item
+
+
+@app.put("/slice-templates/{template_id}")
+def update_slice_template(template_id: str, payload: SliceUpdate) -> dict[str, Any]:
+    item = SLICE_TEMPLATES.get(template_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+
+    item.update(payload.model_dump(exclude_unset=True))
+    item["estado"] = "PLANTILLA"
+    item["updated_at"] = now_iso()
+    write_templates(SLICE_TEMPLATES)
+    return item
+
+
+@app.delete("/slice-templates/{template_id}")
+def delete_slice_template(template_id: str) -> dict[str, str]:
+    if template_id not in SLICE_TEMPLATES:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+    del SLICE_TEMPLATES[template_id]
+    write_templates(SLICE_TEMPLATES)
+    return {"status": "deleted", "template_id": template_id}
+
+
+@app.post("/slice-templates/{template_id}/assign-to-course", status_code=201)
+def assign_template_to_course(
+    template_id: str, payload: AssignTemplateRequest
+) -> dict[str, Any]:
+    template = SLICE_TEMPLATES.get(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+
+    course = get_course(payload.course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso no encontrado")
+
+    created = []
+    for student in course.get("alumnos", []):
+        slice_id = f"slice-{uuid4().hex[:8]}"
+        item = {
+            "id": slice_id,
+            "template_id": template_id,
+            "nombre": f"{template['nombre']} - {student['nombre']}",
+            "zona": template.get("zona") or "openstack-zone-1",
+            "estado": "ASIGNADO",
+            "curso_id": course["id"],
+            "curso_nombre": course["nombre"],
+            "alumno_id": student["id"],
+            "alumno_nombre": student["nombre"],
+            "topologias": deepcopy(template.get("topologias") or []),
+            "nodos": deepcopy(template.get("nodos") or []),
+            "enlaces": deepcopy(template.get("enlaces") or []),
+            "created_at": now_iso(),
+            "updated_at": now_iso(),
+        }
+        SLICES[slice_id] = item
+        created.append(item)
+
+    template.setdefault("assignments", []).append(
+        {
+            "course_id": course["id"],
+            "course_name": course["nombre"],
+            "slice_ids": [item["id"] for item in created],
+            "created_at": now_iso(),
+        }
+    )
+    template["updated_at"] = now_iso()
+    save_slices(SLICES)
+    write_templates(SLICE_TEMPLATES)
+    app_log(
+        f"template asignado template_id={template_id} curso={course['id']} "
+        f"slices={len(created)}"
+    )
+    return {"template": template, "course": course, "slices": created}
 
 
 @app.get("/slices")
 def list_slices() -> list[dict[str, Any]]:
-    return list(SLICES.values())
+    return [enrich_slice(item) for item in SLICES.values()]
 
 
 @app.post("/slices", status_code=201)
@@ -124,11 +390,12 @@ def create_slice(payload: SliceCreate) -> dict[str, Any]:
         "updated_at": now_iso(),
     }
     SLICES[slice_id] = item
+    save_slices(SLICES)
     app_log(
         f"slice creado id={slice_id} nombre={payload.nombre!r} "
         f"topologias={payload.topologias}"
     )
-    return item
+    return enrich_slice(item)
 
 
 @app.get("/slices/{slice_id}")
@@ -136,7 +403,7 @@ def get_slice(slice_id: str) -> dict[str, Any]:
     item = SLICES.get(slice_id)
     if not item:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
-    return item
+    return enrich_slice(item)
 
 
 @app.put("/slices/{slice_id}")
@@ -148,7 +415,8 @@ def update_slice(slice_id: str, payload: SliceUpdate) -> dict[str, Any]:
     changes = payload.model_dump(exclude_unset=True)
     item.update(changes)
     item["updated_at"] = now_iso()
-    return item
+    save_slices(SLICES)
+    return enrich_slice(item)
 
 
 @app.delete("/slices/{slice_id}")
@@ -156,6 +424,7 @@ def delete_slice(slice_id: str) -> dict[str, str]:
     if slice_id not in SLICES:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
     del SLICES[slice_id]
+    save_slices(SLICES)
     return {"status": "deleted", "slice_id": slice_id}
 
 
@@ -167,7 +436,9 @@ def deploy_slice(slice_id: str) -> dict[str, Any]:
 
     job_id = f"job-{uuid4().hex[:8]}"
     item["estado"] = "DESPLEGANDO"
+    item["vm_inventory"] = empty_inventory(slice_id, "QUEUED")
     item["updated_at"] = now_iso()
+    save_slices(SLICES)
     placements = place_vms(item)
     script_variables = build_script_variables(item, placements)
 
@@ -185,6 +456,7 @@ def deploy_slice(slice_id: str) -> dict[str, Any]:
         "updated_at": now_iso(),
     }
     DEPLOYMENTS[job_id] = deployment
+    save_deployments(DEPLOYMENTS)
     write_job(deployment)
     app_log(
         f"deploy solicitado slice_id={slice_id} job_id={job_id} "
@@ -193,18 +465,88 @@ def deploy_slice(slice_id: str) -> dict[str, Any]:
     return deployment
 
 
+@app.post("/slices/{slice_id}/destroy", status_code=202)
+def destroy_slice(slice_id: str) -> dict[str, Any]:
+    item = SLICES.get(slice_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Slice no encontrado")
+
+    inventory = get_runtime_inventory(slice_id) or item.get("vm_inventory")
+    if not inventory or not inventory.get("vms"):
+        raise HTTPException(
+            status_code=409,
+            detail="El slice no tiene inventario de VMs para destruir",
+        )
+
+    job_id = f"job-{uuid4().hex[:8]}"
+    item["estado"] = "DESTRUYENDO"
+    item["updated_at"] = now_iso()
+    save_slices(SLICES)
+
+    deployment = {
+        "id": job_id,
+        "slice_id": slice_id,
+        "status": "QUEUED",
+        "message": "Job creado. El worker destruira las VMs registradas en el inventario.",
+        "script_runner": {
+            "action": "destroy_topology",
+            "variables": {
+                "inventory": deepcopy(inventory),
+            },
+            "vm_inventory": deepcopy(inventory),
+        },
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    DEPLOYMENTS[job_id] = deployment
+    save_deployments(DEPLOYMENTS)
+    write_job(deployment)
+    app_log(f"destroy solicitado slice_id={slice_id} job_id={job_id}")
+    return deployment
+
+
 @app.get("/deployments/{job_id}")
 def get_deployment(job_id: str) -> dict[str, Any]:
-    deployment = read_job(job_id) or DEPLOYMENTS.get(job_id)
+    job_deployment = read_job(job_id)
+    deployment = job_deployment or DEPLOYMENTS.get(job_id)
     if not deployment:
         raise HTTPException(status_code=404, detail="Deployment no encontrado")
 
+    if job_deployment:
+        DEPLOYMENTS[job_id] = job_deployment
+        save_deployments(DEPLOYMENTS)
+
     slice_item = SLICES.get(deployment["slice_id"])
+    inventory = get_runtime_inventory(deployment["slice_id"])
+    if not inventory:
+        inventory = deployment.get("script_runner", {}).get("vm_inventory")
+    if inventory:
+        deployment["vm_inventory"] = inventory
+        if slice_item:
+            slice_item["vm_inventory"] = inventory
+
+    action = deployment.get("script_runner", {}).get("action")
     if slice_item and deployment.get("status") == "SUCCESS":
-        slice_item["estado"] = "ACTIVO"
+        slice_item["estado"] = "DESTRUIDO" if action == "destroy_topology" else "ACTIVO"
         slice_item["updated_at"] = now_iso()
+        save_slices(SLICES)
+    elif slice_item and deployment.get("status") == "FAILED":
+        slice_item["estado"] = "ERROR"
+        slice_item["updated_at"] = now_iso()
+        save_slices(SLICES)
+    elif slice_item and inventory:
+        slice_item["updated_at"] = now_iso()
+        save_slices(SLICES)
 
     return deployment
+
+
+@app.get("/slices/{slice_id}/inventory")
+def get_slice_inventory(slice_id: str) -> dict[str, Any]:
+    item = SLICES.get(slice_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Slice no encontrado")
+    return get_runtime_inventory(slice_id) or item.get("vm_inventory") or empty_inventory(slice_id)
 
 
 @app.post("/slices/{slice_id}/{action}")
@@ -224,4 +566,5 @@ def slice_action(slice_id: str, action: str) -> dict[str, str]:
 
     item["estado"] = states[action]
     item["updated_at"] = now_iso()
+    save_slices(SLICES)
     return {"slice_id": slice_id, "action": action, "estado": item["estado"]}

@@ -414,7 +414,7 @@
 
 			<div class="assign-card">
 				<div class="assign-card-header">
-					<span>Selecciona uno o más cursos</span>
+					<span>Selecciona el curso destino</span>
 					<span class="selected-count" id="sel-count">0</span>
 				</div>
 				<ul class="courses-list" id="courses-list"></ul>
@@ -427,7 +427,7 @@
 				</a>
 				<button class="btn-lanzar" id="btn-lanzar" disabled onclick="lanzarSlices()">
 					<i class="fas fa-rocket"></i>
-					Lanzar Slices
+					Crear slices por alumno
 				</button>
 			</div>
 
@@ -437,24 +437,59 @@
 </div>
 
 <script>
-const CURSOS = [
-	{ id: 'TEL141', nombre: 'Ingeniería de Redes Cloud' },
-	{ id: 'TEL142', nombre: 'Comunicaciones Móviles' },
-	{ id: 'TEL143', nombre: 'Trabajo de Tesis 1' },
-	{ id: 'TEL144', nombre: 'Formulación y Evaluación de Proyectos de Telecomunicaciones' },
-	{ id: 'TEL221', nombre: 'Infraestructura de Redes de Telecomunicaciones' },
+const params = new URLSearchParams(window.location.search);
+const templateId = params.get('template') || params.get('slice') || '';
+const templateName = decodeURIComponent(params.get('slicenombre') || 'Plantilla de slice');
+const FALLBACK_COURSES = [
+	{
+		id: 'TEL141',
+		nombre: 'Ingeniería de Redes Cloud',
+		alumnos: [
+			{ id: 'TEL141-A01', nombre: 'Ana Torres' },
+			{ id: 'TEL141-A02', nombre: 'Bruno Díaz' },
+			{ id: 'TEL141-A03', nombre: 'Carla Rojas' },
+		],
+	},
+	{
+		id: 'TEL142',
+		nombre: 'Comunicaciones Móviles',
+		alumnos: [
+			{ id: 'TEL142-A01', nombre: 'Diego Vargas' },
+			{ id: 'TEL142-A02', nombre: 'Elena Ramos' },
+			{ id: 'TEL142-A03', nombre: 'Fernando Silva' },
+		],
+	},
 ];
 
 const seleccionados = new Set();
+let courses = [];
 
-function renderCursos() {
+document.querySelector('.page-heading h2').textContent = `Asignar ${templateName}`;
+document.querySelector('.btn-back').href = templateId
+	? `configurar-slice.html?slice=${encodeURIComponent(templateId)}&slicenombre=${encodeURIComponent(templateName)}`
+	: 'slices.html';
+
+async function loadCourses() {
+	try {
+		const response = await fetch('/api/cursos');
+		if (!response.ok) throw new Error(`API respondio ${response.status}`);
+		return response.json();
+	} catch (error) {
+		console.warn('Backend no disponible, usando cursos base.', error);
+		return FALLBACK_COURSES;
+	}
+}
+
+async function renderCursos() {
+	courses = await loadCourses();
 	const ul = document.getElementById('courses-list');
-	ul.innerHTML = CURSOS.map(c => `
+	ul.innerHTML = courses.map(c => `
 		<li id="li-${c.id}" onclick="toggleCurso('${c.id}')">
 			<div class="course-checkbox"><i class="fas fa-check"></i></div>
 			<div class="course-info">
 				<span class="course-code">${c.id}</span>
 				<span class="course-nombre">${c.nombre}</span>
+				<span style="font-size:0.78em;color:#9fa3a6;margin-left:0.65em">${(c.alumnos || []).length} alumnos</span>
 			</div>
 		</li>
 	`).join('');
@@ -462,13 +497,10 @@ function renderCursos() {
 
 function toggleCurso(id) {
 	const li = document.getElementById('li-' + id);
-	if (seleccionados.has(id)) {
-		seleccionados.delete(id);
-		li.classList.remove('selected');
-	} else {
-		seleccionados.add(id);
-		li.classList.add('selected');
-	}
+	seleccionados.clear();
+	document.querySelectorAll('.courses-list li').forEach(row => row.classList.remove('selected'));
+	seleccionados.add(id);
+	li.classList.add('selected');
 	const count = seleccionados.size;
 	const badge = document.getElementById('sel-count');
 	badge.textContent = count;
@@ -476,11 +508,38 @@ function toggleCurso(id) {
 	document.getElementById('btn-lanzar').disabled = count === 0;
 }
 
-function lanzarSlices() {
+async function lanzarSlices() {
 	if (!seleccionados.size) return;
-	const nombres = CURSOS.filter(c => seleccionados.has(c.id)).map(c => c.nombre).join(', ');
-	alert(`¡Slices lanzados exitosamente!\n\nAsignados a: ${nombres}`);
-	window.location.href = 'slices.html';
+	if (!templateId) { alert('No se encontro la plantilla a asignar.'); return; }
+	const courseId = Array.from(seleccionados)[0];
+	const course = courses.find(c => c.id === courseId);
+
+	try {
+		const response = await fetch(`/api/slice-templates/${encodeURIComponent(templateId)}/assign-to-course`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ course_id: courseId })
+		});
+		if (!response.ok) throw new Error(`API respondio ${response.status}`);
+		const result = await response.json();
+		alert(`Se crearon ${result.slices.length} slices: uno por cada alumno de ${result.course.nombre}.`);
+		window.location.href = `detalle-curso.html?id=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(course.nombre)}`;
+	} catch (error) {
+		console.warn('Backend no disponible para asignar plantilla.', error);
+		const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
+		const created = (course?.alumnos || []).map(student => ({
+			sliceId: `${templateId}-${student.id}`,
+			sliceName: `${templateName} - ${student.nombre}`,
+			templateId,
+			courseId,
+			courseNom: course?.nombre || courseId,
+			studentId: student.id,
+			studentName: student.nombre,
+		}));
+		localStorage.setItem('nimbuscore_assignments', JSON.stringify([...assignments, ...created]));
+		alert(`Se registraron ${created.length} asignaciones locales.`);
+		window.location.href = `detalle-curso.html?id=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(course?.nombre || courseId)}`;
+	}
 }
 
 (function() {
