@@ -14,6 +14,10 @@ API_Gateway/
 BACKEND/
   API FastAPI. Guarda plantillas, cursos, slices asignados, jobs y endpoints de despliegue.
 
+NOVNC/
+  Contenedor noVNC + websockify.
+  Expone consolas VNC de QEMU dentro del navegador usando tokens.
+
 WORKER/
   Lee jobs desde /jobs y ejecuta comandos SSH hacia el head node.
 
@@ -37,6 +41,7 @@ server4 = app/control server + head node
     - Frontend
     - Backend
     - Worker
+    - noVNC/websockify
   Ejecuta Script Runner como head node:
     - Open vSwitch
     - VLANs del slice
@@ -161,6 +166,50 @@ Luego abre RealVNC Viewer en:
 127.0.0.1:5902
 127.0.0.1:5903
 ```
+
+## Consola noVNC Desde La Interfaz
+
+Como `server4` puede llegar directamente a los puertos VNC de los workers:
+
+```text
+10.0.10.1:5901
+10.0.10.2:5902
+10.0.10.3:5903
+```
+
+NimbusCore incluye un contenedor `novnc` con `websockify`. El usuario ya no necesita abrir tuneles manuales a `5901`, `5902` o `5903` para usar la consola desde la web.
+
+El unico tunel necesario para la app sigue siendo:
+
+```bash
+ssh -N -L 8080:localhost:8080 -p 5804 ubuntu@10.20.12.227
+```
+
+Flujo:
+
+```text
+Usuario selecciona una VM en ver-slice.html
+  -> boton "Abrir consola noVNC"
+  -> POST /api/slices/{slice_id}/vms/{vm_name}/console
+  -> backend busca worker_ip y vnc_port en SCRIPT_RUNS/vm_inventory.json
+  -> backend escribe token en el volumen compartido nimbuscore_novnc_tokens
+  -> websockify usa ese token para conectar al VNC real de QEMU
+  -> navegador abre /novnc/vnc.html por el API Gateway
+```
+
+Ejemplo de token generado internamente:
+
+```text
+console-abc123: 10.0.10.2:5902
+```
+
+Nginx publica noVNC en:
+
+```text
+/novnc/
+```
+
+Y reenvia WebSocket hacia el contenedor `novnc:6080`.
 
 Credenciales por VNC/consola:
 
@@ -570,11 +619,14 @@ backend:
   NIMBUSCORE_ACADEMIC_STORE_PATH: /data/academic.json
   NIMBUSCORE_DEPLOYMENT_STORE_PATH: /data/deployments.json
   NIMBUSCORE_VM_INVENTORY_PATH: /script-runs/vm_inventory.json
+  NIMBUSCORE_NOVNC_TOKEN_FILE: /novnc-tokens/tokens.cfg
+  NIMBUSCORE_NOVNC_PUBLIC_BASE: /novnc
 
 backend volumes:
   /home/ubuntu/nimbuscore-keys:/keypairs
   ./BACKEND_DATA:/data
   ./SCRIPT_RUNS:/script-runs:ro
+  nimbuscore_novnc_tokens:/novnc-tokens
 
 worker:
 NIMBUSCORE_SCRIPT_DRY_RUN: "false"
@@ -632,6 +684,10 @@ SCRIPT_RUNS/vm_inventory.json:
 
 volumen Docker nimbuscore_jobs:
   jobs enviados del backend al worker.
+
+volumen Docker nimbuscore_novnc_tokens:
+  tokens temporales noVNC.
+  el backend escribe el target VNC y el contenedor novnc lo consume con websockify.
 ```
 
 Los slices ya no dependen solo de memoria. Si reinicias el contenedor `backend`, se vuelven a cargar desde `BACKEND_DATA/slices.json`.
@@ -1338,9 +1394,11 @@ GET    /api/slices
 POST   /api/slices
 GET    /api/slices/{slice_id}
 GET    /api/slices/{slice_id}/inventory
+POST   /api/slices/{slice_id}/vms/{vm_name}/console
 PUT    /api/slices/{slice_id}
 DELETE /api/slices/{slice_id}
 POST   /api/slices/{slice_id}/deploy
+POST   /api/slices/{slice_id}/destroy
 GET    /api/deployments/{job_id}
 POST   /api/slices/{slice_id}/start
 POST   /api/slices/{slice_id}/stop

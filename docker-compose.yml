@@ -19,6 +19,8 @@ services:
       NIMBUSCORE_SLICE_TEMPLATE_STORE_PATH: /data/slice_templates.json
       NIMBUSCORE_ACADEMIC_STORE_PATH: /data/academic.json
       NIMBUSCORE_VM_INVENTORY_PATH: /script-runs/vm_inventory.json
+      NIMBUSCORE_NOVNC_TOKEN_FILE: /novnc-tokens/tokens.cfg
+      NIMBUSCORE_NOVNC_PUBLIC_BASE: /novnc
     ports:
       - "8000:8000"
     volumes:
@@ -26,6 +28,7 @@ services:
       - ${NIMBUSCORE_KEYPAIR_DIR:-/home/ubuntu/nimbuscore-keys}:/keypairs
       - ./BACKEND_DATA:/data
       - ./SCRIPT_RUNS:/script-runs:ro
+      - nimbuscore_novnc_tokens:/novnc-tokens
 
   worker:
     build:
@@ -58,12 +61,22 @@ services:
       - ./SCRIPT_RUNS:/script-runs
       - ${NIMBUSCORE_SSH_DIR:-/home/ubuntu/.ssh}:/root/.ssh:ro
 
+  novnc:
+    build:
+      context: ./NOVNC
+    container_name: nimbuscore-novnc
+    volumes:
+      - nimbuscore_novnc_tokens:/tokens
+    expose:
+      - "6080"
+
   api-gateway:
     image: nginx:1.27-alpine
     container_name: nimbuscore-api-gateway
     depends_on:
       - frontend
       - backend
+      - novnc
     ports:
       - "8080:80"
     volumes:
@@ -71,3 +84,4 @@ services:
 
 volumes:
   nimbuscore_jobs:
+  nimbuscore_novnc_tokens:

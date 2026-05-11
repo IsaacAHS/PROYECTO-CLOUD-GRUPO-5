@@ -6,6 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
@@ -30,6 +31,8 @@ from app.services.vm_placement import place_vms
 app = FastAPI(title="NimbusCore API", version="0.1.0")
 KEYPAIR_DIR = Path(os.getenv("NIMBUSCORE_KEYPAIR_DIR", "/keypairs"))
 KEYPAIR_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+NOVNC_TOKEN_FILE = Path(os.getenv("NIMBUSCORE_NOVNC_TOKEN_FILE", "/novnc-tokens/tokens.cfg"))
+NOVNC_PUBLIC_BASE = os.getenv("NIMBUSCORE_NOVNC_PUBLIC_BASE", "/novnc").rstrip("/")
 
 app.add_middleware(
     CORSMiddleware,
@@ -124,6 +127,32 @@ def empty_inventory(slice_id: str, status: str = "PENDING") -> dict[str, Any]:
         "networks": [],
         "topologies": [],
     }
+
+
+def find_inventory_vm(slice_id: str, vm_name: str) -> dict[str, Any] | None:
+    inventory = get_runtime_inventory(slice_id)
+    if not inventory:
+        item = SLICES.get(slice_id)
+        inventory = item.get("vm_inventory") if item else None
+    if not inventory:
+        return None
+
+    for vm in inventory.get("vms", []):
+        if str(vm.get("name")) == vm_name or str(vm.get("id")) == vm_name:
+            return vm
+    return None
+
+
+def write_novnc_token(token: str, target_host: str, target_port: int) -> None:
+    NOVNC_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    existing_lines: list[str] = []
+    if NOVNC_TOKEN_FILE.exists():
+        existing_lines = NOVNC_TOKEN_FILE.read_text(encoding="utf-8").splitlines()
+
+    prefix = f"{token}:"
+    lines = [line for line in existing_lines if not line.startswith(prefix)]
+    lines.append(f"{token}: {target_host}:{target_port}")
+    NOVNC_TOKEN_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def get_runtime_inventory(slice_id: str) -> dict[str, Any] | None:
@@ -547,6 +576,45 @@ def get_slice_inventory(slice_id: str) -> dict[str, Any]:
     if not item:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
     return get_runtime_inventory(slice_id) or item.get("vm_inventory") or empty_inventory(slice_id)
+
+
+@app.post("/slices/{slice_id}/vms/{vm_name}/console", status_code=201)
+def create_vm_console(slice_id: str, vm_name: str) -> dict[str, Any]:
+    if slice_id not in SLICES:
+        raise HTTPException(status_code=404, detail="Slice no encontrado")
+
+    vm = find_inventory_vm(slice_id, vm_name)
+    if not vm:
+        raise HTTPException(status_code=404, detail="VM no encontrada en inventario")
+
+    target_host = str(vm.get("worker_ip") or "").strip()
+    try:
+        target_port = int(vm.get("vnc_port") or 0)
+    except (TypeError, ValueError):
+        target_port = 0
+
+    if not target_host or target_port <= 0:
+        raise HTTPException(status_code=409, detail="La VM no tiene target VNC valido")
+
+    token = f"console-{uuid4().hex[:16]}"
+    write_novnc_token(token, target_host, target_port)
+    websocket_path = f"novnc/websockify?token={quote(token)}"
+    console_url = (
+        f"{NOVNC_PUBLIC_BASE}/vnc.html"
+        f"?autoconnect=1&resize=remote&reconnect=1"
+        f"&path={quote(websocket_path, safe='')}"
+    )
+    app_log(
+        f"console creada slice_id={slice_id} vm={vm_name} "
+        f"target={target_host}:{target_port} token={token}"
+    )
+    return {
+        "slice_id": slice_id,
+        "vm_name": vm.get("name") or vm_name,
+        "target": f"{target_host}:{target_port}",
+        "token": token,
+        "url": console_url,
+    }
 
 
 @app.post("/slices/{slice_id}/{action}")
