@@ -507,6 +507,14 @@ wget --no-check-certificate \
   -O focal-server-cloudimg-amd64.img
 ```
 
+La entrada `cirros-drive` reproduce este metodo manual:
+
+```bash
+wget --no-check-certificate \
+  "https://drive.usercontent.google.com/download?id=1TzJ7mOs-b-Ggwr9lXvcNbYiMVqfTlKH9&export=download&confirm=t" \
+  -O cirros-0.6.2-x86_64-disk.img
+```
+
 Cuando se crea la VM, el worker genera un ISO cloud-init en:
 
 ```text
@@ -865,10 +873,11 @@ Apagar:
   -> POST /api/slices/{slice_id}/destroy
   -> el backend crea un job destroy_topology usando el inventario real del slice
   -> el worker entra por SSH al worker de cada VM
-  -> ejecuta delete_vm.sh para matar QEMU, quitar TAPs de OVS y borrar el disco qcow2 de la VM.
+  -> ejecuta delete_vm.sh para matar QEMU, quitar TAPs de OVS y borrar el disco qcow2 de la VM
+  -> ejecuta delete_network_vlan.sh en server4 para eliminar namespaces DHCP, dnsmasq, veths, puertos vlan<ID> y reglas FORWARD del slice.
 ```
 
-La accion `Apagar` no borra la plantilla ni la asignacion academica. Solo destruye las VMs del slice desplegado. El slice queda en estado `DESTRUIDO` y puede volver a desplegarse despues.
+La accion `Apagar` no borra la plantilla ni la asignacion academica. Destruye las VMs y redes runtime del slice desplegado. El slice queda en estado `DESTRUIDO` y puede volver a desplegarse despues usando la misma reserva VLAN/CIDR/VNC que ya tenia ese slice.
 
 Ejemplo de comando generado:
 
@@ -965,6 +974,39 @@ Modelo DHCP actual:
 ```
 
 No se crea un namespace por slice completo. Como NimbusCore usa una VLAN por enlace logico, cada enlace del slice tiene su propio namespace y su propio servicio DHCP.
+
+### delete_network_vlan.sh
+
+```bash
+./delete_network_vlan.sh <VLAN_ID> [OVS_NAME]
+```
+
+Ejemplo:
+
+```bash
+./delete_network_vlan.sh 100 br-int
+```
+
+En `server4` elimina los recursos runtime de esa VLAN:
+
+```text
+dnsmasq:
+  mata el proceso registrado en /var/run/dnsmasq-dhcp-ns-vlan<VLAN>.pid
+  elimina pid, leases y log de dnsmasq.
+
+iptables:
+  elimina reglas FORWARD que usen vlan<VLAN> como entrada o salida.
+
+OVS/Linux:
+  elimina el puerto veth-h-<VLAN> de br-int.
+  elimina el puerto internal vlan<VLAN> de br-int.
+  elimina las interfaces Linux asociadas si siguen presentes.
+
+namespace:
+  elimina dhcp-ns-vlan<VLAN>.
+```
+
+Este script no toca `ens4` ni los uplinks OVS. Solo limpia los recursos creados para la VLAN del slice.
 
 ### routing_networks.sh
 
@@ -1279,6 +1321,7 @@ Catalogo de imagenes inicial:
 
 ```text
 cirros          -> https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img
+cirros-drive    -> Google Drive con wget --no-check-certificate
 ubuntu-22       -> https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
 ubuntu-20       -> https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img
 ubuntu-20-drive -> Google Drive con wget --no-check-certificate

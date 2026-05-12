@@ -501,10 +501,10 @@ def destroy_slice(slice_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
 
     inventory = get_runtime_inventory(slice_id) or item.get("vm_inventory")
-    if not inventory or not inventory.get("vms"):
+    if not inventory or (not inventory.get("vms") and not inventory.get("networks")):
         raise HTTPException(
             status_code=409,
-            detail="El slice no tiene inventario de VMs para destruir",
+            detail="El slice no tiene inventario de VMs o redes para destruir",
         )
 
     job_id = f"job-{uuid4().hex[:8]}"

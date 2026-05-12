@@ -82,6 +82,12 @@ def mark_all_vms(inventory: dict, status: str) -> None:
         vm["updated_at"] = now_iso()
 
 
+def mark_all_networks(inventory: dict, status: str) -> None:
+    for network in inventory.get("networks", []):
+        network["status"] = status
+        network["updated_at"] = now_iso()
+
+
 def estimate_vm_count(job: dict) -> int:
     variables = job.get("script_runner", {}).get("variables", {})
     topologies = variables.get("topologies") or []
@@ -296,6 +302,7 @@ def process_destroy_job(path: Path, job: dict) -> None:
         raise ValueError("El job de destruccion no contiene inventario de VMs")
 
     mark_all_vms(inventory, "DESTROYING")
+    mark_all_networks(inventory, "DESTROYING")
     inventory["status"] = "DESTROYING"
     inventory["message"] = "Destruccion de VMs en ejecucion."
     inventory["updated_at"] = now_iso()
@@ -316,6 +323,7 @@ def process_destroy_job(path: Path, job: dict) -> None:
         logs.append(command_log)
         if command_log["exit_code"] != 0:
             mark_all_vms(inventory, "FAILED")
+            mark_all_networks(inventory, "FAILED")
             job["status"] = "FAILED"
             job["message"] = f"Fallo destruyendo VM: {command_log['command']}"
             inventory["status"] = "FAILED"
@@ -332,6 +340,7 @@ def process_destroy_job(path: Path, job: dict) -> None:
             return
 
     mark_all_vms(inventory, "DESTROYED")
+    mark_all_networks(inventory, "DESTROYED")
     job["status"] = "SUCCESS"
     job["message"] = "VMs destruidas correctamente."
     inventory["status"] = "DESTROYED"

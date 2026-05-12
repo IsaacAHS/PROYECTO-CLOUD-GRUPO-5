@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-05-10T00:00:00+00:00",
+  "updated_at": "2026-05-12T00:00:00+00:00",
   "images": [
     {
       "id": "cirros",
@@ -7,6 +7,14 @@
       "label": "Cirros 0.6.2",
       "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",
       "download_method": "auto",
+      "active": true
+    },
+    {
+      "id": "cirros-drive",
+      "name": "cirros-0.6.2-x86_64-disk.img",
+      "label": "Cirros 0.6.2 (Google Drive)",
+      "url": "https://drive.usercontent.google.com/download?id=1TzJ7mOs-b-Ggwr9lXvcNbYiMVqfTlKH9&export=download&confirm=t",
+      "download_method": "wget-no-check-certificate",
       "active": true
     },
     {

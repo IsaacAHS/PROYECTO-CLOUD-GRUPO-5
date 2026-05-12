@@ -116,8 +116,24 @@ def destroy_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
             str(ovs_name),
         ))
 
+    seen_vlans: set[int] = set()
+    networks = inventory.get("networks") or []
+    for network in reversed(networks):
+        try:
+            vlan_id = int(network.get("vlan_id"))
+        except (TypeError, ValueError):
+            continue
+        if vlan_id in seen_vlans:
+            continue
+        seen_vlans.add(vlan_id)
+        commands.append(remote_headnode_command(
+            "delete_network_vlan.sh",
+            str(vlan_id),
+            str(inventory.get("ovs_name") or OVS_NAME),
+        ))
+
     if not commands:
-        raise ValueError("El job de destruccion no tiene VMs registradas en el inventario")
+        raise ValueError("El job de destruccion no tiene VMs ni redes registradas en el inventario")
 
     return commands
 

@@ -20,6 +20,14 @@ DEFAULT_IMAGES = [
         "active": True,
     },
     {
+        "id": "cirros-drive",
+        "name": "cirros-0.6.2-x86_64-disk.img",
+        "label": "Cirros 0.6.2 (Google Drive)",
+        "url": "https://drive.usercontent.google.com/download?id=1TzJ7mOs-b-Ggwr9lXvcNbYiMVqfTlKH9&export=download&confirm=t",
+        "download_method": "wget-no-check-certificate",
+        "active": True,
+    },
+    {
         "id": "ubuntu-22",
         "name": "ubuntu-22.04-jammy",
         "label": "Ubuntu 22.04 LTS",
