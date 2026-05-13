@@ -119,6 +119,13 @@ DEPLOYMENTS: dict[str, dict[str, Any]] = load_deployments()
 SLICE_TEMPLATES: dict[str, dict[str, Any]] = read_templates()
 
 
+def course_has_assigned_slices(course_id: str) -> bool:
+    return any(
+        str(slice_item.get("curso_id") or "") == str(course_id)
+        for slice_item in SLICES.values()
+    )
+
+
 def empty_inventory(slice_id: str, status: str = "PENDING") -> dict[str, Any]:
     return {
         "slice_id": slice_id,
@@ -357,6 +364,12 @@ def assign_template_to_course(
     course = get_course(payload.course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Curso no encontrado")
+
+    if course_has_assigned_slices(course["id"]):
+        raise HTTPException(
+            status_code=409,
+            detail="Este curso ya tiene un set de slices asignado.",
+        )
 
     created = []
     for student in course.get("alumnos", []):

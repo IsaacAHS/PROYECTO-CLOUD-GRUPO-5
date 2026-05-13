@@ -573,6 +573,7 @@ const TOPO_META = {
 	lineal: { icon: 'fa-minus',    label: 'Lineal' },
 	anillo: { icon: 'fa-sync-alt', label: 'Anillo' },
 	bus:    { icon: 'fa-bars',     label: 'Bus'    },
+	personalizada: { icon: 'fa-project-diagram', label: 'Personalizada' },
 };
 
 function escapeAttr(value) {
@@ -593,6 +594,8 @@ const TOPO_COLORS = {
 	lineal: 'rgba(74,159,213,0.5)',
 	anillo: 'rgba(68,176,120,0.5)',
 	bus:    'rgba(160,96,200,0.4)',
+	personalizada: 'rgba(120,120,120,0.5)',
+	custom: 'rgba(120,120,120,0.5)',
 };
 
 let nodes = [], edges = [], topoEntries = [];
@@ -601,6 +604,16 @@ let nodeConfigs = {};
 let edgeSeq = 0;
 let vmInventory = [];
 let inventoryStatus = null;
+
+function normalizeTopologyType(type) {
+	const value = String(type || '').trim().toLowerCase();
+	if (value === 'custom') return 'personalizada';
+	return ['lineal', 'anillo', 'arbol', 'bus', 'personalizada'].includes(value) ? value : 'personalizada';
+}
+
+function hasNumericValue(value) {
+	return value !== undefined && value !== null && value !== '' && !Number.isNaN(Number(value));
+}
 
 /* ════════════════════
    RENDER TOPO READ-ONLY LIST
@@ -630,6 +643,11 @@ function buildCanvas(topos) {
 	area.querySelectorAll('.topo-node').forEach(n => n.remove());
 	document.getElementById('topo-svg').innerHTML = '';
 	nodes = []; edges = []; edgeSeq = 0;
+	topoEntries = (topos || []).map((t, index) => ({
+		id: t.id !== undefined ? t.id : index + 1,
+		type: normalizeTopologyType(t.type),
+		count: Number(t.count || 0)
+	}));
 
 	if (!topos || !topos.length) { empty.style.display = ''; return; }
 	empty.style.display = 'none';
@@ -647,8 +665,10 @@ function buildCanvas(topos) {
 		const groupNodes = [];
 
 		for (let i = 0; i < t.count; i++) {
-			const id = `t${ti}-n${i}`;
-			const nd = { id, x: positions[i].x, y: positions[i].y, nodeType: 'srv', topoIdx: ti, topoId: t.id ?? ti + 1, topoNodeIndex: i, name: '' };
+			const topoId = t.id ?? ti + 1;
+			const id = `t${topoId}-n${i}`;
+			const pos = positions[i] || { x: W / 2, y: midY };
+			const nd = { id, x: pos.x, y: pos.y, nodeType: 'srv', topoIdx: ti, topoId, topoNodeIndex: i, name: '' };
 			if (!nodeConfigs[id]) nodeConfigs[id] = getNodeConfig(id, ti, i);
 			const el = createNodeEl(nd);
 			area.appendChild(el);
@@ -697,16 +717,92 @@ function ensureSelectOption(selectId, value, label) {
 	select.appendChild(option);
 }
 
+function getTopologyIndexById(topoId) {
+	const idx = topoEntries.findIndex(t => String(t.id) === String(topoId));
+	return idx >= 0 ? idx : 0;
+}
+
+function getNodeIndexFromId(id) {
+	const match = String(id || '').match(/-n(\d+)$/);
+	return match ? Number(match[1]) : 0;
+}
+
+function makeNodeFromSaved(saved) {
+	const id = String(saved.id || `saved-n${nodes.length}`);
+	const topoId = saved.topologia_id !== undefined ? saved.topologia_id : (saved.topoId ?? null);
+	return {
+		id,
+		x: hasNumericValue(saved.x) ? Number(saved.x) : 120 + (nodes.length * 50),
+		y: hasNumericValue(saved.y) ? Number(saved.y) : 120,
+		nodeType: saved.tipo || saved.nodeType || 'srv',
+		topoIdx: topoId !== null ? getTopologyIndexById(topoId) : 0,
+		topoId,
+		topoNodeIndex: getNodeIndexFromId(id),
+		name: saved.nombre || saved.name || ''
+	};
+}
+
+function updateNodeEl(nd) {
+	const el = document.getElementById('node-' + nd.id);
+	if (!el) return;
+	const selected = el.classList.contains('selected');
+	el.className = `topo-node nt-${nd.nodeType}${selected ? ' selected' : ''}`;
+	el.style.left = nd.x + 'px';
+	el.style.top = nd.y + 'px';
+	el.innerHTML = nodeInner(nd.nodeType);
+}
+
 function applySavedNodeData(savedNodes) {
 	const byId = new Map((savedNodes || []).map(n => [String(n.id), n]));
+	const area = document.getElementById('canvas-area');
+	if ((savedNodes || []).length) document.getElementById('canvas-empty').style.display = 'none';
+
 	nodes.forEach(nd => {
 		const saved = byId.get(String(nd.id));
 		if (!saved) return;
 		nd.name = saved.nombre || saved.name || nd.name || '';
 		nd.nodeType = saved.tipo || saved.nodeType || nd.nodeType;
+		if (hasNumericValue(saved.x)) nd.x = Number(saved.x);
+		if (hasNumericValue(saved.y)) nd.y = Number(saved.y);
 		nodeConfigs[nd.id] = normalizeNodeConfig(saved.configuracion);
-		const el = document.getElementById('node-' + nd.id);
-		if (el) el.innerHTML = nodeInner(nd.nodeType);
+		updateNodeEl(nd);
+	});
+
+	(savedNodes || []).forEach(saved => {
+		const id = String(saved.id || '');
+		if (!id || nodes.some(n => String(n.id) === id)) return;
+		const nd = makeNodeFromSaved(saved);
+		nodeConfigs[nd.id] = normalizeNodeConfig(saved.configuracion);
+		const el = createNodeEl(nd);
+		area.appendChild(el);
+		nodes.push(nd);
+		updateNodeEl(nd);
+	});
+}
+
+function applySavedEdges(savedEdges) {
+	if (!Array.isArray(savedEdges) || savedEdges.length === 0) return;
+	edges = [];
+	edgeSeq = 0;
+
+	savedEdges.forEach(saved => {
+		const id = hasNumericValue(saved.id) ? Number(saved.id) : ++edgeSeq;
+		edgeSeq = Math.max(edgeSeq, id);
+		if (saved.tipo === 'bus' && Array.isArray(saved.nodos)) {
+			const busNodes = saved.nodos
+				.map(nodeId => nodes.find(n => String(n.id) === String(nodeId)))
+				.filter(Boolean);
+			if (busNodes.length > 1) {
+				edges.push({ id, bus: true, busNodes, topo: normalizeTopologyType(saved.topologia || saved.topo || 'bus') });
+			}
+			return;
+		}
+
+		const from = saved.desde || saved.from;
+		const to = saved.hacia || saved.to;
+		if (from && to && nodes.some(n => String(n.id) === String(from)) && nodes.some(n => String(n.id) === String(to))) {
+			edges.push({ id, from: String(from), to: String(to), topo: normalizeTopologyType(saved.topologia || saved.topo || 'personalizada') });
+		}
 	});
 }
 
@@ -736,6 +832,22 @@ function calcLayout(type, n, W, PAD, startY, midY, regionH) {
 	} else if (type === 'bus') {
 		const step = (W - PAD * 2) / (n + 1);
 		for (let i = 0; i < n; i++) arr.push({ x: PAD + step * (i + 1), y: midY + (i % 2 === 0 ? -48 : 48) });
+	} else if (type === 'personalizada') {
+		const cols = Math.ceil(Math.sqrt(n));
+		const rows = Math.ceil(n / cols);
+		const usableW = W - PAD * 2;
+		const usableH = Math.max(regionH - 40, 120);
+		const stepX = usableW / (cols + 1);
+		const stepY = usableH / (rows + 1);
+		const gridTop = midY - usableH / 2;
+		for (let i = 0; i < n; i++) {
+			const col = i % cols;
+			const row = Math.floor(i / cols);
+			arr.push({
+				x: PAD + stepX * (col + 1),
+				y: gridTop + stepY * (row + 1)
+			});
+		}
 	}
 	return arr;
 }
@@ -1024,9 +1136,14 @@ document.addEventListener('keydown', e => {
 window.addEventListener('resize', () => { if (nodes.length) drawEdges(); });
 
 function applySlice(slice) {
+	const savedNodes = Array.isArray(slice.nodos) ? slice.nodos : [];
+	const savedEdges = Array.isArray(slice.enlaces) ? slice.enlaces : [];
+	const hasPersonalizedEdges = savedEdges.some(edge =>
+		normalizeTopologyType(edge.topologia || edge.topo || '') === 'personalizada'
+	);
 	const topologies = (slice.topologias || []).map((topology, index) => ({
 		id: topology.id !== undefined ? topology.id : index + 1,
-		type: topology.type || topology.tipo || 'lineal',
+		type: hasPersonalizedEdges ? 'personalizada' : normalizeTopologyType(topology.type || topology.tipo || 'lineal'),
 		count: Number(topology.count || topology.nodos || 0)
 	})).filter(t => t.type && t.count > 0);
 
@@ -1041,7 +1158,8 @@ function applySlice(slice) {
 	document.getElementById('zona').value = slice.zona || '';
 	renderTopoList(topologies);
 	buildCanvas(topologies);
-	applySavedNodeData(Array.isArray(slice.nodos) ? slice.nodos : []);
+	applySavedNodeData(savedNodes);
+	applySavedEdges(savedEdges);
 	drawEdges();
 
 	const inventory = slice.vm_inventory || {};
@@ -1058,6 +1176,17 @@ function applyDemoSlice() {
 	inventoryStatus = null;
 }
 
+function applyLoadError(error) {
+	document.getElementById('zona').value = '';
+	renderTopoList([]);
+	buildCanvas([]);
+	vmInventory = [];
+	inventoryStatus = null;
+	document.getElementById('canvas-empty').innerHTML = `
+		<i class="fas fa-exclamation-triangle"></i>
+		<p>No se pudo cargar este slice desde la API.<br>${escapeAttr(error.message || error)}</p>`;
+}
+
 /* ════════════════════
    INIT: load persisted data
 ════════════════════ */
@@ -1067,8 +1196,9 @@ function applyDemoSlice() {
 		if (!response.ok) throw new Error(`API /slices/${sliceId} respondio ${response.status}`);
 		applySlice(await response.json());
 	} catch (error) {
-		console.warn('No se pudo cargar el slice desde API, usando datos demo.', error);
-		applyDemoSlice();
+		console.warn('No se pudo cargar el slice desde API.', error);
+		if (DEMO_SLICES[sliceId]) applyDemoSlice();
+		else applyLoadError(error);
 	}
 })();
 </script>

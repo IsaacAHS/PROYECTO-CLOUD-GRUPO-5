@@ -173,14 +173,20 @@
 
 		.section-header-left p { margin: 0; font-size: 0.88em; color: #9fa3a6; }
 
-		.btn-crear {
+		.section-actions {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.75em;
+			flex-wrap: wrap;
+		}
+
+		.btn-crear,
+		.btn-bulk-deploy {
 			display: inline-flex;
 			align-items: center;
 			gap: 0.5em;
 			height: 3.5em;
 			padding: 0 2em;
-			background: #f56a6a;
-			color: #fff;
 			border: none;
 			border-radius: 0.375em;
 			font-family: 'Roboto Slab', serif;
@@ -193,8 +199,22 @@
 			transition: background 0.2s;
 			white-space: nowrap;
 		}
+
+		.btn-crear {
+			background: #f56a6a;
+			color: #fff;
+		}
 		.btn-crear:hover { background: #f67878; color: #fff; }
 		.btn-crear:active { background: #f45c5c; }
+		.btn-crear[hidden] { display: none !important; }
+
+		.btn-bulk-deploy {
+			background: #44b078;
+			color: #fff;
+		}
+		.btn-bulk-deploy:hover { background: #4fc084; color: #fff; }
+		.btn-bulk-deploy:active { background: #3f9f6f; }
+		.btn-bulk-deploy:disabled { opacity: 0.45; cursor: not-allowed; }
 
 		.table-card {
 			background: #fff;
@@ -403,10 +423,16 @@
 					<h2 id="page-title">Slices</h2>
 					<p id="page-subtitle">Administra los slices de este curso.</p>
 				</div>
-				<a href="configurar-slice.html" class="btn-crear">
-					<i class="fas fa-plus"></i>
-					Asignar Slice
-				</a>
+				<div class="section-actions">
+					<button type="button" class="btn-bulk-deploy" id="bulkDeployBtn" onclick="deployAllSlices()" title="Desplegar todos los slices del curso">
+						<i class="fas fa-play-circle"></i>
+						Desplegar todos
+					</button>
+					<a href="configurar-slice.html" class="btn-crear" id="assignSliceBtn">
+						<i class="fas fa-plus"></i>
+						Asignar Slice
+					</a>
+				</div>
 			</div>
 
 			<div class="table-card">
@@ -439,9 +465,10 @@ document.getElementById('badge-id').textContent   = courseId;
 document.getElementById('page-title').textContent = `Slices — ${courseNom}`;
 document.getElementById('col-slices').textContent = `Slices — ${courseNom}`;
 
-document.querySelector('.btn-crear').href = 'slices.html';
+document.getElementById('assignSliceBtn').href = 'slices.html';
 
 let slices = [];
+let bulkDeployRunning = false;
 
 function fmt(s) {
 	const h = Math.floor(s / 3600);
@@ -508,6 +535,11 @@ async function loadCourseSlices() {
 async function renderTable() {
 	slices = await loadCourseSlices();
 	const tbody = document.getElementById('slices-tbody');
+	const bulkDeployBtn = document.getElementById('bulkDeployBtn');
+	const assignSliceBtn = document.getElementById('assignSliceBtn');
+	const deployableCount = slices.filter(s => s.state !== 'running' && s.state !== 'busy').length;
+	if (bulkDeployBtn) bulkDeployBtn.disabled = bulkDeployRunning || deployableCount === 0;
+	if (assignSliceBtn) assignSliceBtn.hidden = slices.length > 0;
 	if (!slices.length) {
 		tbody.innerHTML = `
 			<tr>
@@ -518,7 +550,10 @@ async function renderTable() {
 			</tr>`;
 		return;
 	}
-	tbody.innerHTML = slices.map(s => `
+	tbody.innerHTML = slices.map(s => {
+		const deployDisabled = bulkDeployRunning || s.state === 'running' || s.state === 'busy';
+		const destroyDisabled = bulkDeployRunning || s.state === 'off' || s.state === 'busy';
+		return `
 		<tr id="tr-${s.id}">
 			<td>
 				<span class="status-dot ${s.state}" id="dot-${s.id}"></span>
@@ -532,12 +567,12 @@ async function renderTable() {
 			<td class="col-center">
 				<div class="ctrl-btns">
 					<button class="btn-ctrl btn-deploy ${s.state === 'running' ? 'on' : ''}"
-					        onclick="deploySlice('${s.id}')" title="Desplegar o encender VMs" ${s.state === 'running' || s.state === 'busy' ? 'disabled' : ''}>
+					        onclick="deploySlice('${s.id}')" title="Desplegar o encender VMs" ${deployDisabled ? 'disabled' : ''}>
 						<i class="fas fa-play"></i>
 						Desplegar
 					</button>
 					<button class="btn-ctrl btn-destroy ${s.state === 'off' ? 'on' : ''}"
-					        onclick="destroySlice('${s.id}')" title="Apagar y destruir VMs" ${s.state === 'off' || s.state === 'busy' ? 'disabled' : ''}>
+					        onclick="destroySlice('${s.id}')" title="Apagar y destruir VMs" ${destroyDisabled ? 'disabled' : ''}>
 						<i class="fas fa-power-off"></i>
 						Apagar
 					</button>
@@ -550,7 +585,8 @@ async function renderTable() {
 				</a>
 			</td>
 		</tr>
-	`).join('');
+	`;
+	}).join('');
 }
 
 function findSlice(id) {
@@ -570,6 +606,16 @@ function setSlicePending(id, label) {
 	const status = document.getElementById('status-' + id);
 	status.className = 'timer busy';
 	status.textContent = label === 'DESTRUYENDO' ? 'Destruyendo' : 'Desplegando';
+}
+
+function setBulkDeployState(running, label = 'Desplegar todos') {
+	bulkDeployRunning = running;
+	const button = document.getElementById('bulkDeployBtn');
+	if (!button) return;
+	button.disabled = running;
+	button.innerHTML = running
+		? `<i class="fas fa-spinner fa-spin"></i> ${label}`
+		: '<i class="fas fa-play-circle"></i> Desplegar todos';
 }
 
 async function requestSliceJob(id, action) {
@@ -606,6 +652,7 @@ async function pollDeployment(jobId) {
 
 async function deploySlice(id) {
 	try {
+		if (bulkDeployRunning) return;
 		setSlicePending(id, 'DESPLEGANDO');
 		const deployment = await requestSliceJob(id, 'deploy');
 		await pollDeployment(deployment.id);
@@ -616,9 +663,39 @@ async function deploySlice(id) {
 	}
 }
 
+async function deployAllSlices() {
+	if (bulkDeployRunning) return;
+
+	const pendingSlices = slices.filter(s => s.state !== 'running' && s.state !== 'busy');
+	if (!pendingSlices.length) return;
+
+	try {
+		setBulkDeployState(true, `Desplegando 1/${pendingSlices.length}`);
+		await renderTable();
+
+		for (let index = 0; index < pendingSlices.length; index++) {
+			const slice = pendingSlices[index];
+			setBulkDeployState(true, `Desplegando ${index + 1}/${pendingSlices.length}`);
+			setSlicePending(slice.id, 'DESPLEGANDO');
+			const deployment = await requestSliceJob(slice.id, 'deploy');
+			await pollDeployment(deployment.id);
+		}
+
+		await renderTable();
+	} catch (error) {
+		console.error('No se pudo completar el despliegue masivo.', error);
+		alert(`No se pudo completar el despliegue masivo: ${error.message}`);
+		await renderTable();
+	} finally {
+		setBulkDeployState(false);
+		await renderTable();
+	}
+}
+
 async function destroySlice(id) {
 	const s = findSlice(id);
 	if (!s) return;
+	if (bulkDeployRunning) return;
 	if (!confirm(`Se apagaran y eliminaran las VMs de "${s.name}". ¿Continuar?`)) return;
 	try {
 		setSlicePending(id, 'DESTRUYENDO');

@@ -76,7 +76,7 @@ Navegador
   -> job JSON en volumen /jobs
   -> Worker en Docker dentro de server4
   -> SSH a ubuntu@10.0.10.4
-  -> SCRIPT_RUNNER/create_linear_topology.sh o create_ring_topology.sh en server4
+  -> SCRIPT_RUNNER/create_linear_topology.sh, create_ring_topology.sh o create_custom_topology.sh en server4
   -> server4 crea VLANs, DHCP y forwarding localmente
   -> server4 hace SSH a server1/server2/server3
   -> workers crean VMs QEMU y TAPs en OVS
@@ -135,7 +135,7 @@ slice 2 -> bloque 6001-6100
 slice 3 -> bloque 6101-6200
 ```
 
-Dentro de un mismo slice, si hay varias topologias, el `vnc_cursor` va avanzando por cantidad de VMs. Por ejemplo, una topologia de 3 VMs usa `5901-5903`; si en el mismo slice hay otra topologia de 2 VMs, usa `5904-5905`.
+En el flujo actual del frontend se permite una sola topologia por slice. Internamente, el worker igual reserva bloques completos por slice para evitar choques si el modelo crece despues.
 
 Para el primer slice, con una topologia de 3 VMs y asignacion round-robin:
 
@@ -866,7 +866,7 @@ En `detalle-curso.html` hay dos acciones reales por slice:
 Desplegar:
   -> POST /api/slices/{slice_id}/deploy
   -> el backend crea un job create_topology
-  -> el worker ejecuta create_linear_topology.sh o create_ring_topology.sh
+  -> el worker ejecuta create_linear_topology.sh, create_ring_topology.sh o create_custom_topology.sh
   -> se crean VLANs, DHCP, TAPs y VMs QEMU.
 
 Apagar:
@@ -933,6 +933,23 @@ vm3-vm1
 ```
 
 Cada enlace usa una VLAN distinta.
+
+### create_custom_topology.sh
+
+```bash
+NIMBUSCORE_TOPOLOGY_LINK_SPECS='0-1;1-2;1-3' \
+./create_custom_topology.sh <SLICE_NAME> <N_VMS> <VLAN_BASE> <VNC_BASE> <CIDR_BASE>
+```
+
+`NIMBUSCORE_TOPOLOGY_LINK_SPECS` usa indices 0-based de nodos. Por ejemplo:
+
+```text
+0-1 -> vm1-vm2
+1-2 -> vm2-vm3
+1-3 -> vm2-vm4
+```
+
+Cada enlace crea una VLAN dedicada. Cada VM recibe una NIC por cada enlace donde participa. Si un nodo no tiene enlaces, se crea como VM aislada sin NIC.
 
 ### create_network_vlan.sh
 
@@ -1240,10 +1257,13 @@ nombre:
   nombre base del slice.
 
 topologias[].type:
-  lineal o anillo.
+  lineal, anillo o personalizada.
 
 topologias[].count:
   cantidad de VMs para esa topologia.
+
+enlaces[]:
+  para topologia personalizada, cada enlace directo del canvas se convierte en una VLAN dedicada.
 
 nodos[].configuracion.flavor:
   define vCPU y RAM de cada VM.
@@ -1303,13 +1323,21 @@ Internamente, el worker pasa estos valores hacia los scripts de topologia con:
 NIMBUSCORE_TOPOLOGY_VM_SPECS='vcpus:ram_mb:disk_gb;vcpus:ram_mb:disk_gb;...'
 ```
 
-Luego `create_linear_topology.sh` o `create_ring_topology.sh` exportan por VM:
+Luego `create_linear_topology.sh`, `create_ring_topology.sh` o `create_custom_topology.sh` exportan por VM:
 
 ```text
 NIMBUSCORE_VM_VCPUS
 NIMBUSCORE_VM_RAM_MB
 NIMBUSCORE_VM_DISK_GB
 ```
+
+Para topologias personalizadas, el worker tambien envia:
+
+```text
+NIMBUSCORE_TOPOLOGY_LINK_SPECS='0-1;1-2;1-3'
+```
+
+`create_custom_topology.sh` usa esa lista para decidir que VLANs recibe cada VM.
 
 La imagen seleccionada tambien viaja por VM:
 
@@ -1338,7 +1366,7 @@ El par de llaves seleccionado tambien viaja por VM:
 NIMBUSCORE_TOPOLOGY_KEYPAIR_SPECS='key-dev;key-prod;key-testing;...'
 ```
 
-Luego `create_linear_topology.sh` o `create_ring_topology.sh` exportan por VM:
+Luego `create_linear_topology.sh`, `create_ring_topology.sh` o `create_custom_topology.sh` exportan por VM:
 
 ```text
 NIMBUSCORE_KEYPAIR_NAME
@@ -1370,8 +1398,9 @@ reglas de seguridad:
   no se aplican por VM todavia.
   el acceso SSH desde local depende del salto por server4 y de la conectividad OVS/VLAN, no de un security group implementado por NimbusCore.
 
-nodos y enlaces manuales:
-  se guardan como parte del slice, pero el worker actual despliega segun topologias[].type y topologias[].count.
+nodos[].tipo:
+  se guarda y se muestra en el canvas como Servidor, Computadora, Router o Switch.
+  por ahora no cambia el tipo real de QEMU: todos los nodos desplegados siguen siendo VMs.
 ```
 
 Variables soportadas por `create_vm.sh`:
@@ -1403,17 +1432,17 @@ Implementadas:
 ```text
 lineal
 anillo
+personalizada
 ```
 
-Pendientes:
+Removidas temporalmente del flujo de creacion:
 
 ```text
 arbol
 bus
-topologias manuales desde nodos/enlaces
 ```
 
-Si se selecciona una topologia no soportada por el worker, el job falla con error de topologia no soportada.
+En `personalizada`, la tabla define la cantidad de nodos y el canvas define los enlaces manuales. El worker convierte cada enlace en una VLAN y crea las VMs con las NICs correspondientes. El frontend limita el slice a una sola topologia para mantener una unica fuente de verdad.
 
 ## Endpoints Principales
 

@@ -87,6 +87,24 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
             vlan_cursor += node_count
             cidr_cursor += node_count
             vnc_cursor += node_count
+        elif topo_type == "personalizada":
+            custom_links = topology_custom_links(variables, topology, matched_instances)
+            link_specs = topology_link_specs(custom_links)
+            commands.append(remote_headnode_command(
+                "create_custom_topology.sh",
+                topology_name,
+                str(node_count),
+                str(vlan_cursor),
+                str(vnc_cursor),
+                str(cidr_cursor),
+                vm_specs=vm_specs,
+                image_specs=image_specs,
+                keypair_specs=keypair_specs,
+                link_specs=link_specs,
+            ))
+            vlan_cursor += len(custom_links)
+            cidr_cursor += len(custom_links)
+            vnc_cursor += node_count
         else:
             raise ValueError(f"Topologia no soportada por scripts: {topo_type}")
 
@@ -215,6 +233,22 @@ def inventory_for_job(job: dict[str, Any]) -> dict[str, Any]:
             vlan_cursor += node_count
             cidr_cursor += node_count
             vnc_cursor += node_count
+        elif topo_type == "personalizada":
+            custom_links = topology_custom_links(variables, topology, matched_instances)
+            append_custom_inventory(
+                inventory,
+                topology_record,
+                matched_instances,
+                node_count,
+                custom_links,
+                vlan_cursor,
+                cidr_cursor,
+                vnc_cursor,
+                compute_ips,
+            )
+            vlan_cursor += len(custom_links)
+            cidr_cursor += len(custom_links)
+            vnc_cursor += node_count
 
     return inventory
 
@@ -296,6 +330,51 @@ def append_ring_inventory(
             vnc_base + index,
             compute_ips[index % len(compute_ips)],
             [right_vlan, left_vlan],
+            vlan_base,
+            cidr_base,
+        ))
+
+
+def append_custom_inventory(
+    inventory: dict[str, Any],
+    topology_record: dict[str, Any],
+    matched_instances: list[dict[str, Any]],
+    node_count: int,
+    custom_links: list[dict[str, int]],
+    vlan_base: int,
+    cidr_base: int,
+    vnc_base: int,
+    compute_ips: list[str],
+) -> None:
+    topology_name = topology_record["name"]
+    vm_vlans: list[list[int]] = [[] for _ in range(node_count)]
+
+    for link_index, link in enumerate(custom_links):
+        vlan_id = vlan_base + link_index
+        cidr_third = cidr_base + link_index
+        from_index = int(link["from_index"])
+        to_index = int(link["to_index"])
+        vm_vlans[from_index].append(vlan_id)
+        vm_vlans[to_index].append(vlan_id)
+        inventory["networks"].append(network_record(
+            topology_record,
+            link_index,
+            vlan_id,
+            cidr_third,
+            [
+                f"{topology_name}-vm{from_index + 1}",
+                f"{topology_name}-vm{to_index + 1}",
+            ],
+        ))
+
+    for index in range(node_count):
+        inventory["vms"].append(vm_record(
+            topology_record,
+            matched_instances,
+            index,
+            vnc_base + index,
+            compute_ips[index % len(compute_ips)],
+            vm_vlans[index],
             vlan_base,
             cidr_base,
         ))
@@ -422,6 +501,68 @@ def topology_instances(variables: dict[str, Any], topology: dict[str, Any]) -> l
     return matched
 
 
+def topology_custom_links(
+    variables: dict[str, Any],
+    topology: dict[str, Any],
+    matched_instances: list[dict[str, Any]],
+) -> list[dict[str, int]]:
+    node_to_index = {
+        str(instance.get("node_id")): index
+        for index, instance in enumerate(matched_instances)
+        if instance.get("node_id") is not None
+    }
+    if not node_to_index:
+        return []
+
+    custom_links: list[dict[str, int]] = []
+    seen: set[tuple[int, int]] = set()
+    links = variables.get("links") or []
+    topology_id = topology.get("id")
+
+    for link in links:
+        if link.get("tipo") == "bus":
+            continue
+
+        source = link.get("desde") or link.get("from")
+        target = link.get("hacia") or link.get("to")
+        if source is None or target is None:
+            continue
+
+        source_key = str(source)
+        target_key = str(target)
+        if source_key not in node_to_index or target_key not in node_to_index:
+            continue
+
+        if topology_id is not None:
+            link_topology = link.get("topologia_id") or link.get("topology_id")
+            if link_topology is not None and str(link_topology) != str(topology_id):
+                continue
+
+        from_index = node_to_index[source_key]
+        to_index = node_to_index[target_key]
+        if from_index == to_index:
+            continue
+
+        dedupe_key = tuple(sorted((from_index, to_index)))
+        if dedupe_key in seen:
+            continue
+
+        seen.add(dedupe_key)
+        custom_links.append({
+            "from_index": from_index,
+            "to_index": to_index,
+        })
+
+    return custom_links
+
+
+def topology_link_specs(custom_links: list[dict[str, int]]) -> str:
+    return ";".join(
+        f"{link['from_index']}-{link['to_index']}"
+        for link in custom_links
+    )
+
+
 def topology_vm_specs(matched: list[dict[str, Any]], node_count: int) -> str:
     specs = []
 
@@ -476,6 +617,7 @@ def remote_headnode_command(
     vm_specs: str = "",
     image_specs: str = "",
     keypair_specs: str = "",
+    link_specs: str = "",
 ) -> list[str]:
     env = (
         "NIMBUSCORE_HEADNODE_LOCAL=true "
@@ -491,7 +633,8 @@ def remote_headnode_command(
         f"NIMBUSCORE_ENABLE_PASSWORD_LOGIN={shell_quote(ENABLE_PASSWORD_LOGIN)} "
         f"NIMBUSCORE_TOPOLOGY_VM_SPECS={shell_quote(vm_specs)} "
         f"NIMBUSCORE_TOPOLOGY_IMAGE_SPECS={shell_quote(image_specs)} "
-        f"NIMBUSCORE_TOPOLOGY_KEYPAIR_SPECS={shell_quote(keypair_specs)}"
+        f"NIMBUSCORE_TOPOLOGY_KEYPAIR_SPECS={shell_quote(keypair_specs)} "
+        f"NIMBUSCORE_TOPOLOGY_LINK_SPECS={shell_quote(link_specs)}"
     )
     remote_command = " ".join(
         [

@@ -103,6 +103,7 @@ def estimate_vm_count(job: dict) -> int:
 def estimate_network_count(job: dict) -> int:
     variables = job.get("script_runner", {}).get("variables", {})
     topologies = variables.get("topologies") or []
+    links = variables.get("links") or []
     total = 0
 
     for topology in topologies:
@@ -119,6 +120,28 @@ def estimate_network_count(job: dict) -> int:
             total += max(node_count - 1, 1)
         elif topology_type == "anillo":
             total += node_count
+        elif topology_type == "personalizada":
+            topology_id = topology.get("id")
+            node_ids = {
+                str(instance.get("node_id"))
+                for instance in variables.get("instances") or []
+                if str(instance.get("topology_id")) == str(topology_id)
+            }
+            link_count = 0
+            seen = set()
+            for link in links:
+                source = link.get("desde") or link.get("from")
+                target = link.get("hacia") or link.get("to")
+                if source is None or target is None:
+                    continue
+                if str(source) not in node_ids or str(target) not in node_ids:
+                    continue
+                key = tuple(sorted((str(source), str(target))))
+                if key in seen:
+                    continue
+                seen.add(key)
+                link_count += 1
+            total += link_count
         else:
             total += max(node_count, 1)
 

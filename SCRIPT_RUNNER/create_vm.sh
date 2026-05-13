@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Uso:
-#   ./create_vm.sh <VM_NAME> <OVS_NAME> <VNC_PORT> <VLAN_1> [VLAN_2 ...]
+#   ./create_vm.sh <VM_NAME> <OVS_NAME> <VNC_PORT> [VLAN_1 ...]
 #
 # Crea una VM con QEMU directo, una interfaz TAP por VLAN y puertos OVS tagged.
 
@@ -10,8 +10,8 @@ VM_NAME="${1:-}"
 OVS_NAME="${2:-}"
 VNC_PORT="${3:-}"
 
-if [ "$#" -lt 4 ] || [ -z "$VM_NAME" ] || [ -z "$OVS_NAME" ] || [ -z "$VNC_PORT" ]; then
-    echo "Uso: $0 <VM_NAME> <OVS_NAME> <VNC_PORT> <VLAN_1> [VLAN_2 ...]"
+if [ "$#" -lt 3 ] || [ -z "$VM_NAME" ] || [ -z "$OVS_NAME" ] || [ -z "$VNC_PORT" ]; then
+    echo "Uso: $0 <VM_NAME> <OVS_NAME> <VNC_PORT> [VLAN_1 ...]"
     exit 1
 fi
 
@@ -148,7 +148,11 @@ create_cloud_init_seed() {
 
     {
         printf 'version: 2\n'
-        printf 'ethernets:\n'
+        if [ "${#VLANS[@]}" -eq 0 ]; then
+            printf 'ethernets: {}\n'
+        else
+            printf 'ethernets:\n'
+        fi
         for idx in "${!VLANS[@]}"; do
             local vlan_id="${VLANS[$idx]}"
             local mac_addr

@@ -221,6 +221,12 @@
 		.courses-list li:last-child { border-bottom: none; }
 		.courses-list li:hover { background: rgba(245,106,106,0.03); }
 		.courses-list li.selected { background: rgba(245,106,106,0.05); }
+		.courses-list li.disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+			background: #fafafa;
+		}
+		.courses-list li.disabled:hover { background: #fafafa; }
 
 		.course-checkbox {
 			width: 1.3em; height: 1.3em;
@@ -463,6 +469,7 @@ const FALLBACK_COURSES = [
 
 const seleccionados = new Set();
 let courses = [];
+let assignedCourseIds = new Set();
 
 document.querySelector('.page-heading h2').textContent = `Asignar ${templateName}`;
 document.querySelector('.btn-back').href = templateId
@@ -480,22 +487,40 @@ async function loadCourses() {
 	}
 }
 
+async function loadAssignedCourseIds() {
+	try {
+		const response = await fetch('/api/slices');
+		if (!response.ok) throw new Error(`API respondio ${response.status}`);
+		const slices = await response.json();
+		return new Set(slices.map(slice => String(slice.curso_id || '')).filter(Boolean));
+	} catch (error) {
+		console.warn('No se pudo consultar asignaciones existentes, usando asignaciones locales.', error);
+		const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
+		return new Set(assignments.map(a => String(a.courseId || '')).filter(Boolean));
+	}
+}
+
 async function renderCursos() {
 	courses = await loadCourses();
+	assignedCourseIds = await loadAssignedCourseIds();
 	const ul = document.getElementById('courses-list');
-	ul.innerHTML = courses.map(c => `
-		<li id="li-${c.id}" onclick="toggleCurso('${c.id}')">
+	ul.innerHTML = courses.map(c => {
+		const isAssigned = assignedCourseIds.has(String(c.id));
+		return `
+		<li id="li-${c.id}" class="${isAssigned ? 'disabled' : ''}" onclick="toggleCurso('${c.id}')" aria-disabled="${isAssigned ? 'true' : 'false'}">
 			<div class="course-checkbox"><i class="fas fa-check"></i></div>
 			<div class="course-info">
 				<span class="course-code">${c.id}</span>
 				<span class="course-nombre">${c.nombre}</span>
 				<span style="font-size:0.78em;color:#9fa3a6;margin-left:0.65em">${(c.alumnos || []).length} alumnos</span>
+				${isAssigned ? '<span style="font-size:0.78em;color:#f56a6a;margin-left:0.65em">Ya tiene slices</span>' : ''}
 			</div>
-		</li>
-	`).join('');
+		</li>`;
+	}).join('');
 }
 
 function toggleCurso(id) {
+	if (assignedCourseIds.has(String(id))) return;
 	const li = document.getElementById('li-' + id);
 	seleccionados.clear();
 	document.querySelectorAll('.courses-list li').forEach(row => row.classList.remove('selected'));
@@ -513,6 +538,10 @@ async function lanzarSlices() {
 	if (!templateId) { alert('No se encontro la plantilla a asignar.'); return; }
 	const courseId = Array.from(seleccionados)[0];
 	const course = courses.find(c => c.id === courseId);
+	if (assignedCourseIds.has(String(courseId))) {
+		alert('Este curso ya tiene un set de slices asignado.');
+		return;
+	}
 
 	try {
 		const response = await fetch(`/api/slice-templates/${encodeURIComponent(templateId)}/assign-to-course`, {
@@ -520,11 +549,24 @@ async function lanzarSlices() {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ course_id: courseId })
 		});
-		if (!response.ok) throw new Error(`API respondio ${response.status}`);
+		if (!response.ok) {
+			let detail = `API respondio ${response.status}`;
+			try {
+				const payload = await response.json();
+				detail = payload.detail || detail;
+			} catch (_) {}
+			const apiError = new Error(detail);
+			apiError.fromApi = true;
+			throw apiError;
+		}
 		const result = await response.json();
 		alert(`Se crearon ${result.slices.length} slices: uno por cada alumno de ${result.course.nombre}.`);
 		window.location.href = `detalle-curso.html?id=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(course.nombre)}`;
 	} catch (error) {
+		if (error.fromApi) {
+			alert(error.message);
+			return;
+		}
 		console.warn('Backend no disponible para asignar plantilla.', error);
 		const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
 		const created = (course?.alumnos || []).map(student => ({
