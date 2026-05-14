@@ -37,6 +37,7 @@ KEYPAIR_DIR="${NIMBUSCORE_KEYPAIR_DIR:-/home/ubuntu/nimbuscore-keys}"
 CONSOLE_USER="${NIMBUSCORE_CONSOLE_USER:-nimbus}"
 CONSOLE_PASSWORD="${NIMBUSCORE_CONSOLE_PASSWORD:-NimbusCore123}"
 ENABLE_PASSWORD_LOGIN="${NIMBUSCORE_ENABLE_PASSWORD_LOGIN:-true}"
+ENABLE_AUTO_ROUTING="${NIMBUSCORE_ENABLE_AUTO_ROUTING:-false}"
 DEFAULT_VM_SPEC="${NIMBUSCORE_DEFAULT_VM_SPEC:-1:2048:20}"
 IFS=';' read -r -a VM_SPECS <<< "${NIMBUSCORE_TOPOLOGY_VM_SPECS:-}"
 IFS=';' read -r -a IMAGE_SPECS <<< "${NIMBUSCORE_TOPOLOGY_IMAGE_SPECS:-}"
@@ -53,9 +54,9 @@ vm_spec_for_index() {
 image_spec_for_index() {
     local index="$1"
     local spec="${IMAGE_SPECS[$index]:-}"
-    local image_name image_url download_method
-    IFS='|' read -r image_name image_url download_method <<< "$spec"
-    echo "${image_name:-cirros-0-6-2} ${image_url:-https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img} ${download_method:-auto}"
+    local image_name image_url download_method cloud_init
+    IFS='|' read -r image_name image_url download_method cloud_init <<< "$spec"
+    echo "${image_name:-cirros-0-6-2} ${image_url:-https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img} ${download_method:-auto} ${cloud_init:-false}"
 }
 
 keypair_spec_for_index() {
@@ -171,11 +172,12 @@ for (( i=0; i<N_VMS; i++ )); do
 
     echo "  → VM $VM_IDX/$N_VMS : $VM_NAME | servidor $COMPUTE_IP | VNC $VNC_PORT"
     read -r VM_VCPUS VM_RAM_MB VM_DISK_GB <<< "$(vm_spec_for_index "$i")"
-    read -r VM_IMAGE_NAME VM_IMAGE_URL VM_IMAGE_DOWNLOAD_METHOD <<< "$(image_spec_for_index "$i")"
+    read -r VM_IMAGE_NAME VM_IMAGE_URL VM_IMAGE_DOWNLOAD_METHOD VM_CLOUD_INIT <<< "$(image_spec_for_index "$i")"
     VM_KEYPAIR_NAME="$(keypair_spec_for_index "$i")"
     VM_PUBLIC_KEY_B64="$(public_key_b64_for_keypair "$VM_KEYPAIR_NAME")"
     echo "    Flavor efectivo: ${VM_VCPUS} vCPU | ${VM_RAM_MB} MB RAM | ${VM_DISK_GB} GB disco"
     echo "    Imagen: ${VM_IMAGE_NAME} (${VM_IMAGE_URL})"
+    echo "    Cloud-init: ${VM_CLOUD_INIT}"
     echo "    Par de llaves: ${VM_KEYPAIR_NAME}"
 
     VM_VLANS=()
@@ -183,7 +185,7 @@ for (( i=0; i<N_VMS; i++ )); do
     [ -n "$LEFT_VLAN" ] && VM_VLANS+=("$LEFT_VLAN")
 
     ssh ${SSH_OPTS} ${SSH_USER}@${COMPUTE_IP} \
-        "NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' NIMBUSCORE_VM_VCPUS=$VM_VCPUS NIMBUSCORE_VM_RAM_MB=$VM_RAM_MB NIMBUSCORE_VM_DISK_GB=$VM_DISK_GB NIMBUSCORE_BASE_IMAGE_NAME='$VM_IMAGE_NAME' NIMBUSCORE_BASE_IMAGE_URL='$VM_IMAGE_URL' NIMBUSCORE_BASE_IMAGE_DOWNLOAD_METHOD='$VM_IMAGE_DOWNLOAD_METHOD' NIMBUSCORE_CONSOLE_USER='$CONSOLE_USER' NIMBUSCORE_CONSOLE_PASSWORD='$CONSOLE_PASSWORD' NIMBUSCORE_ENABLE_PASSWORD_LOGIN='$ENABLE_PASSWORD_LOGIN' NIMBUSCORE_KEYPAIR_NAME='$VM_KEYPAIR_NAME' NIMBUSCORE_PUBLIC_KEY_B64='$VM_PUBLIC_KEY_B64' bash ${SCRIPTS_DIR}/create_vm.sh $VM_NAME $OVS_NAME $VNC_PORT ${VM_VLANS[*]}"
+        "NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' NIMBUSCORE_VM_VCPUS=$VM_VCPUS NIMBUSCORE_VM_RAM_MB=$VM_RAM_MB NIMBUSCORE_VM_DISK_GB=$VM_DISK_GB NIMBUSCORE_BASE_IMAGE_NAME='$VM_IMAGE_NAME' NIMBUSCORE_BASE_IMAGE_URL='$VM_IMAGE_URL' NIMBUSCORE_BASE_IMAGE_DOWNLOAD_METHOD='$VM_IMAGE_DOWNLOAD_METHOD' NIMBUSCORE_ENABLE_CLOUD_INIT='$VM_CLOUD_INIT' NIMBUSCORE_CONSOLE_USER='$CONSOLE_USER' NIMBUSCORE_CONSOLE_PASSWORD='$CONSOLE_PASSWORD' NIMBUSCORE_ENABLE_PASSWORD_LOGIN='$ENABLE_PASSWORD_LOGIN' NIMBUSCORE_KEYPAIR_NAME='$VM_KEYPAIR_NAME' NIMBUSCORE_PUBLIC_KEY_B64='$VM_PUBLIC_KEY_B64' bash ${SCRIPTS_DIR}/create_vm.sh $VM_NAME $OVS_NAME $VNC_PORT ${VM_VLANS[*]}"
 
     if [ $? -ne 0 ]; then
         echo "  [ERROR] Fallo al crear VM $VM_NAME en $COMPUTE_IP. Abortando."
@@ -192,18 +194,24 @@ for (( i=0; i<N_VMS; i++ )); do
 done
 
 # ──────────────────────────────────────────────
-# PASO 3: Habilitar ruteo entre VLANs adyacentes
-# (para que el tráfico fluya a lo largo de la cadena)
+# PASO 3: Ruteo automático entre VLANs
+# Desactivado por defecto para que el tráfico no salte la topología lógica.
+# Si se requiere modo demo centralizado, usar NIMBUSCORE_ENABLE_AUTO_ROUTING=true.
 # ──────────────────────────────────────────────
 echo ""
-echo "[PASO 3] Habilitando ruteo entre VLANs adyacentes en headnode..."
+if [ "$ENABLE_AUTO_ROUTING" = "true" ]; then
+    echo "[PASO 3] Habilitando ruteo entre VLANs adyacentes en headnode..."
 
-for (( link=0; link<N_LINKS-1; link++ )); do
-    VLAN_A=$(( VLAN_BASE + link ))
-    VLAN_B=$(( VLAN_BASE + link + 1 ))
-    echo "  → Ruteo VLAN $VLAN_A ↔ VLAN $VLAN_B"
-    run_headnode_script routing_networks.sh "$VLAN_A" "$VLAN_B"
-done
+    for (( link=0; link<N_LINKS-1; link++ )); do
+        VLAN_A=$(( VLAN_BASE + link ))
+        VLAN_B=$(( VLAN_BASE + link + 1 ))
+        echo "  → Ruteo VLAN $VLAN_A ↔ VLAN $VLAN_B"
+        run_headnode_script routing_networks.sh "$VLAN_A" "$VLAN_B"
+    done
+else
+    echo "[PASO 3] Ruteo automatico entre VLANs desactivado."
+    echo "  Para modo demo centralizado: NIMBUSCORE_ENABLE_AUTO_ROUTING=true"
+fi
 
 # ──────────────────────────────────────────────
 # Resumen final

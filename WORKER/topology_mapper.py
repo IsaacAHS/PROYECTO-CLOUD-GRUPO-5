@@ -15,6 +15,7 @@ OVS_UPLINKS = os.getenv("NIMBUSCORE_OVS_UPLINKS", "ens4")
 CONSOLE_USER = os.getenv("NIMBUSCORE_CONSOLE_USER", "nimbus")
 CONSOLE_PASSWORD = os.getenv("NIMBUSCORE_CONSOLE_PASSWORD", "NimbusCore123")
 ENABLE_PASSWORD_LOGIN = os.getenv("NIMBUSCORE_ENABLE_PASSWORD_LOGIN", "true")
+ENABLE_AUTO_ROUTING = os.getenv("NIMBUSCORE_ENABLE_AUTO_ROUTING", "false")
 MAC_SALT = os.getenv("NIMBUSCORE_MAC_SALT", "nimbuscore")
 VLAN_BASE = int(os.getenv("NIMBUSCORE_VLAN_BASE", "100"))
 DEFAULT_VNC_BASE = int(os.getenv("NIMBUSCORE_VNC_BASE", "5901"))
@@ -23,6 +24,7 @@ DEFAULT_VM_SPEC = {"vcpus": 1, "ram_mb": 2048, "disk_gb": 20}
 DEFAULT_IMAGE = {
     "name": "cirros-0.6.2",
     "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",
+    "cloud_init": False,
 }
 DEFAULT_KEYPAIR = "default-key"
 
@@ -424,6 +426,7 @@ def vm_record(
     image_name = safe_image_name(instance.get("image_name") or DEFAULT_IMAGE["name"])
     image_url = instance.get("image_url") or DEFAULT_IMAGE["url"]
     image_download_method = instance.get("image_download_method") or "auto"
+    image_cloud_init = bool_from_value(instance.get("image_cloud_init", DEFAULT_IMAGE["cloud_init"]))
     key_pair = safe_keypair_name(instance.get("key_pair") or DEFAULT_KEYPAIR)
 
     nics = []
@@ -470,6 +473,7 @@ def vm_record(
         "image_name": image_name,
         "image_url": image_url,
         "image_download_method": image_download_method,
+        "image_cloud_init": image_cloud_init,
         "key_pair": key_pair,
         "security_ports": instance.get("security_ports") or [],
         "custom_rules": instance.get("custom_rules") or [],
@@ -584,7 +588,10 @@ def topology_image_specs(matched: list[dict[str, Any]], node_count: int) -> str:
         image_name = safe_image_name(instance.get("image_name") or DEFAULT_IMAGE["name"])
         image_url = instance.get("image_url") or DEFAULT_IMAGE["url"]
         download_method = instance.get("image_download_method") or "auto"
-        specs.append(f"{image_name}|{image_url}|{download_method}")
+        cloud_init = bool_to_shell(bool_from_value(
+            instance.get("image_cloud_init", DEFAULT_IMAGE["cloud_init"])
+        ))
+        specs.append(f"{image_name}|{image_url}|{download_method}|{cloud_init}")
 
     return ";".join(specs)
 
@@ -605,6 +612,18 @@ def safe_image_name(value: str) -> str:
     value = re.sub(r"[^a-z0-9._-]+", "-", value)
     value = re.sub(r"-+", "-", value).strip("-._")
     return value or "image"
+
+
+def bool_from_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def bool_to_shell(value: bool) -> str:
+    return "true" if value else "false"
 
 
 def safe_keypair_name(value: str) -> str:
@@ -631,6 +650,7 @@ def remote_headnode_command(
         f"NIMBUSCORE_CONSOLE_USER={shell_quote(CONSOLE_USER)} "
         f"NIMBUSCORE_CONSOLE_PASSWORD={shell_quote(CONSOLE_PASSWORD)} "
         f"NIMBUSCORE_ENABLE_PASSWORD_LOGIN={shell_quote(ENABLE_PASSWORD_LOGIN)} "
+        f"NIMBUSCORE_ENABLE_AUTO_ROUTING={shell_quote(ENABLE_AUTO_ROUTING)} "
         f"NIMBUSCORE_TOPOLOGY_VM_SPECS={shell_quote(vm_specs)} "
         f"NIMBUSCORE_TOPOLOGY_IMAGE_SPECS={shell_quote(image_specs)} "
         f"NIMBUSCORE_TOPOLOGY_KEYPAIR_SPECS={shell_quote(keypair_specs)} "

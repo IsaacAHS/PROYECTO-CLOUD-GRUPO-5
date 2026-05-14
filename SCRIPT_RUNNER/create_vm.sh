@@ -51,6 +51,10 @@ ENABLE_PASSWORD_LOGIN="${NIMBUSCORE_ENABLE_PASSWORD_LOGIN:-true}"
 if [ "$ENABLE_PASSWORD_LOGIN" != "true" ] && [ "$ENABLE_PASSWORD_LOGIN" != "false" ]; then
     ENABLE_PASSWORD_LOGIN="true"
 fi
+ENABLE_CLOUD_INIT="${NIMBUSCORE_ENABLE_CLOUD_INIT:-true}"
+if [ "$ENABLE_CLOUD_INIT" != "true" ] && [ "$ENABLE_CLOUD_INIT" != "false" ]; then
+    ENABLE_CLOUD_INIT="true"
+fi
 
 mac_for_iface() {
     local vm_name="$1"
@@ -226,7 +230,7 @@ if [ -f "$PID_FILE" ]; then
     sudo rm -f "$PID_FILE"
 fi
 
-echo "[create_vm] VM=$VM_NAME VNC=$VNC_PORT OVS=$OVS_NAME vCPUs=$VCPUS RAM=${RAM_MB}MB DISK=${DISK_GB}GB VLANs=${VLANS[*]} KEYPAIR=${KEYPAIR_NAME:-none}"
+echo "[create_vm] VM=$VM_NAME VNC=$VNC_PORT OVS=$OVS_NAME vCPUs=$VCPUS RAM=${RAM_MB}MB DISK=${DISK_GB}GB VLANs=${VLANS[*]} KEYPAIR=${KEYPAIR_NAME:-none} CLOUD_INIT=$ENABLE_CLOUD_INIT"
 
 sudo mkdir -p "$IMAGE_DIR"
 ensure_ovs_ready
@@ -247,7 +251,11 @@ if [ ! -f "$VM_DISK" ]; then
     sudo qemu-img create -f qcow2 -F qcow2 -b "$BASE_IMAGE_PATH" "$VM_DISK" "${DISK_GB}G"
 fi
 
-create_cloud_init_seed
+if [ "$ENABLE_CLOUD_INIT" = "true" ]; then
+    create_cloud_init_seed
+else
+    echo "[create_vm] Cloud-init desactivado para imagen $BASE_IMAGE_NAME. Se respetan usuarios, claves y red internos de la imagen."
+fi
 
 NET_ARGS=()
 for idx in "${!VLANS[@]}"; do

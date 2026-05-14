@@ -286,8 +286,9 @@
 
 		.img-upload-field {
 			display: flex;
-			align-items: center;
-			gap: 0.5em;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.35em;
 		}
 
 		.img-upload-field input[type="file"] { display: none; }
@@ -313,9 +314,11 @@
 		.upload-filename {
 			font-size: 0.78em;
 			color: #3d4449;
-			white-space: nowrap;
+			line-height: 1.35;
+			max-width: 100%;
+			white-space: normal;
+			overflow-wrap: anywhere;
 			overflow: hidden;
-			text-overflow: ellipsis;
 			min-width: 0;
 		}
 
@@ -464,6 +467,30 @@
 		.canvas-hint { font-size: 0.7em; color: #9fa3a6; white-space: nowrap; }
 
 		.canvas-area { flex: 1; position: relative; overflow: hidden; background: #fafbfc; background-image: radial-gradient(circle, rgba(210,215,217,0.5) 1px, transparent 1px); background-size: 24px 24px; }
+
+		body.image-uploading .canvas-area::after {
+			content: attr(data-upload-lock-message);
+			position: absolute;
+			inset: 0;
+			z-index: 60;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: rgba(250,251,252,0.78);
+			color: #3d4449;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.82em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			text-align: center;
+			pointer-events: auto;
+		}
+
+		body.image-uploading .canvas-area,
+		body.image-uploading .topo-node {
+			cursor: wait;
+		}
 
 		#topo-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
@@ -731,7 +758,7 @@
 								</div>
 								<div id="img-upload-wrap" style="display:none">
 									<div class="img-upload-field">
-										<button class="btn-upload-file" onclick="document.getElementById('nc-imagen-file').click()">
+										<button class="btn-upload-file" id="btn-upload-image" onclick="document.getElementById('nc-imagen-file').click()">
 											<i class="fas fa-upload"></i> Subir imagen
 										</button>
 										<span class="upload-filename" id="upload-fname">Sin archivo</span>
@@ -957,6 +984,35 @@ let availableKeypairs = [];
 let keypairsLoaded = false;
 let availableImages = [];
 let imagesLoaded = false;
+let imageUploadInProgress = false;
+let imageUploadLockedNodeId = null;
+
+function setTopologyUploadLock(locked, fileName) {
+	imageUploadInProgress = locked;
+	imageUploadLockedNodeId = locked ? selectedNodeId : null;
+	document.body.classList.toggle('image-uploading', locked);
+
+	const area = document.getElementById('canvas-area');
+	if (area) {
+		area.dataset.uploadLockMessage = locked
+			? `Subiendo imagen${fileName ? `: ${fileName}` : ''}`
+			: '';
+	}
+
+	const connectBtn = document.getElementById('btn-connect');
+	if (connectBtn) {
+		connectBtn.disabled = locked || ctxReviewOnly || !isCustomTopologyActive();
+	}
+
+	if (locked) {
+		document.getElementById('node-popover')?.classList.remove('open');
+		document.getElementById('ctx-menu')?.classList.remove('open');
+		document.getElementById('edge-ctx-menu')?.classList.remove('open');
+		if (linkMode) cancelLink();
+	}
+	if (document.getElementById('topo-tbody')) renderTopoTable();
+	if (!locked) syncTopologyModeControls();
+}
 
 function normalizeTopologyType(type) {
 	const value = String(type || '').trim();
@@ -977,11 +1033,11 @@ function syncTopologyModeControls() {
 	const addTopoBtn = document.getElementById('btn-add-topo');
 	if (addTopoBtn) {
 		addTopoBtn.hidden = topoEntries.length >= 1;
-		addTopoBtn.disabled = ctxReviewOnly || topoEntries.length >= 1;
+		addTopoBtn.disabled = ctxReviewOnly || imageUploadInProgress || topoEntries.length >= 1;
 	}
 
 	const connectBtn = document.getElementById('btn-connect');
-	const canConnect = !ctxReviewOnly && isCustomTopologyActive();
+	const canConnect = !ctxReviewOnly && !imageUploadInProgress && isCustomTopologyActive();
 	if (connectBtn) {
 		connectBtn.disabled = !canConnect;
 		connectBtn.title = canConnect
@@ -1007,7 +1063,7 @@ function syncTopologyModeControls() {
    TOPOLOGY TABLE
 ════════════════════ */
 function addTopoEntry(type, count) {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	if (topoEntries.length >= 1) return;
 	const id = ++topoSeq;
 	const entry = { id, type: normalizeTopologyType(type), count: count || 3 };
@@ -1019,7 +1075,7 @@ function addTopoEntry(type, count) {
 }
 
 function removeTopoEntry(id) {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	removeTopoNodes(id);
 	topoEntries = topoEntries.filter(e => e.id !== id);
 	renderTopoTable();
@@ -1033,7 +1089,7 @@ function removeTopoEntry(id) {
 }
 
 function onTopoTypeChange(id, val) {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	const entry = topoEntries.find(e => e.id === id);
 	if (!entry) return;
 	entry.type = normalizeTopologyType(val);
@@ -1043,7 +1099,7 @@ function onTopoTypeChange(id, val) {
 }
 
 function onTopoCountChange(id, val) {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	const entry = topoEntries.find(e => e.id === id);
 	if (!entry) return;
 	const n = Math.max(2, Math.min(30, parseInt(val) || 2));
@@ -1056,7 +1112,7 @@ function onTopoCountChange(id, val) {
 
 function renderTopoTable() {
 	const tbody = document.getElementById('topo-tbody');
-	const disabled = ctxReviewOnly ? 'disabled' : '';
+	const disabled = (ctxReviewOnly || imageUploadInProgress) ? 'disabled' : '';
 	if (!topoEntries.length) {
 		tbody.innerHTML = `<tr id="topo-empty-row"><td colspan="3"><div class="topo-empty-hint">Sin topología — agrega una</div></td></tr>`;
 		syncTopologyModeControls();
@@ -1283,13 +1339,13 @@ function bindEdgeEvents() {
 	document.querySelectorAll('.edge-line').forEach(line => {
 		line.addEventListener('click', e => {
 			e.stopPropagation();
-			if (ctxReviewOnly || linkMode || !isCustomTopologyActive()) return;
+			if (ctxReviewOnly || imageUploadInProgress || linkMode || !isCustomTopologyActive()) return;
 			selectEdge(Number(line.dataset.edgeId));
 		});
 		line.addEventListener('contextmenu', e => {
 			e.preventDefault();
 			e.stopPropagation();
-			if (ctxReviewOnly || !isCustomTopologyActive()) return;
+			if (ctxReviewOnly || imageUploadInProgress || !isCustomTopologyActive()) return;
 			showEdgeCtxMenu(Number(line.dataset.edgeId), e.clientX, e.clientY);
 		});
 	});
@@ -1315,6 +1371,7 @@ function createNodeEl(nd) {
 	// Single click: select / link
 	div.addEventListener('click', e => {
 		e.stopPropagation();
+		if (imageUploadInProgress) return;
 		if (linkMode && !ctxReviewOnly) {
 			handleLinkClick(nd.id);
 		} else {
@@ -1325,7 +1382,7 @@ function createNodeEl(nd) {
 	// Double click: change type
 	div.addEventListener('dblclick', e => {
 		e.stopPropagation();
-		if (ctxReviewOnly) return;
+		if (ctxReviewOnly || imageUploadInProgress) return;
 		showNodeTypePopover(nd.id, e.clientX, e.clientY);
 	});
 
@@ -1333,7 +1390,7 @@ function createNodeEl(nd) {
 	div.addEventListener('contextmenu', e => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (ctxReviewOnly) return;
+		if (ctxReviewOnly || imageUploadInProgress) return;
 		showCtxMenu(nd.id, e.clientX, e.clientY);
 	});
 
@@ -1355,7 +1412,7 @@ function updateNodeEl(nd) {
 ════════════════════ */
 function makeDraggable(el, nd) {
 	el.addEventListener('mousedown', e => {
-		if (ctxReviewOnly) return;
+		if (ctxReviewOnly || imageUploadInProgress) return;
 		if (e.button !== 0) return;
 		e.preventDefault();
 		const ox = nd.x, oy = nd.y, sx = e.clientX, sy = e.clientY;
@@ -1403,6 +1460,7 @@ function makeDraggable(el, nd) {
    NODE SELECTION
 ════════════════════ */
 function selectNode(id) {
+	if (imageUploadInProgress && id !== imageUploadLockedNodeId) return;
 	deselectEdge();
 	// deselect previous
 	if (selectedNodeId) {
@@ -1419,6 +1477,7 @@ function selectNode(id) {
 }
 
 function deselectNode() {
+	if (imageUploadInProgress) return;
 	if (selectedNodeId) {
 		const el = document.getElementById('node-' + selectedNodeId);
 		if (el) el.classList.remove('selected');
@@ -1430,7 +1489,7 @@ function deselectNode() {
 }
 
 function selectEdge(id) {
-	if (ctxReviewOnly || !isCustomTopologyActive()) return;
+	if (ctxReviewOnly || imageUploadInProgress || !isCustomTopologyActive()) return;
 	deselectNode();
 	selectedEdgeId = id;
 	document.getElementById('btn-del-node').disabled = false;
@@ -1468,7 +1527,7 @@ function renderNodeConfig() {
 	// Image mode
 	setImgMode(cfg.imagenMode || 'select', false);
 	renderImageOptions(cfg.imagen || '');
-	document.getElementById('upload-fname').textContent = cfg.imagenFile ? cfg.imagenFile : 'Sin archivo';
+	updateUploadImageState(cfg);
 
 	// Security chips
 	const chipsEl = document.getElementById('nc-chips');
@@ -1521,9 +1580,9 @@ function saveNodeConfig() {
 	updateNodeValidationState(selectedNodeId);
 }
 
-function renderImageOptions(preferredValue) {
-	const select = document.getElementById('nc-imagen');
-	if (!select) return;
+	function renderImageOptions(preferredValue) {
+		const select = document.getElementById('nc-imagen');
+		if (!select) return;
 
 	const currentValue = preferredValue !== undefined ? preferredValue : select.value;
 	select.innerHTML = '';
@@ -1549,11 +1608,20 @@ function renderImageOptions(preferredValue) {
 		select.appendChild(option);
 	}
 
-	select.value = currentValue || '';
-}
+		select.value = currentValue || '';
+	}
 
-async function loadImages(preferredValue) {
-	try {
+	function upsertAvailableImage(image) {
+		if (!image || !image.id) return;
+
+		const currentIndex = availableImages.findIndex(item => item.id === image.id);
+		if (currentIndex >= 0) availableImages.splice(currentIndex, 1);
+		availableImages.unshift(image);
+		imagesLoaded = true;
+	}
+
+	async function loadImages(preferredValue) {
+		try {
 		const response = await fetch('/api/images');
 		if (!response.ok) throw new Error(`API /images respondio ${response.status}`);
 		availableImages = await response.json();
@@ -1701,13 +1769,101 @@ function setImgMode(mode, doSave) {
 	document.getElementById('img-upload-wrap').style.display = mode === 'upload' ? '' : 'none';
 }
 
-function onFileChange(input) {
+function updateUploadImageState(cfg, state) {
+	const button = document.getElementById('btn-upload-image');
+	const label = document.getElementById('upload-fname');
+	if (!button || !label) return;
+
+	if (state === 'uploading') {
+		button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo imagen';
+		label.textContent = cfg?.imagenFile ? `Subiendo ${cfg.imagenFile}...` : 'Subiendo imagen...';
+		return;
+	}
+
+	if (state === 'error') {
+		button.innerHTML = '<i class="fas fa-redo"></i> Intentar subir de nuevo';
+		label.textContent = cfg?.imagenFile ? `No se pudo subir: ${cfg.imagenFile}` : 'Error al subir';
+		return;
+	}
+
+	if (cfg?.imagenMode === 'upload' && cfg.imagen && cfg.imagenFile) {
+		button.innerHTML = '<i class="fas fa-sync-alt"></i> Volver a subir imagen';
+		label.textContent = `Seleccionada: ${cfg.imagenFile}`;
+		return;
+	}
+
+	button.innerHTML = '<i class="fas fa-upload"></i> Subir imagen';
+	label.textContent = cfg?.imagenFile || 'Sin archivo';
+}
+
+async function uploadImageFile(file) {
+	const formData = new FormData();
+	formData.append('file', file);
+	formData.append('label', file.name);
+
+	const response = await fetch('/api/images/upload', {
+		method: 'POST',
+		body: formData
+	});
+	if (!response.ok) {
+		const detail = await response.json().catch(() => ({}));
+		throw new Error(detail.detail || `API /images/upload respondio ${response.status}`);
+	}
+	return response.json();
+}
+
+async function onFileChange(input) {
 	if (ctxReviewOnly) return;
-	const fname = input.files[0] ? input.files[0].name : 'Sin archivo';
-	document.getElementById('upload-fname').textContent = fname;
-	if (selectedNodeId) {
-		const cfg = nodeConfigs[selectedNodeId];
-		if (cfg) cfg.imagenFile = fname;
+	const file = input.files[0];
+	const uploadButton = document.getElementById('btn-upload-image');
+	if (!file) {
+		const cfg = selectedNodeId ? nodeConfigs[selectedNodeId] : null;
+		updateUploadImageState(cfg);
+		return;
+	}
+
+	if (!selectedNodeId) {
+		updateUploadImageState({ imagenFile: file.name });
+		return;
+	}
+
+	const uploadNodeId = selectedNodeId;
+	const cfg = nodeConfigs[uploadNodeId];
+	if (cfg) {
+		cfg.imagenMode = 'upload';
+		cfg.imagenFile = file.name;
+		cfg.imagen = '';
+	}
+	updateNodeValidationState(uploadNodeId);
+	updateUploadImageState(cfg, 'uploading');
+	setTopologyUploadLock(true, file.name);
+	input.disabled = true;
+	if (uploadButton) uploadButton.disabled = true;
+
+	try {
+		const image = await uploadImageFile(file);
+		upsertAvailableImage(image);
+		renderImageOptions(image.id);
+
+		if (cfg) {
+			cfg.imagen = image.id;
+			cfg.imagenFile = file.name;
+		}
+		updateUploadImageState(cfg);
+		updateNodeValidationState(uploadNodeId);
+		syncReviewModeControls();
+		alert(`Imagen ${image.label || image.name || image.id} subida y registrada.`);
+	} catch (error) {
+		console.error('No se pudo subir la imagen.', error);
+		if (cfg) cfg.imagen = '';
+		updateUploadImageState(cfg, 'error');
+		updateNodeValidationState(uploadNodeId);
+		alert(`No se pudo subir la imagen: ${error.message}`);
+	} finally {
+		setTopologyUploadLock(false);
+		input.disabled = false;
+		if (uploadButton && !ctxReviewOnly) uploadButton.disabled = false;
+		input.value = '';
 	}
 }
 
@@ -1780,7 +1936,7 @@ function removeRule(id) {
    ADD STANDALONE NODE
 ════════════════════ */
 function addStandaloneNode() {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	const area = document.getElementById('canvas-area');
 	const W = area.offsetWidth  || 600;
 	const H = area.offsetHeight || 400;
@@ -1799,7 +1955,7 @@ function addStandaloneNode() {
    DELETE NODE
 ════════════════════ */
 function deleteNode(id) {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	const el = document.getElementById('node-' + id);
 	if (el) el.remove();
 	edges = edges.filter(e => e.from !== id && e.to !== id && !(e.bus && e.busNodes && e.busNodes.some(n => n.id === id)));
@@ -1816,6 +1972,7 @@ function deleteSelectedNode() {
 }
 
 function deleteEdge(id) {
+	if (imageUploadInProgress) return;
 	if (!isCustomTopologyActive()) return;
 	edges = edges.filter(e => e.id !== id);
 	if (selectedEdgeId === id) selectedEdgeId = null;
@@ -1824,7 +1981,7 @@ function deleteEdge(id) {
 }
 
 function deleteSelectedItem() {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	if (selectedEdgeId) deleteEdge(selectedEdgeId);
 }
 
@@ -1832,7 +1989,7 @@ function deleteSelectedItem() {
    LINK MODE
 ════════════════════ */
 function toggleLinkMode() {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	if (!isCustomTopologyActive()) return;
 	linkMode = !linkMode;
 	const btn = document.getElementById('btn-connect');
@@ -1843,7 +2000,7 @@ function toggleLinkMode() {
 }
 
 function handleLinkClick(nodeId) {
-	if (ctxReviewOnly) return;
+	if (ctxReviewOnly || imageUploadInProgress) return;
 	if (!isCustomTopologyActive()) return;
 	if (!linkSourceId) {
 		linkSourceId = nodeId;
@@ -2052,6 +2209,7 @@ window.addEventListener('resize', () => {
 
 // Canvas click deselects if not on node
 document.getElementById('canvas-area').addEventListener('click', e => {
+	if (imageUploadInProgress) return;
 	if (!e.target.closest('.topo-node')) {
 		if (linkMode) cancelLink();
 		else {

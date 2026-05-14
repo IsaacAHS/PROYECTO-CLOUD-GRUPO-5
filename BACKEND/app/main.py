@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import subprocess
@@ -5,11 +6,12 @@ import tempfile
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 from typing import Any
 from urllib.parse import quote
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -33,6 +35,17 @@ KEYPAIR_DIR = Path(os.getenv("NIMBUSCORE_KEYPAIR_DIR", "/keypairs"))
 KEYPAIR_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 NOVNC_TOKEN_FILE = Path(os.getenv("NIMBUSCORE_NOVNC_TOKEN_FILE", "/novnc-tokens/tokens.cfg"))
 NOVNC_PUBLIC_BASE = os.getenv("NIMBUSCORE_NOVNC_PUBLIC_BASE", "/novnc").rstrip("/")
+IMAGE_UPLOAD_DIR = Path(os.getenv("NIMBUSCORE_IMAGE_UPLOAD_DIR", "/image-uploads"))
+IMAGE_UPLOAD_SCRIPT = Path(
+    os.getenv("NIMBUSCORE_IMAGE_UPLOAD_SCRIPT", "/image-runner/upload_image_to_drive.sh")
+)
+KEEP_IMAGE_UPLOADS = os.getenv("NIMBUSCORE_KEEP_IMAGE_UPLOADS", "false").lower() == "true"
+IMAGE_UPLOAD_TIMEOUT = int(os.getenv("NIMBUSCORE_IMAGE_UPLOAD_TIMEOUT", "3600"))
+IMAGE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+ALLOWED_IMAGE_SUFFIXES = {".img", ".qcow2", ".iso"}
+ACTIVE_JOB_STATUSES = {"QUEUED", "RUNNING"}
+DEPLOY_BLOCKING_SLICE_STATES = {"DESPLEGANDO", "ACTIVO", "DESTRUYENDO", "REINICIANDO"}
+DEPLOYMENT_LOCK = Lock()
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,6 +76,70 @@ def validate_keypair_name(name: str) -> str:
             detail="Nombre invalido. Usa letras, numeros, punto, guion o guion bajo.",
         )
     return clean_name
+
+
+def sanitize_uploaded_image_name(filename: str) -> str:
+    clean_name = Path(filename or "").name.strip()
+    clean_name = re.sub(r"[^A-Za-z0-9._-]+", "-", clean_name).strip("-._")
+    if not clean_name:
+        raise HTTPException(status_code=400, detail="Nombre de archivo invalido.")
+    suffix = Path(clean_name).suffix.lower()
+    if suffix not in ALLOWED_IMAGE_SUFFIXES:
+        allowed = ", ".join(sorted(ALLOWED_IMAGE_SUFFIXES))
+        raise HTTPException(status_code=400, detail=f"Extension no soportada. Usa: {allowed}")
+    return clean_name
+
+
+def image_id_from_filename(filename: str) -> str:
+    base_name = Path(filename).stem.lower()
+    image_id = re.sub(r"[^a-z0-9._-]+", "-", base_name).strip("-._")
+    image_id = image_id[:64].strip("-._") or f"image-{uuid4().hex[:8]}"
+    if not IMAGE_ID_RE.match(image_id):
+        image_id = f"image-{uuid4().hex[:8]}"
+    return image_id
+
+
+async def write_upload_to_disk(upload: UploadFile, target: Path) -> int:
+    total = 0
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("wb") as output:
+        while True:
+            chunk = await upload.read(1024 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            output.write(chunk)
+    return total
+
+
+def run_image_upload_script(source_file: Path, dest_name: str) -> dict[str, Any]:
+    if not IMAGE_UPLOAD_SCRIPT.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Script de subida no encontrado: {IMAGE_UPLOAD_SCRIPT}",
+        )
+
+    result = subprocess.run(
+        ["sh", str(IMAGE_UPLOAD_SCRIPT), str(source_file), dest_name],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=IMAGE_UPLOAD_TIMEOUT,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "Error ejecutando rclone.").strip()
+        raise HTTPException(status_code=500, detail=detail)
+
+    output = result.stdout.strip().splitlines()
+    if not output:
+        raise HTTPException(status_code=500, detail="El script de rclone no devolvio metadata.")
+    try:
+        return json.loads(output[-1])
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudo parsear la respuesta de rclone: {output[-1]}",
+        ) from exc
 
 
 def keypair_item(public_key_path: Path) -> dict[str, str]:
@@ -107,6 +184,7 @@ class ImageCreate(BaseModel):
     label: str | None = None
     url: str = Field(min_length=1)
     download_method: str = "auto"
+    cloud_init: bool | None = None
     active: bool = True
 
 
@@ -124,6 +202,52 @@ def course_has_assigned_slices(course_id: str) -> bool:
         str(slice_item.get("curso_id") or "") == str(course_id)
         for slice_item in SLICES.values()
     )
+
+
+def find_active_deployment_for_slice(slice_id: str) -> dict[str, Any] | None:
+    changed = False
+    active_deployment = None
+
+    for job_id, deployment in list(DEPLOYMENTS.items()):
+        current = deployment
+        job_deployment = read_job(job_id)
+        if job_deployment:
+            current = job_deployment
+            if DEPLOYMENTS.get(job_id) != job_deployment:
+                DEPLOYMENTS[job_id] = job_deployment
+                changed = True
+
+        if str(current.get("slice_id")) != str(slice_id):
+            continue
+
+        status = str(current.get("status") or "").upper()
+        if status in ACTIVE_JOB_STATUSES:
+            active_deployment = current
+            break
+
+    if changed:
+        save_deployments(DEPLOYMENTS)
+
+    return active_deployment
+
+
+def ensure_slice_can_start_deploy(slice_id: str, item: dict[str, Any]) -> None:
+    active_deployment = find_active_deployment_for_slice(slice_id)
+    if active_deployment:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "El slice ya tiene un job activo "
+                f"({active_deployment.get('status')}: {active_deployment.get('id')})."
+            ),
+        )
+
+    state = str(item.get("estado") or "").upper()
+    if state in DEPLOY_BLOCKING_SLICE_STATES:
+        raise HTTPException(
+            status_code=409,
+            detail=f"El slice esta en estado {state}; no se puede desplegar nuevamente.",
+        )
 
 
 def empty_inventory(slice_id: str, status: str = "PENDING") -> dict[str, Any]:
@@ -294,6 +418,77 @@ def create_image(payload: ImageCreate) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     app_log(f"imagen registrada id={image['id']} method={image['download_method']}")
+    return image
+
+
+@app.post("/images/upload", status_code=201)
+async def upload_image_to_drive(
+    file: UploadFile = File(...),
+    image_id: str | None = Form(None),
+    label: str | None = Form(None),
+    active: bool = Form(True),
+) -> dict[str, Any]:
+    original_name = sanitize_uploaded_image_name(file.filename or "")
+    clean_id = (image_id or image_id_from_filename(original_name)).strip()
+    if not IMAGE_ID_RE.match(clean_id):
+        raise HTTPException(
+            status_code=400,
+            detail="ID de imagen invalido. Usa letras, numeros, punto, guion o guion bajo.",
+        )
+    if any(image["id"] == clean_id for image in list_images(include_inactive=True)):
+        await file.close()
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Ya existe una imagen registrada como {clean_id}. "
+                "Renombra el archivo antes de subirlo."
+            ),
+        )
+
+    suffix = Path(original_name).suffix.lower()
+    drive_name = f"{clean_id}-{uuid4().hex[:8]}{suffix}"
+    temp_name = f"{uuid4().hex}-{original_name}"
+    temp_path = IMAGE_UPLOAD_DIR / temp_name
+
+    try:
+        size_bytes = await write_upload_to_disk(file, temp_path)
+        if size_bytes <= 0:
+            raise HTTPException(status_code=400, detail="La imagen subida esta vacia.")
+
+        upload_result = run_image_upload_script(temp_path, drive_name)
+        try:
+            image = upsert_image(
+                {
+                    "id": clean_id,
+                    "name": upload_result.get("name") or drive_name,
+                    "label": label or original_name,
+                    "url": upload_result["download_url"],
+                    "download_method": upload_result.get(
+                        "download_method", "wget-no-check-certificate"
+                    ),
+                    "cloud_init": False,
+                    "active": active,
+                    "source": "google-drive-rclone",
+                    "drive_file_id": upload_result.get("file_id"),
+                    "drive_public_link": upload_result.get("public_link"),
+                    "drive_target": upload_result.get("target"),
+                    "drive_remote": upload_result.get("remote"),
+                    "drive_folder": upload_result.get("folder"),
+                    "size_bytes": upload_result.get("size_bytes") or size_bytes,
+                    "uploaded_at": now_iso(),
+                }
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        await file.close()
+        if not KEEP_IMAGE_UPLOADS:
+            temp_path.unlink(missing_ok=True)
+
+    app_log(
+        f"imagen subida id={image['id']} file={image['name']} "
+        f"drive_file_id={image.get('drive_file_id')}"
+    )
     return image
 
 
@@ -476,30 +671,34 @@ def deploy_slice(slice_id: str) -> dict[str, Any]:
     if not item:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
 
-    job_id = f"job-{uuid4().hex[:8]}"
-    item["estado"] = "DESPLEGANDO"
-    item["vm_inventory"] = empty_inventory(slice_id, "QUEUED")
-    item["updated_at"] = now_iso()
-    save_slices(SLICES)
-    placements = place_vms(item)
-    script_variables = build_script_variables(item, placements)
+    with DEPLOYMENT_LOCK:
+        ensure_slice_can_start_deploy(slice_id, item)
 
-    deployment = {
-        "id": job_id,
-        "slice_id": slice_id,
-        "status": "QUEUED",
-        "message": "Job creado. El worker ejecutara Script Runner segun la configuracion actual.",
-        "placements": placements,
-        "script_runner": {
-            "action": "create_topology",
-            "variables": script_variables,
-        },
-        "created_at": now_iso(),
-        "updated_at": now_iso(),
-    }
-    DEPLOYMENTS[job_id] = deployment
-    save_deployments(DEPLOYMENTS)
-    write_job(deployment)
+        job_id = f"job-{uuid4().hex[:8]}"
+        item["estado"] = "DESPLEGANDO"
+        item["vm_inventory"] = empty_inventory(slice_id, "QUEUED")
+        item["updated_at"] = now_iso()
+        save_slices(SLICES)
+        placements = place_vms(item)
+        script_variables = build_script_variables(item, placements)
+
+        deployment = {
+            "id": job_id,
+            "slice_id": slice_id,
+            "status": "QUEUED",
+            "message": "Job creado. El worker ejecutara Script Runner segun la configuracion actual.",
+            "placements": placements,
+            "script_runner": {
+                "action": "create_topology",
+                "variables": script_variables,
+            },
+            "created_at": now_iso(),
+            "updated_at": now_iso(),
+        }
+        DEPLOYMENTS[job_id] = deployment
+        save_deployments(DEPLOYMENTS)
+        write_job(deployment)
+
     app_log(
         f"deploy solicitado slice_id={slice_id} job_id={job_id} "
         f"job_dir=/jobs topologias={script_variables.get('topologies')}"

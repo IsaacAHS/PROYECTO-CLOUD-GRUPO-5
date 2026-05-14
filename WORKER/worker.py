@@ -395,13 +395,29 @@ def process_job(path: Path) -> None:
         process_script_job(path, job)
 
 
+def job_fifo_sort_key(path: Path) -> tuple[str, str]:
+    try:
+        job = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        try:
+            created_at = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
+        except OSError:
+            created_at = "9999-12-31T23:59:59+00:00"
+        return (created_at, path.name)
+
+    created_at = str(job.get("created_at") or "").strip()
+    if not created_at:
+        created_at = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
+    return (created_at, path.name)
+
+
 def main() -> None:
     JOB_DIR.mkdir(parents=True, exist_ok=True)
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     log(f"worker iniciado mode=scripts job_dir={JOB_DIR} run_dir={RUN_DIR}")
 
     while True:
-        for path in sorted(JOB_DIR.glob("job-*.json")):
+        for path in sorted(JOB_DIR.glob("job-*.json"), key=job_fifo_sort_key):
             try:
                 process_job(path)
             except Exception as exc:

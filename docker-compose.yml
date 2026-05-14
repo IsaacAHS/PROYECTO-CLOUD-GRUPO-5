@@ -21,6 +21,11 @@ services:
       NIMBUSCORE_VM_INVENTORY_PATH: /script-runs/vm_inventory.json
       NIMBUSCORE_NOVNC_TOKEN_FILE: /novnc-tokens/tokens.cfg
       NIMBUSCORE_NOVNC_PUBLIC_BASE: /novnc
+      NIMBUSCORE_IMAGE_UPLOAD_DIR: /image-uploads
+      NIMBUSCORE_IMAGE_UPLOAD_SCRIPT: /image-runner/upload_image_to_drive.sh
+      NIMBUSCORE_RCLONE_REMOTE: "${NIMBUSCORE_RCLONE_REMOTE:-}"
+      NIMBUSCORE_RCLONE_FOLDER: "${NIMBUSCORE_RCLONE_FOLDER:-NimbusCore/images}"
+      RCLONE_CONFIG: /root/.config/rclone/rclone.conf
     ports:
       - "8000:8000"
     volumes:
@@ -29,6 +34,9 @@ services:
       - ./BACKEND_DATA:/data
       - ./SCRIPT_RUNS:/script-runs:ro
       - nimbuscore_novnc_tokens:/novnc-tokens
+      - ./IMAGE_UPLOADS:/image-uploads
+      - ./IMAGE_RUNNER:/image-runner:ro
+      - ${NIMBUSCORE_RCLONE_CONFIG_DIR:-/home/ubuntu/.config/rclone}:/root/.config/rclone
 
   worker:
     build:
@@ -48,6 +56,7 @@ services:
       NIMBUSCORE_CONSOLE_USER: "${NIMBUSCORE_CONSOLE_USER:-nimbus}"
       NIMBUSCORE_CONSOLE_PASSWORD: "${NIMBUSCORE_CONSOLE_PASSWORD:-NimbusCore123}"
       NIMBUSCORE_ENABLE_PASSWORD_LOGIN: "${NIMBUSCORE_ENABLE_PASSWORD_LOGIN:-true}"
+      NIMBUSCORE_ENABLE_AUTO_ROUTING: "${NIMBUSCORE_ENABLE_AUTO_ROUTING:-false}"
       NIMBUSCORE_VLAN_BASE: 100
       NIMBUSCORE_VLAN_BLOCK_SIZE: 100
       NIMBUSCORE_VNC_BASE: 5901

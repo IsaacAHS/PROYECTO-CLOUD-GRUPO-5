@@ -256,6 +256,12 @@ sudo docker compose up -d
 sudo docker compose logs -f worker
 ```
 
+Si solo cambiaste configuracion del gateway o los volumenes del backend, recrea esos servicios:
+
+```bash
+sudo docker compose up -d --force-recreate backend api-gateway
+```
+
 Para detener:
 
 ```bash
@@ -478,8 +484,22 @@ Y llena el selector de imagenes con las entradas activas del JSON. Cada entrada 
   "label": "Ubuntu 20.04 Focal (Google Drive)",
   "url": "https://drive.usercontent.google.com/download?id=169719Mq3URSPKf2y6x-uAJ0vluH31i5n&export=download&confirm=t",
   "download_method": "wget-no-check-certificate",
+  "cloud_init": false,
   "active": true
 }
+```
+
+`cloud_init` define si NimbusCore debe inyectar usuario, password, llaves SSH, hostname y DHCP por NIC:
+
+```text
+true:
+  NimbusCore genera y adjunta un ISO cloud-init.
+  Usado para imagenes oficiales gestionadas por NimbusCore: ubuntu-20, ubuntu-22, debian-12.
+
+false:
+  NimbusCore no adjunta cloud-init.
+  La VM conserva los usuarios, credenciales y configuracion interna de la imagen.
+  Usado para Cirros, imagenes de Drive e imagenes subidas por el usuario.
 ```
 
 Para registrar o actualizar una imagen por API:
@@ -487,6 +507,42 @@ Para registrar o actualizar una imagen por API:
 ```text
 POST /api/images
 ```
+
+Para subir una imagen local desde la interfaz:
+
+```text
+POST /api/images/upload
+```
+
+El backend guarda el archivo temporalmente en `/image-uploads`, ejecuta `IMAGE_RUNNER/upload_image_to_drive.sh`, sube el archivo a Google Drive con `rclone`, crea/obtiene un enlace publico y registra la imagen en `BACKEND_DATA/images.json`.
+
+En `server4` el archivo de configuracion de rclone queda en el host:
+
+```text
+/home/ubuntu/.config/rclone/rclone.conf
+```
+
+No hay que moverlo a `/root`. Docker Compose monta ese directorio dentro del contenedor backend:
+
+```text
+/home/ubuntu/.config/rclone -> /root/.config/rclone
+```
+
+El montaje debe quedar escribible. Aunque el archivo ya exista, `rclone` puede refrescar el token OAuth y guardar cambios en `rclone.conf`; si el volumen se monta solo lectura, comandos como `rclone lsd gdrive:` pueden listar carpetas pero mostrar el error `read-only file system`.
+
+Variables importantes:
+
+```text
+NIMBUSCORE_RCLONE_CONFIG_DIR=/home/ubuntu/.config/rclone
+NIMBUSCORE_RCLONE_REMOTE=<remote de rclone>
+NIMBUSCORE_RCLONE_FOLDER=NimbusCore/images
+```
+
+Si `NIMBUSCORE_RCLONE_REMOTE` queda vacio, el script usa el primer remote devuelto por `rclone listremotes`.
+
+La subida debe hacerse entrando por el API Gateway (`http://localhost:8080`) y no por el frontend directo (`8081`). El gateway permite subir archivos grandes en `/api/images/upload`; si aparece `413`, significa que algun proxy en el camino sigue limitando el tamano del cuerpo HTTP.
+
+Al subir una imagen local, el backend genera el ID desde el nombre del archivo. Si ese ID ya existe en `BACKEND_DATA/images.json`, la subida se rechaza antes de copiar el archivo a Drive. Para registrar una variante nueva, renombra el archivo local antes de subirlo. Las imagenes subidas por esta ruta se registran con `cloud_init=false`.
 
 Metodos soportados:
 
@@ -1033,6 +1089,18 @@ Este script no toca `ens4` ni los uplinks OVS. Solo limpia los recursos creados 
 
 Habilita forwarding entre dos VLANs en `server4` con iptables. Esto permite que las redes creadas se comuniquen pasando por el head node.
 
+Importante: los scripts de creacion de topologias ya no lo ejecutan automaticamente. Queda disponible solo para pruebas manuales o para modo demo centralizado. Si se quiere reactivar ese comportamiento al crear una topologia:
+
+```bash
+NIMBUSCORE_ENABLE_AUTO_ROUTING=true
+```
+
+El valor por defecto es:
+
+```bash
+NIMBUSCORE_ENABLE_AUTO_ROUTING=false
+```
+
 ### create_vm.sh
 
 ```bash
@@ -1135,7 +1203,9 @@ eth0 -> 192.168.11.39/24  VLAN 101
 eth1 -> 192.168.10.57/24  VLAN 100
 ```
 
-Importante: actualmente `server4` tambien puede enrutar entre VLANs usando `routing_networks.sh`. Entonces el trafico entre extremos puede pasar por el head node:
+Importante: `server4` puede enrutar entre VLANs usando `routing_networks.sh`, pero ese ruteo automatico esta desactivado por defecto. Con el comportamiento actual, el head node crea las VLANs y DHCP, pero no conecta redes distintas entre si automaticamente.
+
+Si se activa `NIMBUSCORE_ENABLE_AUTO_ROUTING=true`, entonces el trafico entre extremos puede pasar por el head node:
 
 ```text
 vm1 -> server4 -> vm3
@@ -1342,23 +1412,21 @@ NIMBUSCORE_TOPOLOGY_LINK_SPECS='0-1;1-2;1-3'
 La imagen seleccionada tambien viaja por VM:
 
 ```text
-NIMBUSCORE_TOPOLOGY_IMAGE_SPECS='image_name|image_url|download_method;image_name|image_url|download_method;...'
+NIMBUSCORE_TOPOLOGY_IMAGE_SPECS='image_name|image_url|download_method|cloud_init;image_name|image_url|download_method|cloud_init;...'
 ```
 
 Catalogo de imagenes inicial:
 
 ```text
-cirros          -> https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img
-cirros-drive    -> Google Drive con wget --no-check-certificate
-ubuntu-22       -> https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img
-ubuntu-20       -> https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img
-ubuntu-20-drive -> Google Drive con wget --no-check-certificate
-debian-12       -> https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2
+cirros          -> sin cloud-init, usa credenciales propias de Cirros.
+cirros-drive    -> sin cloud-init, Google Drive con wget --no-check-certificate.
+ubuntu-22       -> con cloud-init, imagen oficial Ubuntu Jammy.
+ubuntu-20       -> con cloud-init, imagen oficial Ubuntu Focal.
+ubuntu-20-drive -> sin cloud-init, Google Drive con wget --no-check-certificate.
+debian-12       -> con cloud-init, imagen oficial Debian Bookworm.
 ```
 
-Para usar imagenes desde GitHub o Drive, la regla es que el backend debe tener una URL de descarga directa. Lo mas practico es publicar imagenes grandes como assets de GitHub Releases, GitHub LFS o un enlace publico directo equivalente. Google Drive puede funcionar con `drive.usercontent.google.com` y `download_method=wget-no-check-certificate`; un enlace normal de vista previa no siempre sirve para `wget`/`curl`.
-
-El flujo actual no sube archivos desde el navegador. El boton de subir imagen conserva el nombre en la UI, pero todavia no envia el binario al backend ni a un almacenamiento externo.
+Para usar imagenes desde GitHub o Drive, la regla es que el backend debe tener una URL de descarga directa. Lo mas practico para este proyecto es subir la imagen a Drive con rclone y registrar una URL `drive.usercontent.google.com` con `download_method=wget-no-check-certificate`; un enlace normal de vista previa no siempre sirve para `wget`/`curl`.
 
 El par de llaves seleccionado tambien viaja por VM:
 
@@ -1379,11 +1447,13 @@ NIMBUSCORE_PUBLIC_KEY_B64
 /home/ubuntu/nimbuscore-keys/<NIMBUSCORE_KEYPAIR_NAME>.pub
 ```
 
-Si existe, crea un ISO cloud-init y lo adjunta a QEMU. Si no existe, muestra un warning y crea la VM sin inyectar llave. Para hacer que la ausencia de llave sea un error, se puede exportar:
+Si la imagen tiene `cloud_init=true`, `create_vm.sh` crea un ISO cloud-init y lo adjunta a QEMU. Si no existe la llave publica, muestra un warning y crea la VM sin inyectar llave. Para hacer que la ausencia de llave sea un error, se puede exportar:
 
 ```text
 NIMBUSCORE_REQUIRE_KEYPAIR=true
 ```
+
+Si la imagen tiene `cloud_init=false`, `create_vm.sh` no adjunta ISO cloud-init. En ese caso se respetan las credenciales internas de la imagen, pero la imagen debe venir preparada para tomar red por DHCP en las interfaces que necesite.
 
 ## Parametros Del Frontend Todavia No Usados
 
@@ -1419,6 +1489,7 @@ NIMBUSCORE_KEYPAIR_DIR
 NIMBUSCORE_PUBLIC_KEY_PATH
 NIMBUSCORE_PUBLIC_KEY_B64
 NIMBUSCORE_CLOUD_INIT_DIR
+NIMBUSCORE_ENABLE_CLOUD_INIT
 NIMBUSCORE_REQUIRE_KEYPAIR
 NIMBUSCORE_CONSOLE_USER
 NIMBUSCORE_CONSOLE_PASSWORD
@@ -1454,6 +1525,7 @@ GET    /api/cursos/{course_id}
 GET    /api/cursos/{course_id}/alumnos
 GET    /api/images
 POST   /api/images
+POST   /api/images/upload
 GET    /api/keypairs
 POST   /api/keypairs
 GET    /api/slice-templates

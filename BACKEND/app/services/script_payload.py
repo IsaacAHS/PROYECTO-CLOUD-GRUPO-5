@@ -55,6 +55,7 @@ def build_script_variables(
                 "image_name": image["name"],
                 "image_url": image["url"],
                 "image_download_method": image.get("download_method", "auto"),
+                "image_cloud_init": bool(image.get("cloud_init", True)),
                 "flavor": flavor["name"],
                 "vcpus": flavor["vcpus"],
                 "ram_mb": flavor["ram_mb"],

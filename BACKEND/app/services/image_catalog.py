@@ -17,6 +17,7 @@ DEFAULT_IMAGES = [
         "label": "Cirros 0.6.2",
         "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",
         "download_method": "auto",
+        "cloud_init": False,
         "active": True,
     },
     {
@@ -25,6 +26,7 @@ DEFAULT_IMAGES = [
         "label": "Cirros 0.6.2 (Google Drive)",
         "url": "https://drive.usercontent.google.com/download?id=1TzJ7mOs-b-Ggwr9lXvcNbYiMVqfTlKH9&export=download&confirm=t",
         "download_method": "wget-no-check-certificate",
+        "cloud_init": False,
         "active": True,
     },
     {
@@ -33,6 +35,7 @@ DEFAULT_IMAGES = [
         "label": "Ubuntu 22.04 LTS",
         "url": "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img",
         "download_method": "auto",
+        "cloud_init": True,
         "active": True,
     },
     {
@@ -41,6 +44,7 @@ DEFAULT_IMAGES = [
         "label": "Ubuntu 20.04 LTS",
         "url": "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img",
         "download_method": "auto",
+        "cloud_init": True,
         "active": True,
     },
     {
@@ -49,6 +53,7 @@ DEFAULT_IMAGES = [
         "label": "Ubuntu 20.04 Focal (Google Drive)",
         "url": "https://drive.usercontent.google.com/download?id=169719Mq3URSPKf2y6x-uAJ0vluH31i5n&export=download&confirm=t",
         "download_method": "wget-no-check-certificate",
+        "cloud_init": False,
         "active": True,
     },
     {
@@ -57,6 +62,7 @@ DEFAULT_IMAGES = [
         "label": "Debian 12",
         "url": "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2",
         "download_method": "auto",
+        "cloud_init": True,
         "active": True,
     },
 ]
@@ -64,6 +70,26 @@ DEFAULT_IMAGES = [
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def bool_from_item(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def infer_cloud_init(item: dict[str, Any], image_id: str, url: str) -> bool:
+    if item.get("cloud_init") is not None:
+        return bool_from_item(item.get("cloud_init"))
+    if image_id == "cirros" or image_id.endswith("-drive"):
+        return False
+    if item.get("source") == "google-drive-rclone":
+        return False
+    if "drive.usercontent.google.com" in url or "drive.google.com" in url:
+        return False
+    return True
 
 
 def normalize_image(item: dict[str, Any]) -> dict[str, Any]:
@@ -82,14 +108,28 @@ def normalize_image(item: dict[str, Any]) -> dict[str, Any]:
     if download_method not in ALLOWED_DOWNLOAD_METHODS:
         raise ValueError(f"Metodo de descarga no soportado: {download_method}")
 
-    return {
+    normalized = {
         "id": image_id,
         "name": name,
         "label": label,
         "url": url,
         "download_method": download_method,
+        "cloud_init": infer_cloud_init(item, image_id, url),
         "active": bool(item.get("active", True)),
     }
+    for optional_key in (
+        "source",
+        "drive_file_id",
+        "drive_public_link",
+        "drive_target",
+        "drive_remote",
+        "drive_folder",
+        "size_bytes",
+        "uploaded_at",
+    ):
+        if item.get(optional_key) not in (None, ""):
+            normalized[optional_key] = item[optional_key]
+    return normalized
 
 
 def write_catalog(images: list[dict[str, Any]]) -> None:
@@ -125,7 +165,7 @@ def read_catalog() -> list[dict[str, Any]]:
     images = [normalize_image(item) for item in raw_images]
 
     existing_ids = {item["id"] for item in images}
-    changed = False
+    changed = raw_images != images
     for default_item in DEFAULT_IMAGES:
         if default_item["id"] not in existing_ids:
             images.append(normalize_image(default_item))
