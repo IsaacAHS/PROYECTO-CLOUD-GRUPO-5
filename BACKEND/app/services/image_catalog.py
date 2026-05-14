@@ -18,6 +18,7 @@ DEFAULT_IMAGES = [
         "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",
         "download_method": "auto",
         "cloud_init": False,
+        "min_disk_gb": 1,
         "active": True,
     },
     {
@@ -27,6 +28,7 @@ DEFAULT_IMAGES = [
         "url": "https://drive.usercontent.google.com/download?id=1TzJ7mOs-b-Ggwr9lXvcNbYiMVqfTlKH9&export=download&confirm=t",
         "download_method": "wget-no-check-certificate",
         "cloud_init": False,
+        "min_disk_gb": 1,
         "active": True,
     },
     {
@@ -36,6 +38,7 @@ DEFAULT_IMAGES = [
         "url": "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img",
         "download_method": "auto",
         "cloud_init": True,
+        "min_disk_gb": 3,
         "active": True,
     },
     {
@@ -45,6 +48,7 @@ DEFAULT_IMAGES = [
         "url": "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img",
         "download_method": "auto",
         "cloud_init": True,
+        "min_disk_gb": 3,
         "active": True,
     },
     {
@@ -54,6 +58,7 @@ DEFAULT_IMAGES = [
         "url": "https://drive.usercontent.google.com/download?id=169719Mq3URSPKf2y6x-uAJ0vluH31i5n&export=download&confirm=t",
         "download_method": "wget-no-check-certificate",
         "cloud_init": False,
+        "min_disk_gb": 3,
         "active": True,
     },
     {
@@ -63,6 +68,7 @@ DEFAULT_IMAGES = [
         "url": "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2",
         "download_method": "auto",
         "cloud_init": True,
+        "min_disk_gb": 3,
         "active": True,
     },
 ]
@@ -92,6 +98,20 @@ def infer_cloud_init(item: dict[str, Any], image_id: str, url: str) -> bool:
     return True
 
 
+def min_disk_from_item(item: dict[str, Any], image_id: str, name: str, label: str, url: str) -> int:
+    try:
+        min_disk_gb = int(item.get("min_disk_gb") or 0)
+    except (TypeError, ValueError):
+        min_disk_gb = 0
+    if min_disk_gb > 0:
+        return min_disk_gb
+
+    text = " ".join([image_id, name, label, url]).lower()
+    if "ubuntu" in text or "debian" in text:
+        return 3
+    return 1
+
+
 def normalize_image(item: dict[str, Any]) -> dict[str, Any]:
     image_id = str(item.get("id") or "").strip()
     name = str(item.get("name") or image_id).strip()
@@ -115,6 +135,7 @@ def normalize_image(item: dict[str, Any]) -> dict[str, Any]:
         "url": url,
         "download_method": download_method,
         "cloud_init": infer_cloud_init(item, image_id, url),
+        "min_disk_gb": min_disk_from_item(item, image_id, name, label, url),
         "active": bool(item.get("active", True)),
     }
     for optional_key in (

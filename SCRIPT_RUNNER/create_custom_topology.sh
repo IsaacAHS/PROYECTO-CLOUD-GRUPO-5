@@ -25,7 +25,7 @@ CONSOLE_USER="${NIMBUSCORE_CONSOLE_USER:-nimbus}"
 CONSOLE_PASSWORD="${NIMBUSCORE_CONSOLE_PASSWORD:-NimbusCore123}"
 ENABLE_PASSWORD_LOGIN="${NIMBUSCORE_ENABLE_PASSWORD_LOGIN:-true}"
 ENABLE_AUTO_ROUTING="${NIMBUSCORE_ENABLE_AUTO_ROUTING:-false}"
-DEFAULT_VM_SPEC="${NIMBUSCORE_DEFAULT_VM_SPEC:-1:2048:20}"
+DEFAULT_VM_SPEC="${NIMBUSCORE_DEFAULT_VM_SPEC:-1:2048:1}"
 LINK_SPECS_RAW="${NIMBUSCORE_TOPOLOGY_LINK_SPECS:-}"
 IFS=';' read -r -a VM_SPECS <<< "${NIMBUSCORE_TOPOLOGY_VM_SPECS:-}"
 IFS=';' read -r -a IMAGE_SPECS <<< "${NIMBUSCORE_TOPOLOGY_IMAGE_SPECS:-}"
@@ -36,7 +36,7 @@ vm_spec_for_index() {
     local spec="${VM_SPECS[$index]:-$DEFAULT_VM_SPEC}"
     local vcpus ram_mb disk_gb
     IFS=':' read -r vcpus ram_mb disk_gb <<< "$spec"
-    echo "${vcpus:-1} ${ram_mb:-2048} ${disk_gb:-20}"
+    echo "${vcpus:-1} ${ram_mb:-2048} ${disk_gb:-1}"
 }
 
 image_spec_for_index() {

@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import subprocess
@@ -45,6 +46,7 @@ IMAGE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 ALLOWED_IMAGE_SUFFIXES = {".img", ".qcow2", ".iso"}
 ACTIVE_JOB_STATUSES = {"QUEUED", "RUNNING"}
 DEPLOY_BLOCKING_SLICE_STATES = {"DESPLEGANDO", "ACTIVO", "DESTRUYENDO", "REINICIANDO"}
+DESTROY_BLOCKING_SLICE_STATES = {"DESPLEGANDO", "DESTRUYENDO", "REINICIANDO", "DESTRUIDO"}
 DEPLOYMENT_LOCK = Lock()
 
 app.add_middleware(
@@ -185,6 +187,7 @@ class ImageCreate(BaseModel):
     url: str = Field(min_length=1)
     download_method: str = "auto"
     cloud_init: bool | None = None
+    min_disk_gb: int | None = None
     active: bool = True
 
 
@@ -231,6 +234,87 @@ def find_active_deployment_for_slice(slice_id: str) -> dict[str, Any] | None:
     return active_deployment
 
 
+def refresh_deployment_from_job(job_id: str, deployment: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    job_deployment = read_job(job_id)
+    if job_deployment and DEPLOYMENTS.get(job_id) != job_deployment:
+        DEPLOYMENTS[job_id] = job_deployment
+        return job_deployment, True
+    return job_deployment or deployment, False
+
+
+def deployment_created_at(deployment: dict[str, Any]) -> str:
+    return str(deployment.get("created_at") or deployment.get("updated_at") or "")
+
+
+def latest_deployment_for_slice(slice_id: str) -> tuple[dict[str, Any] | None, bool]:
+    changed = False
+    matches: list[dict[str, Any]] = []
+
+    for job_id, deployment in list(DEPLOYMENTS.items()):
+        current, current_changed = refresh_deployment_from_job(job_id, deployment)
+        changed = changed or current_changed
+        if str(current.get("slice_id")) == str(slice_id):
+            matches.append(current)
+
+    matches.sort(key=deployment_created_at, reverse=True)
+    return (matches[0] if matches else None), changed
+
+
+def state_from_deployment(deployment: dict[str, Any]) -> str | None:
+    status = str(deployment.get("status") or "").upper()
+    action = deployment.get("script_runner", {}).get("action")
+
+    if status in ACTIVE_JOB_STATUSES:
+        return "DESTRUYENDO" if action == "destroy_topology" else "DESPLEGANDO"
+    if status == "SUCCESS":
+        return "DESTRUIDO" if action == "destroy_topology" else "ACTIVO"
+    if status == "FAILED":
+        return "ERROR"
+    return None
+
+
+def state_from_inventory(inventory: dict[str, Any] | None) -> str | None:
+    if not inventory:
+        return None
+
+    status = str(inventory.get("status") or "").upper()
+    if status == "SUCCESS":
+        return "ACTIVO"
+    if status == "DESTROYED":
+        return "DESTRUIDO"
+    if status == "DESTROYING":
+        return "DESTRUYENDO"
+    if status == "FAILED":
+        return "ERROR"
+    if status == "RUNNING":
+        return "DESPLEGANDO"
+    return None
+
+
+def reconcile_slice_runtime_state(item: dict[str, Any]) -> bool:
+    slice_id = str(item.get("id") or "")
+    if not slice_id:
+        return False
+
+    changed = False
+    deployment, deployments_changed = latest_deployment_for_slice(slice_id)
+    changed = changed or deployments_changed
+
+    desired_state = state_from_deployment(deployment) if deployment else None
+    inventory = get_runtime_inventory(slice_id) or item.get("vm_inventory")
+    if inventory:
+        item["vm_inventory"] = inventory
+    if desired_state is None:
+        desired_state = state_from_inventory(inventory)
+
+    if desired_state and str(item.get("estado") or "").upper() != desired_state:
+        item["estado"] = desired_state
+        item["updated_at"] = now_iso()
+        changed = True
+
+    return changed
+
+
 def ensure_slice_can_start_deploy(slice_id: str, item: dict[str, Any]) -> None:
     active_deployment = find_active_deployment_for_slice(slice_id)
     if active_deployment:
@@ -247,6 +331,25 @@ def ensure_slice_can_start_deploy(slice_id: str, item: dict[str, Any]) -> None:
         raise HTTPException(
             status_code=409,
             detail=f"El slice esta en estado {state}; no se puede desplegar nuevamente.",
+        )
+
+
+def ensure_slice_can_start_destroy(slice_id: str, item: dict[str, Any]) -> None:
+    active_deployment = find_active_deployment_for_slice(slice_id)
+    if active_deployment:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "El slice ya tiene un job activo "
+                f"({active_deployment.get('status')}: {active_deployment.get('id')})."
+            ),
+        )
+
+    state = str(item.get("estado") or "").upper()
+    if state in DESTROY_BLOCKING_SLICE_STATES:
+        raise HTTPException(
+            status_code=409,
+            detail=f"El slice esta en estado {state}; no se puede apagar nuevamente.",
         )
 
 
@@ -291,6 +394,7 @@ def get_runtime_inventory(slice_id: str) -> dict[str, Any] | None:
 
 
 def enrich_slice(item: dict[str, Any]) -> dict[str, Any]:
+    reconcile_slice_runtime_state(item)
     enriched = dict(item)
     inventory = get_runtime_inventory(str(item["id"])) or item.get("vm_inventory")
     if inventory:
@@ -467,6 +571,7 @@ async def upload_image_to_drive(
                         "download_method", "wget-no-check-certificate"
                     ),
                     "cloud_init": False,
+                    "min_disk_gb": max(1, math.ceil(size_bytes / (1024**3))),
                     "active": active,
                     "source": "google-drive-rclone",
                     "drive_file_id": upload_result.get("file_id"),
@@ -608,7 +713,10 @@ def assign_template_to_course(
 
 @app.get("/slices")
 def list_slices() -> list[dict[str, Any]]:
-    return [enrich_slice(item) for item in SLICES.values()]
+    enriched = [enrich_slice(item) for item in SLICES.values()]
+    save_slices(SLICES)
+    save_deployments(DEPLOYMENTS)
+    return enriched
 
 
 @app.post("/slices", status_code=201)
@@ -640,7 +748,10 @@ def get_slice(slice_id: str) -> dict[str, Any]:
     item = SLICES.get(slice_id)
     if not item:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
-    return enrich_slice(item)
+    enriched = enrich_slice(item)
+    save_slices(SLICES)
+    save_deployments(DEPLOYMENTS)
+    return enriched
 
 
 @app.put("/slices/{slice_id}")
@@ -672,6 +783,9 @@ def deploy_slice(slice_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
 
     with DEPLOYMENT_LOCK:
+        if reconcile_slice_runtime_state(item):
+            save_slices(SLICES)
+            save_deployments(DEPLOYMENTS)
         ensure_slice_can_start_deploy(slice_id, item)
 
         job_id = f"job-{uuid4().hex[:8]}"
@@ -680,7 +794,15 @@ def deploy_slice(slice_id: str) -> dict[str, Any]:
         item["updated_at"] = now_iso()
         save_slices(SLICES)
         placements = place_vms(item)
-        script_variables = build_script_variables(item, placements)
+        try:
+            script_variables = build_script_variables(item, placements)
+        except ValueError as exc:
+            item["estado"] = "ERROR"
+            item["vm_inventory"] = empty_inventory(slice_id, "FAILED")
+            item["vm_inventory"]["message"] = str(exc)
+            item["updated_at"] = now_iso()
+            save_slices(SLICES)
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         deployment = {
             "id": job_id,
@@ -712,36 +834,43 @@ def destroy_slice(slice_id: str) -> dict[str, Any]:
     if not item:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
 
-    inventory = get_runtime_inventory(slice_id) or item.get("vm_inventory")
-    if not inventory or (not inventory.get("vms") and not inventory.get("networks")):
-        raise HTTPException(
-            status_code=409,
-            detail="El slice no tiene inventario de VMs o redes para destruir",
-        )
+    with DEPLOYMENT_LOCK:
+        if reconcile_slice_runtime_state(item):
+            save_slices(SLICES)
+            save_deployments(DEPLOYMENTS)
+        ensure_slice_can_start_destroy(slice_id, item)
 
-    job_id = f"job-{uuid4().hex[:8]}"
-    item["estado"] = "DESTRUYENDO"
-    item["updated_at"] = now_iso()
-    save_slices(SLICES)
+        inventory = get_runtime_inventory(slice_id) or item.get("vm_inventory")
+        if not inventory or (not inventory.get("vms") and not inventory.get("networks")):
+            raise HTTPException(
+                status_code=409,
+                detail="El slice no tiene inventario de VMs o redes para destruir",
+            )
 
-    deployment = {
-        "id": job_id,
-        "slice_id": slice_id,
-        "status": "QUEUED",
-        "message": "Job creado. El worker destruira las VMs registradas en el inventario.",
-        "script_runner": {
-            "action": "destroy_topology",
-            "variables": {
-                "inventory": deepcopy(inventory),
+        job_id = f"job-{uuid4().hex[:8]}"
+        item["estado"] = "DESTRUYENDO"
+        item["updated_at"] = now_iso()
+        save_slices(SLICES)
+
+        deployment = {
+            "id": job_id,
+            "slice_id": slice_id,
+            "status": "QUEUED",
+            "message": "Job creado. El worker destruira las VMs registradas en el inventario.",
+            "script_runner": {
+                "action": "destroy_topology",
+                "variables": {
+                    "inventory": deepcopy(inventory),
+                },
+                "vm_inventory": deepcopy(inventory),
             },
-            "vm_inventory": deepcopy(inventory),
-        },
-        "created_at": now_iso(),
-        "updated_at": now_iso(),
-    }
-    DEPLOYMENTS[job_id] = deployment
-    save_deployments(DEPLOYMENTS)
-    write_job(deployment)
+            "created_at": now_iso(),
+            "updated_at": now_iso(),
+        }
+        DEPLOYMENTS[job_id] = deployment
+        save_deployments(DEPLOYMENTS)
+        write_job(deployment)
+
     app_log(f"destroy solicitado slice_id={slice_id} job_id={job_id}")
     return deployment
 

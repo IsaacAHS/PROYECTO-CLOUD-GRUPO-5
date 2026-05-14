@@ -18,4 +18,7 @@ def read_job(job_id: str) -> dict[str, Any] | None:
     path = JOB_DIR / f"{job_id}.json"
     if not path.exists():
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None

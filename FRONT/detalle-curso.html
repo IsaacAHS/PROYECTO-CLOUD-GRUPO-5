@@ -181,7 +181,8 @@
 		}
 
 		.btn-crear,
-		.btn-bulk-deploy {
+		.btn-bulk-deploy,
+		.btn-bulk-destroy {
 			display: inline-flex;
 			align-items: center;
 			gap: 0.5em;
@@ -215,6 +216,14 @@
 		.btn-bulk-deploy:hover { background: #4fc084; color: #fff; }
 		.btn-bulk-deploy:active { background: #3f9f6f; }
 		.btn-bulk-deploy:disabled { opacity: 0.45; cursor: not-allowed; }
+
+		.btn-bulk-destroy {
+			background: #f56a6a;
+			color: #fff;
+		}
+		.btn-bulk-destroy:hover { background: #f67878; color: #fff; }
+		.btn-bulk-destroy:active { background: #f45c5c; }
+		.btn-bulk-destroy:disabled { opacity: 0.45; cursor: not-allowed; }
 
 		.table-card {
 			background: #fff;
@@ -428,6 +437,10 @@
 						<i class="fas fa-play-circle"></i>
 						Desplegar todos
 					</button>
+					<button type="button" class="btn-bulk-destroy" id="bulkDestroyBtn" onclick="destroyAllSlices()" title="Apagar todos los slices activos del curso">
+						<i class="fas fa-power-off"></i>
+						Apagar todos
+					</button>
 					<a href="configurar-slice.html" class="btn-crear" id="assignSliceBtn">
 						<i class="fas fa-plus"></i>
 						Asignar Slice
@@ -468,7 +481,7 @@ document.getElementById('col-slices').textContent = `Slices — ${courseNom}`;
 document.getElementById('assignSliceBtn').href = 'slices.html';
 
 let slices = [];
-let bulkDeployRunning = false;
+let bulkActionRunning = false;
 
 function fmt(s) {
 	const h = Math.floor(s / 3600);
@@ -496,6 +509,20 @@ function stateLabel(slice) {
 	return estado ? estado.charAt(0) + estado.slice(1).toLowerCase() : 'Pendiente';
 }
 
+function resolvedBackendEstado(slice) {
+	const estado = String(slice.estado || 'ASIGNADO').toUpperCase();
+	const runtimeStatus = String(
+		slice.runtime_status || (slice.vm_inventory && slice.vm_inventory.status) || ''
+	).toUpperCase();
+
+	if (runtimeStatus === 'FAILED') return 'ERROR';
+	if (runtimeStatus === 'DESTROYED') return 'DESTRUIDO';
+	if (runtimeStatus === 'DESTROYING') return 'DESTRUYENDO';
+	if (runtimeStatus === 'SUCCESS' && estado === 'DESPLEGANDO') return 'ACTIVO';
+	if (runtimeStatus === 'RUNNING' && estado !== 'DESTRUYENDO') return 'DESPLEGANDO';
+	return estado;
+}
+
 async function loadCourseSlices() {
 	try {
 		const response = await fetch('/api/slices');
@@ -503,17 +530,20 @@ async function loadCourseSlices() {
 		const apiSlices = await response.json();
 		return apiSlices
 			.filter(slice => String(slice.curso_id || '') === String(courseId))
-			.map((slice, index) => ({
-				id: slice.id,
-				name: slice.nombre,
-				alumno: slice.alumno_nombre || '',
-				backendEstado: slice.estado || 'ASIGNADO',
-				state: stateFromBackend(slice.estado),
-				hasInventory: !!(slice.vm_inventory && (slice.vm_inventory.vms || []).length),
-				secs: 0,
-				isAssigned: true,
-				index,
-			}));
+			.map((slice, index) => {
+				const backendEstado = resolvedBackendEstado(slice);
+				return {
+					id: slice.id,
+					name: slice.nombre,
+					alumno: slice.alumno_nombre || '',
+					backendEstado,
+					state: stateFromBackend(backendEstado),
+					hasInventory: !!(slice.vm_inventory && (slice.vm_inventory.vms || []).length),
+					secs: 0,
+					isAssigned: true,
+					index,
+				};
+			});
 	} catch (error) {
 		console.warn('Backend no disponible, usando asignaciones locales.', error);
 		const assignments = JSON.parse(localStorage.getItem('nimbuscore_assignments') || '[]');
@@ -536,9 +566,12 @@ async function renderTable() {
 	slices = await loadCourseSlices();
 	const tbody = document.getElementById('slices-tbody');
 	const bulkDeployBtn = document.getElementById('bulkDeployBtn');
+	const bulkDestroyBtn = document.getElementById('bulkDestroyBtn');
 	const assignSliceBtn = document.getElementById('assignSliceBtn');
 	const deployableCount = slices.filter(s => s.state !== 'running' && s.state !== 'busy').length;
-	if (bulkDeployBtn) bulkDeployBtn.disabled = bulkDeployRunning || deployableCount === 0;
+	const activeCount = slices.filter(s => s.state === 'running').length;
+	if (bulkDeployBtn) bulkDeployBtn.disabled = bulkActionRunning || deployableCount === 0;
+	if (bulkDestroyBtn) bulkDestroyBtn.disabled = bulkActionRunning || activeCount === 0;
 	if (assignSliceBtn) assignSliceBtn.hidden = slices.length > 0;
 	if (!slices.length) {
 		tbody.innerHTML = `
@@ -551,8 +584,8 @@ async function renderTable() {
 		return;
 	}
 	tbody.innerHTML = slices.map(s => {
-		const deployDisabled = bulkDeployRunning || s.state === 'running' || s.state === 'busy';
-		const destroyDisabled = bulkDeployRunning || s.state === 'off' || s.state === 'busy';
+		const deployDisabled = bulkActionRunning || s.state === 'running' || s.state === 'busy';
+		const destroyDisabled = bulkActionRunning || s.state === 'off' || s.state === 'busy';
 		return `
 		<tr id="tr-${s.id}">
 			<td>
@@ -608,14 +641,24 @@ function setSlicePending(id, label) {
 	status.textContent = label === 'DESTRUYENDO' ? 'Destruyendo' : 'Desplegando';
 }
 
-function setBulkDeployState(running, label = 'Desplegar todos') {
-	bulkDeployRunning = running;
-	const button = document.getElementById('bulkDeployBtn');
-	if (!button) return;
-	button.disabled = running;
-	button.innerHTML = running
-		? `<i class="fas fa-spinner fa-spin"></i> ${label}`
-		: '<i class="fas fa-play-circle"></i> Desplegar todos';
+function setBulkActionState(running, action, label) {
+	bulkActionRunning = running;
+	const deployButton = document.getElementById('bulkDeployBtn');
+	const destroyButton = document.getElementById('bulkDestroyBtn');
+
+	if (deployButton) {
+		deployButton.disabled = running;
+		deployButton.innerHTML = running && action === 'deploy'
+			? `<i class="fas fa-spinner fa-spin"></i> ${label}`
+			: '<i class="fas fa-play-circle"></i> Desplegar todos';
+	}
+
+	if (destroyButton) {
+		destroyButton.disabled = running;
+		destroyButton.innerHTML = running && action === 'destroy'
+			? `<i class="fas fa-spinner fa-spin"></i> ${label}`
+			: '<i class="fas fa-power-off"></i> Apagar todos';
+	}
 }
 
 async function requestSliceJob(id, action) {
@@ -631,28 +674,29 @@ async function requestSliceJob(id, action) {
 	return response.json();
 }
 
-async function pollDeployment(jobId) {
+async function pollDeployment(jobId, options = {}) {
+	const renderOnChange = options.render !== false;
 	for (let attempt = 0; attempt < 120; attempt++) {
 		await new Promise(resolve => setTimeout(resolve, 2500));
 		const response = await fetch(`/api/deployments/${encodeURIComponent(jobId)}`);
 		if (!response.ok) continue;
 		const deployment = await response.json();
 		if (deployment.status === 'SUCCESS') {
-			await renderTable();
+			if (renderOnChange) await renderTable();
 			return deployment;
 		}
 		if (deployment.status === 'FAILED') {
-			await renderTable();
+			if (renderOnChange) await renderTable();
 			throw new Error(deployment.message || 'El job fallo');
 		}
 	}
-	await renderTable();
+	if (renderOnChange) await renderTable();
 	throw new Error('El job sigue en ejecucion. Revisa los logs del worker.');
 }
 
 async function deploySlice(id) {
 	try {
-		if (bulkDeployRunning) return;
+		if (bulkActionRunning) return;
 		setSlicePending(id, 'DESPLEGANDO');
 		const deployment = await requestSliceJob(id, 'deploy');
 		await pollDeployment(deployment.id);
@@ -664,30 +708,45 @@ async function deploySlice(id) {
 }
 
 async function deployAllSlices() {
-	if (bulkDeployRunning) return;
+	if (bulkActionRunning) return;
 
 	const pendingSlices = slices.filter(s => s.state !== 'running' && s.state !== 'busy');
 	if (!pendingSlices.length) return;
 
+	const queuedDeployments = [];
 	try {
-		setBulkDeployState(true, `Desplegando 1/${pendingSlices.length}`);
+		setBulkActionState(true, 'deploy', `Encolando 1/${pendingSlices.length}`);
 		await renderTable();
 
 		for (let index = 0; index < pendingSlices.length; index++) {
 			const slice = pendingSlices[index];
-			setBulkDeployState(true, `Desplegando ${index + 1}/${pendingSlices.length}`);
+			setBulkActionState(true, 'deploy', `Encolando ${index + 1}/${pendingSlices.length}`);
 			setSlicePending(slice.id, 'DESPLEGANDO');
 			const deployment = await requestSliceJob(slice.id, 'deploy');
-			await pollDeployment(deployment.id);
+			queuedDeployments.push({ slice, deployment });
 		}
 
+		let completed = 0;
+		setBulkActionState(true, 'deploy', `Desplegando 0/${queuedDeployments.length}`);
 		await renderTable();
+
+		const results = await Promise.allSettled(queuedDeployments.map(async ({ deployment }) => {
+			const result = await pollDeployment(deployment.id, { render: false });
+			completed += 1;
+			setBulkActionState(true, 'deploy', `Desplegando ${completed}/${queuedDeployments.length}`);
+			await renderTable();
+			return result;
+		}));
+		const failed = results.filter(result => result.status === 'rejected');
+		if (failed.length) {
+			throw new Error(`${failed.length} job(s) de despliegue fallaron.`);
+		}
 	} catch (error) {
 		console.error('No se pudo completar el despliegue masivo.', error);
 		alert(`No se pudo completar el despliegue masivo: ${error.message}`);
 		await renderTable();
 	} finally {
-		setBulkDeployState(false);
+		setBulkActionState(false);
 		await renderTable();
 	}
 }
@@ -695,7 +754,7 @@ async function deployAllSlices() {
 async function destroySlice(id) {
 	const s = findSlice(id);
 	if (!s) return;
-	if (bulkDeployRunning) return;
+	if (bulkActionRunning) return;
 	if (!confirm(`Se apagaran y eliminaran las VMs de "${s.name}". ¿Continuar?`)) return;
 	try {
 		setSlicePending(id, 'DESTRUYENDO');
@@ -704,6 +763,36 @@ async function destroySlice(id) {
 	} catch (error) {
 		console.error('No se pudo apagar el slice.', error);
 		alert(`No se pudo apagar el slice: ${error.message}`);
+		await renderTable();
+	}
+}
+
+async function destroyAllSlices() {
+	if (bulkActionRunning) return;
+
+	const activeSlices = slices.filter(s => s.state === 'running');
+	if (!activeSlices.length) return;
+	if (!confirm(`Se apagaran y eliminaran las VMs de ${activeSlices.length} slice(s) activo(s). ¿Continuar?`)) return;
+
+	try {
+		setBulkActionState(true, 'destroy', `Apagando 1/${activeSlices.length}`);
+		await renderTable();
+
+		for (let index = 0; index < activeSlices.length; index++) {
+			const slice = activeSlices[index];
+			setBulkActionState(true, 'destroy', `Apagando ${index + 1}/${activeSlices.length}`);
+			setSlicePending(slice.id, 'DESTRUYENDO');
+			const deployment = await requestSliceJob(slice.id, 'destroy');
+			await pollDeployment(deployment.id);
+		}
+
+		await renderTable();
+	} catch (error) {
+		console.error('No se pudo completar el apagado masivo.', error);
+		alert(`No se pudo completar el apagado masivo: ${error.message}`);
+		await renderTable();
+	} finally {
+		setBulkActionState(false);
 		await renderTable();
 	}
 }

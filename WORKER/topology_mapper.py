@@ -20,7 +20,7 @@ MAC_SALT = os.getenv("NIMBUSCORE_MAC_SALT", "nimbuscore")
 VLAN_BASE = int(os.getenv("NIMBUSCORE_VLAN_BASE", "100"))
 DEFAULT_VNC_BASE = int(os.getenv("NIMBUSCORE_VNC_BASE", "5901"))
 CIDR_BASE = int(os.getenv("NIMBUSCORE_CIDR_BASE", "10"))
-DEFAULT_VM_SPEC = {"vcpus": 1, "ram_mb": 2048, "disk_gb": 20}
+DEFAULT_VM_SPEC = {"vcpus": 1, "ram_mb": 2048, "disk_gb": 1}
 DEFAULT_IMAGE = {
     "name": "cirros-0.6.2",
     "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",

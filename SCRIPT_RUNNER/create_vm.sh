@@ -55,6 +55,10 @@ ENABLE_CLOUD_INIT="${NIMBUSCORE_ENABLE_CLOUD_INIT:-true}"
 if [ "$ENABLE_CLOUD_INIT" != "true" ] && [ "$ENABLE_CLOUD_INIT" != "false" ]; then
     ENABLE_CLOUD_INIT="true"
 fi
+if ! [[ "$DISK_GB" =~ ^[0-9]+$ ]] || [ "$DISK_GB" -lt 1 ] || [ "$DISK_GB" -gt 3 ]; then
+    echo "[create_vm] ERROR: NIMBUSCORE_VM_DISK_GB debe ser 1, 2 o 3. Valor recibido: $DISK_GB"
+    exit 1
+fi
 
 mac_for_iface() {
     local vm_name="$1"

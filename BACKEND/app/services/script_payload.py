@@ -3,6 +3,8 @@ from typing import Any
 from app.services.image_catalog import image_details
 
 
+ALLOWED_DISK_GB = {1, 2, 3}
+
 FLAVORS = {
     "m1.tiny": {"vcpus": 1, "ram_mb": 512},
     "m1.small": {"vcpus": 1, "ram_mb": 2048},
@@ -19,10 +21,25 @@ def flavor_details(flavor_name: str | None) -> dict[str, int | str]:
 
 def disk_gb_from_config(value: Any) -> int:
     try:
-        disk_gb = int(value or 20)
+        disk_gb = int(value or 1)
     except (TypeError, ValueError):
-        disk_gb = 20
-    return max(disk_gb, 1)
+        disk_gb = 1
+    if disk_gb not in ALLOWED_DISK_GB:
+        raise ValueError("Disco no soportado. Usa una opcion de 1, 2 o 3 GB.")
+    return disk_gb
+
+
+def validate_disk_for_image(disk_gb: int, image: dict[str, Any]) -> None:
+    try:
+        min_disk_gb = int(image.get("min_disk_gb") or 1)
+    except (TypeError, ValueError):
+        min_disk_gb = 1
+    if disk_gb < min_disk_gb:
+        label = image.get("label") or image.get("name") or image.get("id") or "la imagen"
+        raise ValueError(
+            f"La imagen {label} requiere al menos {min_disk_gb} GB de disco. "
+            f"Seleccionaste {disk_gb} GB."
+        )
 
 
 def topology_node_index(node_id: str) -> int:
@@ -43,6 +60,8 @@ def build_script_variables(
         placement = placement_by_node.get(node["id"], {})
         flavor = flavor_details(cfg.get("flavor"))
         image = image_details(cfg.get("imagen"))
+        disk_gb = disk_gb_from_config(cfg.get("disco"))
+        validate_disk_for_image(disk_gb, image)
 
         instances.append(
             {
@@ -59,7 +78,7 @@ def build_script_variables(
                 "flavor": flavor["name"],
                 "vcpus": flavor["vcpus"],
                 "ram_mb": flavor["ram_mb"],
-                "disk_gb": disk_gb_from_config(cfg.get("disco")),
+                "disk_gb": disk_gb,
                 "key_pair": cfg.get("llaves") or "default-key",
                 "security_ports": cfg.get("seguridad") or ["22", "443"],
                 "custom_rules": cfg.get("reglas") or [],

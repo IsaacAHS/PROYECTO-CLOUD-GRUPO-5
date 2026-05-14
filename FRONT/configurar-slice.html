@@ -502,7 +502,7 @@
 		.topo-node.invalid { box-shadow: 0 0 0 3px rgba(245,106,106,0.28), 0 3px 14px rgba(0,0,0,0.12); border-color: #f56a6a; }
 		.topo-node.invalid::after { content: "!"; position: absolute; top: -0.55em; right: -0.55em; width: 1.35em; height: 1.35em; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #f56a6a; color: #fff; border: solid 2px #fff; font-size: 0.72em; font-weight: 700; line-height: 1; }
 		.topo-node i { font-size: 1.3em; line-height: 1; pointer-events: none; }
-		.node-lbl { font-size: 8.5px; font-weight: 700; font-family: 'Roboto Slab', serif; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1; pointer-events: none; }
+		.node-lbl { font-size: 8.5px; font-weight: 700; font-family: 'Roboto Slab', serif; letter-spacing: 0; line-height: 1; pointer-events: none; }
 
 		.nt-srv { background: rgba(245,106,106,0.11); border-color: rgba(245,106,106,0.35); color: #f56a6a; }
 		.nt-pc  { background: rgba(74,159,213,0.11);  border-color: rgba(74,159,213,0.35);  color: #4a9fd5; }
@@ -737,12 +737,11 @@
 								<label>Disco <span class="req">*</span></label>
 								<select id="nc-disco" onchange="saveNodeConfig()">
 									<option value="">— Seleccionar —</option>
-									<option value="20">20 GB SSD</option>
-									<option value="50">50 GB SSD</option>
-									<option value="100">100 GB SSD</option>
-									<option value="200">200 GB SSD</option>
-									<option value="500">500 GB HDD</option>
+									<option value="1">1 GB</option>
+									<option value="2">2 GB</option>
+									<option value="3">3 GB</option>
 								</select>
+								<div class="keypair-help" id="disk-help">El disco debe ser suficiente para la imagen seleccionada.</div>
 							</div>
 
 							<div class="field">
@@ -865,7 +864,7 @@
 
 						<div class="canvas-hint" style="padding:0.3em 1em; font-size:0.7em; color:#9fa3a6; border-bottom: solid 1px rgba(210,215,217,0.4); background:#fafbfc; flex-shrink:0;">
 							<i class="fas fa-info-circle"></i>
-							Clic: configurar VM &middot; Doble clic: cambiar tipo &middot; Ctrl+arrastrar: mover grupo &middot; Conectar disponible en personalizada
+							Clic: configurar VM &middot; Doble clic/clic derecho: cambiar tipo &middot; Selecciona un nodo y usa Eliminar &middot; Conectar disponible en personalizada
 						</div>
 
 						<div class="canvas-area" id="canvas-area">
@@ -953,6 +952,8 @@ const REQUIRED_VM_FIELDS = [
 	{ key: 'llaves', label: 'par de llaves' }
 ];
 
+const ALLOWED_DISK_GB = [1, 2, 3];
+
 const NODE_TYPES = {
 	srv: { icon: 'fa-server',  label: 'SRV' },
 	pc:  { icon: 'fa-desktop', label: 'PC'  },
@@ -1029,6 +1030,22 @@ function isCustomTopologyActive() {
 	return !!entry && entry.type === 'personalizada';
 }
 
+function canDeleteSelection() {
+	if (ctxReviewOnly || imageUploadInProgress) return false;
+	if (selectedNodeId && nodes.some(n => n.id === selectedNodeId)) return true;
+	if (selectedEdgeId && isCustomTopologyActive() && edges.some(e => e.id === selectedEdgeId)) return true;
+	return false;
+}
+
+function syncDeleteButtonState() {
+	const deleteBtn = document.getElementById('btn-del-node');
+	if (!deleteBtn) return;
+	deleteBtn.disabled = !canDeleteSelection();
+	if (selectedNodeId) deleteBtn.title = 'Eliminar nodo seleccionado';
+	else if (selectedEdgeId) deleteBtn.title = 'Eliminar enlace seleccionado';
+	else deleteBtn.title = 'Selecciona un nodo para eliminarlo';
+}
+
 function syncTopologyModeControls() {
 	const addTopoBtn = document.getElementById('btn-add-topo');
 	if (addTopoBtn) {
@@ -1055,8 +1072,7 @@ function syncTopologyModeControls() {
 	const ctxDelete = document.getElementById('ctx-delete');
 	if (ctxDelete) ctxDelete.hidden = true;
 
-	const deleteBtn = document.getElementById('btn-del-node');
-	if (deleteBtn && selectedNodeId) deleteBtn.disabled = true;
+	syncDeleteButtonState();
 }
 
 /* ════════════════════
@@ -1250,6 +1266,79 @@ function removeTopoNodes(topoId) {
 	nodes = nodes.filter(n => n.topoId !== topoId);
 }
 
+function topologyNodeOrder(nd) {
+	const match = String(nd.id || '').match(/-n(\d+)$/);
+	return match ? Number(match[1]) : 0;
+}
+
+function topoNodesFor(topoId) {
+	return nodes
+		.filter(n => String(n.topoId) === String(topoId))
+		.sort((a, b) => topologyNodeOrder(a) - topologyNodeOrder(b));
+}
+
+function syncTopoCountFromNodes(topoId) {
+	if (topoId === null || topoId === undefined) return;
+	const entry = topoEntries.find(e => String(e.id) === String(topoId));
+	if (!entry) return;
+	entry.count = topoNodesFor(topoId).length;
+	const input = document.getElementById('ncount-' + entry.id);
+	if (input) input.value = entry.count;
+}
+
+function pruneNodeEdges(nodeId) {
+	edges = edges.flatMap(e => {
+		if (e.bus) {
+			const busNodes = (e.busNodes || []).filter(n => n.id !== nodeId);
+			return busNodes.length > 1 ? [{ ...e, busNodes }] : [];
+		}
+		return e.from === nodeId || e.to === nodeId ? [] : [e];
+	});
+}
+
+function reindexTopologyNodes(topoId) {
+	if (topoId === null || topoId === undefined) return;
+	topoNodesFor(topoId).forEach((nd, index) => {
+		const nextId = `t${topoId}-n${index}`;
+		if (nd.id === nextId) return;
+
+		const previousId = nd.id;
+		const nodeEl = document.getElementById('node-' + previousId);
+		if (nodeEl) nodeEl.id = 'node-' + nextId;
+
+		nd.id = nextId;
+		if (nodeConfigs[previousId] && !nodeConfigs[nextId]) {
+			nodeConfigs[nextId] = nodeConfigs[previousId];
+		}
+		delete nodeConfigs[previousId];
+
+		edges.forEach(edge => {
+			if (!edge.bus) {
+				if (edge.from === previousId) edge.from = nextId;
+				if (edge.to === previousId) edge.to = nextId;
+			}
+		});
+
+		if (selectedNodeId === previousId) selectedNodeId = nextId;
+		if (ctxNodeId === previousId) ctxNodeId = nextId;
+		if (linkSourceId === previousId) linkSourceId = nextId;
+	});
+}
+
+function rebuildGeneratedEdgesForTopology(topoId) {
+	const entry = topoEntries.find(e => String(e.id) === String(topoId));
+	if (!entry || entry.type === 'personalizada') return;
+
+	const groupNodes = topoNodesFor(topoId);
+	const groupIds = new Set(groupNodes.map(n => n.id));
+	edges = edges.filter(e => {
+		if (e.bus) return !(e.busNodes || []).some(n => groupIds.has(n.id));
+		return !groupIds.has(e.from) && !groupIds.has(e.to);
+	});
+
+	if (groupNodes.length > 1) buildEdgesForGroup(entry.type, groupNodes);
+}
+
 /* ════════════════════
    LAYOUTS
 ════════════════════ */
@@ -1303,7 +1392,7 @@ function drawEdges() {
 	const svg = document.getElementById('topo-svg');
 	if (selectedEdgeId && !edges.some(e => e.id === selectedEdgeId)) {
 		selectedEdgeId = null;
-		if (!selectedNodeId) document.getElementById('btn-del-node').disabled = true;
+		syncDeleteButtonState();
 	}
 	const nm = {};
 	nodes.forEach(n => nm[n.id] = n);
@@ -1357,7 +1446,7 @@ function bindEdgeEvents() {
 function nodeInner(nd) {
 	const type = nd.nodeType;
 	const t = NODE_TYPES[type];
-	return `<i class="fas ${t.icon}"></i><span class="node-lbl">${nd.name || t.label}</span>`;
+	return `<i class="fas ${t.icon}"></i><span class="node-lbl">${getNodeDisplayName(nd)}</span>`;
 }
 
 function createNodeEl(nd) {
@@ -1472,7 +1561,7 @@ function selectNode(id) {
 	const el = document.getElementById('node-' + id);
 	if (el) el.classList.add('selected');
 
-	document.getElementById('btn-del-node').disabled = true;
+	syncDeleteButtonState();
 	renderNodeConfig();
 }
 
@@ -1483,7 +1572,7 @@ function deselectNode() {
 		if (el) el.classList.remove('selected');
 	}
 	selectedNodeId = null;
-	document.getElementById('btn-del-node').disabled = true;
+	syncDeleteButtonState();
 	document.getElementById('vm-empty').style.display = '';
 	document.getElementById('vm-config').style.display = 'none';
 }
@@ -1492,14 +1581,14 @@ function selectEdge(id) {
 	if (ctxReviewOnly || imageUploadInProgress || !isCustomTopologyActive()) return;
 	deselectNode();
 	selectedEdgeId = id;
-	document.getElementById('btn-del-node').disabled = false;
+	syncDeleteButtonState();
 	drawEdges();
 }
 
 function deselectEdge() {
 	if (!selectedEdgeId) return;
 	selectedEdgeId = null;
-	if (!selectedNodeId) document.getElementById('btn-del-node').disabled = true;
+	syncDeleteButtonState();
 	drawEdges();
 }
 
@@ -1528,6 +1617,7 @@ function renderNodeConfig() {
 	setImgMode(cfg.imagenMode || 'select', false);
 	renderImageOptions(cfg.imagen || '');
 	updateUploadImageState(cfg);
+	updateDiskHelp(cfg);
 
 	// Security chips
 	const chipsEl = document.getElementById('nc-chips');
@@ -1553,7 +1643,21 @@ function renderNodeConfig() {
 }
 
 function getNodeDisplayName(nd) {
-	return nd.name || `Nodo ${nd.id}`;
+	return nd.name || `Nodo ${getNodeOrdinal(nd)}`;
+}
+
+function getNodeOrdinal(nd) {
+	const match = String(nd?.id || '').match(/-n(\d+)$/);
+	if (match) return Number(match[1]) + 1;
+	const index = nodes.findIndex(n => n.id === nd?.id);
+	return index >= 0 ? index + 1 : 1;
+}
+
+function cleanSavedNodeName(value) {
+	const name = String(value || '').trim();
+	if (/^nodo\s+t\d+-n\d+$/i.test(name)) return '';
+	if (/^nodo\s+\d+$/i.test(name)) return '';
+	return name;
 }
 
 function renameSelectedNode() {
@@ -1577,7 +1681,67 @@ function saveNodeConfig() {
 	cfg.disco  = document.getElementById('nc-disco').value;
 	cfg.llaves = document.getElementById('nc-llaves').value;
 	cfg.imagen = document.getElementById('nc-imagen').value;
+	updateDiskHelp(cfg);
 	updateNodeValidationState(selectedNodeId);
+}
+
+function imageDisplayLabel(image) {
+	return image?.label || image?.name || image?.id || 'imagen';
+}
+
+function imageMinDiskGb(image) {
+	const minDisk = Number(image?.min_disk_gb || 1);
+	return Number.isFinite(minDisk) && minDisk > 0 ? Math.ceil(minDisk) : 1;
+}
+
+function findAvailableImage(imageId) {
+	if (!imageId) return null;
+	return availableImages.find(image => image.id === imageId) || null;
+}
+
+function diskCompatibilityMessage(cfg) {
+	if (!cfg) return '';
+	const diskValue = String(cfg.disco || '').trim();
+	if (!diskValue) return '';
+
+	const diskGb = Number(diskValue);
+	if (!ALLOWED_DISK_GB.includes(diskGb)) {
+		return 'selecciona un disco de 1, 2 o 3 GB.';
+	}
+
+	if (!imagesLoaded || !cfg.imagen) return '';
+	const image = findAvailableImage(cfg.imagen);
+	if (!image) return '';
+
+	const minDisk = imageMinDiskGb(image);
+	if (diskGb < minDisk) {
+		return `la imagen ${imageDisplayLabel(image)} requiere al menos ${minDisk} GB de disco; seleccionaste ${diskGb} GB.`;
+	}
+	return '';
+}
+
+function updateDiskHelp(cfg) {
+	const help = document.getElementById('disk-help');
+	if (!help) return;
+
+	const message = diskCompatibilityMessage(cfg);
+	if (message) {
+		help.textContent = message;
+		help.style.color = '#f56a6a';
+		return;
+	}
+
+	if (cfg?.imagen) {
+		const image = findAvailableImage(cfg.imagen);
+		if (image) {
+			help.textContent = `Imagen seleccionada: requiere mínimo ${imageMinDiskGb(image)} GB.`;
+			help.style.color = '#9fa3a6';
+			return;
+		}
+	}
+
+	help.textContent = 'El disco debe ser suficiente para la imagen seleccionada.';
+	help.style.color = '#9fa3a6';
 }
 
 	function renderImageOptions(preferredValue) {
@@ -1597,7 +1761,7 @@ function saveNodeConfig() {
 	availableImages.forEach(image => {
 		const option = document.createElement('option');
 		option.value = image.id;
-		option.textContent = image.label || image.name || image.id;
+		option.textContent = `${imageDisplayLabel(image)} · mín. ${imageMinDiskGb(image)} GB`;
 		select.appendChild(option);
 	});
 
@@ -1609,6 +1773,7 @@ function saveNodeConfig() {
 	}
 
 		select.value = currentValue || '';
+		if (selectedNodeId) updateDiskHelp(nodeConfigs[selectedNodeId]);
 	}
 
 	function upsertAvailableImage(image) {
@@ -1636,6 +1801,7 @@ function saveNodeConfig() {
 		? preferredValue
 		: (selectedNodeId && nodeConfigs[selectedNodeId] ? nodeConfigs[selectedNodeId].imagen : '');
 	renderImageOptions(selectedValue || '');
+	if (selectedNodeId) updateDiskHelp(nodeConfigs[selectedNodeId]);
 	if (selectedNodeId) updateNodeValidationState(selectedNodeId);
 	nodes.forEach(nd => updateNodeValidationState(nd.id));
 	syncReviewModeControls();
@@ -1850,6 +2016,7 @@ async function onFileChange(input) {
 			cfg.imagenFile = file.name;
 		}
 		updateUploadImageState(cfg);
+		updateDiskHelp(cfg);
 		updateNodeValidationState(uploadNodeId);
 		syncReviewModeControls();
 		alert(`Imagen ${image.label || image.name || image.id} subida y registrada.`);
@@ -1857,6 +2024,7 @@ async function onFileChange(input) {
 		console.error('No se pudo subir la imagen.', error);
 		if (cfg) cfg.imagen = '';
 		updateUploadImageState(cfg, 'error');
+		updateDiskHelp(cfg);
 		updateNodeValidationState(uploadNodeId);
 		alert(`No se pudo subir la imagen: ${error.message}`);
 	} finally {
@@ -1956,15 +2124,25 @@ function addStandaloneNode() {
 ════════════════════ */
 function deleteNode(id) {
 	if (ctxReviewOnly || imageUploadInProgress) return;
+	const nd = nodes.find(n => n.id === id);
+	if (!nd) return;
+	const topoId = nd.topoId;
 	const el = document.getElementById('node-' + id);
 	if (el) el.remove();
-	edges = edges.filter(e => e.from !== id && e.to !== id && !(e.bus && e.busNodes && e.busNodes.some(n => n.id === id)));
+	pruneNodeEdges(id);
 	if (selectedEdgeId && !edges.some(e => e.id === selectedEdgeId)) selectedEdgeId = null;
 	nodes = nodes.filter(n => n.id !== id);
 	delete nodeConfigs[id];
 	if (selectedNodeId === id) deselectNode();
+	if (topoId !== null && topoId !== undefined) {
+		reindexTopologyNodes(topoId);
+		syncTopoCountFromNodes(topoId);
+		rebuildGeneratedEdgesForTopology(topoId);
+		renderTopoTable();
+	}
 	drawEdges();
 	updateCanvasEmpty();
+	syncTopologyModeControls();
 }
 
 function deleteSelectedNode() {
@@ -1976,13 +2154,14 @@ function deleteEdge(id) {
 	if (!isCustomTopologyActive()) return;
 	edges = edges.filter(e => e.id !== id);
 	if (selectedEdgeId === id) selectedEdgeId = null;
-	if (!selectedNodeId) document.getElementById('btn-del-node').disabled = true;
+	syncDeleteButtonState();
 	drawEdges();
 }
 
 function deleteSelectedItem() {
 	if (ctxReviewOnly || imageUploadInProgress) return;
-	if (selectedEdgeId) deleteEdge(selectedEdgeId);
+	if (selectedNodeId) deleteSelectedNode();
+	else if (selectedEdgeId) deleteEdge(selectedEdgeId);
 }
 
 /* ════════════════════
@@ -2097,8 +2276,10 @@ function setCtxNodeType(type) {
 
 function deleteCtxNode() {
 	if (ctxReviewOnly) return;
+	const nodeId = ctxNodeId;
 	document.getElementById('ctx-menu').classList.remove('open');
 	ctxNodeId = null;
+	if (nodeId) deleteNode(nodeId);
 }
 
 function showEdgeCtxMenu(edgeId, cx, cy) {
@@ -2331,7 +2512,7 @@ function makeNodeFromSaved(saved) {
 		y: hasNumericValue(saved.y) ? Number(saved.y) : 120,
 		nodeType: saved.tipo || saved.nodeType || 'srv',
 		topoId: saved.topologia_id !== undefined ? saved.topologia_id : (saved.topoId ?? null),
-		name: saved.nombre || saved.name || ''
+		name: cleanSavedNodeName(saved.nombre || saved.name)
 	};
 }
 
@@ -2342,7 +2523,7 @@ function applySavedNodeData(savedNodes) {
 	nodes.forEach(nd => {
 		const saved = byId.get(String(nd.id));
 		if (!saved) return;
-		nd.name = saved.nombre || saved.name || nd.name;
+		nd.name = cleanSavedNodeName(saved.nombre || saved.name) || nd.name;
 		nd.nodeType = saved.tipo || saved.nodeType || nd.nodeType;
 		if (hasNumericValue(saved.x)) nd.x = Number(saved.x);
 		if (hasNumericValue(saved.y)) nd.y = Number(saved.y);
@@ -2563,8 +2744,18 @@ function missingVmFields(nodeId) {
 		.map(f => f.label);
 }
 
+function vmConfigValidationMessages(nodeId) {
+	const missing = missingVmFields(nodeId);
+	const messages = [];
+	if (missing.length > 0) messages.push(`falta ${missing.join(', ')}.`);
+
+	const diskMessage = diskCompatibilityMessage(nodeConfigs[nodeId]);
+	if (diskMessage) messages.push(diskMessage);
+	return messages;
+}
+
 function nodeHasMissingConfig(nodeId) {
-	return missingVmFields(nodeId).length > 0;
+	return vmConfigValidationMessages(nodeId).length > 0;
 }
 
 function updateNodeValidationState(nodeId) {
@@ -2589,11 +2780,11 @@ function validateSliceBeforeSave() {
 	}
 
 	nodes.forEach(nd => {
-		const missing = missingVmFields(nd.id);
-		if (missing.length > 0) {
+		const messages = vmConfigValidationMessages(nd.id);
+		if (messages.length > 0) {
 			errors.push({
 				nodeId: nd.id,
-				message: `${getNodeDisplayName(nd)}: falta ${missing.join(', ')}.`
+				message: `${getNodeDisplayName(nd)}: ${messages.join(' ')}`
 			});
 		}
 	});
@@ -2625,7 +2816,7 @@ function buildSlicePayload(nombre) {
 			.map(t => ({ id: t.id, type: t.type, count: Number(t.count) || 0 })),
 		nodos: nodes.map(n => ({
 			id: n.id,
-			nombre: getNodeDisplayName(n),
+			nombre: n.name || '',
 			tipo: n.nodeType,
 			topologia_id: n.topoId,
 			x: Math.round(n.x),
