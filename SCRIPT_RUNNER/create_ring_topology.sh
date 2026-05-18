@@ -43,6 +43,16 @@ CONSOLE_USER="${NIMBUSCORE_CONSOLE_USER:-nimbus}"
 CONSOLE_PASSWORD="${NIMBUSCORE_CONSOLE_PASSWORD:-NimbusCore123}"
 ENABLE_PASSWORD_LOGIN="${NIMBUSCORE_ENABLE_PASSWORD_LOGIN:-true}"
 ENABLE_AUTO_ROUTING="${NIMBUSCORE_ENABLE_AUTO_ROUTING:-false}"
+MAC_SALT="${NIMBUSCORE_MAC_SALT:-nimbuscore}"
+ENABLE_MGMT_NETWORK="${NIMBUSCORE_ENABLE_MGMT_NETWORK:-true}"
+MGMT_VLAN="${NIMBUSCORE_MGMT_VLAN:-99}"
+MGMT_CIDR="${NIMBUSCORE_MGMT_CIDR:-10.60.9.0/24}"
+MGMT_GATEWAY="${NIMBUSCORE_MGMT_GATEWAY:-10.60.9.1}"
+MGMT_DNS="${NIMBUSCORE_MGMT_DNS:-8.8.8.8}"
+MGMT_DHCP_SERVER_IP="${NIMBUSCORE_MGMT_DHCP_SERVER_IP:-10.60.9.2}"
+MGMT_DHCP_START="${NIMBUSCORE_MGMT_DHCP_START:-10.60.9.20}"
+MGMT_DHCP_END="${NIMBUSCORE_MGMT_DHCP_END:-10.60.9.250}"
+MGMT_DHCP_LEASE_TIME="${NIMBUSCORE_MGMT_DHCP_LEASE_TIME:-12h}"
 DEFAULT_VM_SPEC="${NIMBUSCORE_DEFAULT_VM_SPEC:-1:2048:1}"
 IFS=';' read -r -a VM_SPECS <<< "${NIMBUSCORE_TOPOLOGY_VM_SPECS:-}"
 IFS=';' read -r -a IMAGE_SPECS <<< "${NIMBUSCORE_TOPOLOGY_IMAGE_SPECS:-}"
@@ -87,10 +97,16 @@ run_headnode_script() {
 
     if [ "$HEADNODE_LOCAL" = "true" ]; then
         sudo env NIMBUSCORE_OVS_NAME="$OVS_NAME" NIMBUSCORE_OVS_UPLINKS="$OVS_UPLINKS" \
+            NIMBUSCORE_MGMT_VLAN="$MGMT_VLAN" NIMBUSCORE_MGMT_CIDR="$MGMT_CIDR" \
+            NIMBUSCORE_MGMT_GATEWAY="$MGMT_GATEWAY" NIMBUSCORE_MGMT_DNS="$MGMT_DNS" \
+            NIMBUSCORE_MGMT_DHCP_SERVER_IP="$MGMT_DHCP_SERVER_IP" \
+            NIMBUSCORE_MGMT_DHCP_START="$MGMT_DHCP_START" \
+            NIMBUSCORE_MGMT_DHCP_END="$MGMT_DHCP_END" \
+            NIMBUSCORE_MGMT_DHCP_LEASE_TIME="$MGMT_DHCP_LEASE_TIME" \
             bash "${SCRIPTS_DIR}/${script_name}" "$@"
     else
         ssh ${SSH_OPTS} ${SSH_USER}@${HEADNODE_IP} \
-            "NIMBUSCORE_OVS_NAME='$OVS_NAME' NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' bash ${SCRIPTS_DIR}/${script_name} $*"
+            "NIMBUSCORE_OVS_NAME='$OVS_NAME' NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' NIMBUSCORE_MGMT_VLAN='$MGMT_VLAN' NIMBUSCORE_MGMT_CIDR='$MGMT_CIDR' NIMBUSCORE_MGMT_GATEWAY='$MGMT_GATEWAY' NIMBUSCORE_MGMT_DNS='$MGMT_DNS' NIMBUSCORE_MGMT_DHCP_SERVER_IP='$MGMT_DHCP_SERVER_IP' NIMBUSCORE_MGMT_DHCP_START='$MGMT_DHCP_START' NIMBUSCORE_MGMT_DHCP_END='$MGMT_DHCP_END' NIMBUSCORE_MGMT_DHCP_LEASE_TIME='$MGMT_DHCP_LEASE_TIME' bash ${SCRIPTS_DIR}/${script_name} $*"
     fi
 }
 
@@ -121,6 +137,9 @@ echo "======================================================"
 echo " Creando topología en ANILLO: $SLICE_NAME"
 echo " VMs      : $N_VMS"
 echo " VLANs    : $VLAN_BASE → $(( VLAN_BASE + N_VMS - 1 ))"
+if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
+    echo " Gestion  : VLAN $MGMT_VLAN | ${MGMT_CIDR} | GW $MGMT_GATEWAY"
+fi
 echo " VNC      : $VNC_BASE → $(( VNC_BASE + N_VMS - 1 ))"
 echo "======================================================"
 
@@ -135,20 +154,24 @@ for (( k=0; k<N_VMS; k++ )); do
     VLAN_ID=$(( VLAN_BASE + k ))
     CIDR_THIRD=$(( CIDR_BASE + k ))
     CIDR="192.168.${CIDR_THIRD}.0/24"
-    DHCP_START="192.168.${CIDR_THIRD}.10"
-    DHCP_END="192.168.${CIDR_THIRD}.100"
 
     VM_A=$(( k + 1 ))
     VM_B=$(( (k + 1) % N_VMS + 1 ))
-    echo "  → Enlace vm${VM_A}↔vm${VM_B} : VLAN $VLAN_ID | Red $CIDR"
+    echo "  → Enlace vm${VM_A}↔vm${VM_B} : VLAN $VLAN_ID | Red sugerida $CIDR | L2 sin DHCP"
 
-    run_headnode_script create_network_vlan.sh "$VLAN_ID" "$CIDR" dhcp "$DHCP_START" "$DHCP_END"
+    run_headnode_script create_network_vlan.sh "$VLAN_ID" "$CIDR" nodhcp
 
     if [ $? -ne 0 ]; then
         echo "  [ERROR] Fallo al crear VLAN $VLAN_ID. Abortando."
         exit 1
     fi
 done
+
+if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
+    echo ""
+    echo "[PASO 1.5] Preparando DHCP de gestion en VLAN $MGMT_VLAN..."
+    run_headnode_script create_access_network.sh
+fi
 
 # ──────────────────────────────────────────────
 # PASO 2: Crear las VMs con sus dos interfaces TAP
@@ -170,6 +193,8 @@ for (( i=0; i<N_VMS; i++ )); do
     VLAN_RIGHT=$(( VLAN_BASE + i % N_VMS ))
     # VLAN del enlace izquierdo (VM_(i-1) → VM_i): segunda interfaz TAP
     VLAN_LEFT=$(( VLAN_BASE + (i - 1 + N_VMS) % N_VMS ))
+    INTERNAL_VLANS=("$VLAN_RIGHT" "$VLAN_LEFT")
+    VM_VLANS=("${INTERNAL_VLANS[@]}")
 
     echo "  → VM $VM_IDX/$N_VMS : $VM_NAME | servidor $COMPUTE_IP | VNC $VNC_PORT"
     echo "    VLANs: izq=$VLAN_LEFT  der=$VLAN_RIGHT"
@@ -181,9 +206,13 @@ for (( i=0; i<N_VMS; i++ )); do
     echo "    Imagen: ${VM_IMAGE_NAME} (${VM_IMAGE_URL})"
     echo "    Cloud-init: ${VM_CLOUD_INIT}"
     echo "    Par de llaves: ${VM_KEYPAIR_NAME}"
+    if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
+        VM_VLANS=("$MGMT_VLAN" "${INTERNAL_VLANS[@]}")
+        echo "    Gestion: VLAN ${MGMT_VLAN} | DHCP dinamico | GW ${MGMT_GATEWAY}"
+    fi
 
     ssh ${SSH_OPTS} ${SSH_USER}@${COMPUTE_IP} \
-        "NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' NIMBUSCORE_VM_VCPUS=$VM_VCPUS NIMBUSCORE_VM_RAM_MB=$VM_RAM_MB NIMBUSCORE_VM_DISK_GB=$VM_DISK_GB NIMBUSCORE_BASE_IMAGE_NAME='$VM_IMAGE_NAME' NIMBUSCORE_BASE_IMAGE_URL='$VM_IMAGE_URL' NIMBUSCORE_BASE_IMAGE_DOWNLOAD_METHOD='$VM_IMAGE_DOWNLOAD_METHOD' NIMBUSCORE_ENABLE_CLOUD_INIT='$VM_CLOUD_INIT' NIMBUSCORE_CONSOLE_USER='$CONSOLE_USER' NIMBUSCORE_CONSOLE_PASSWORD='$CONSOLE_PASSWORD' NIMBUSCORE_ENABLE_PASSWORD_LOGIN='$ENABLE_PASSWORD_LOGIN' NIMBUSCORE_KEYPAIR_NAME='$VM_KEYPAIR_NAME' NIMBUSCORE_PUBLIC_KEY_B64='$VM_PUBLIC_KEY_B64' bash ${SCRIPTS_DIR}/create_vm.sh $VM_NAME $OVS_NAME $VNC_PORT $VLAN_RIGHT $VLAN_LEFT"
+        "NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' NIMBUSCORE_MAC_SALT='$MAC_SALT' NIMBUSCORE_VM_VCPUS=$VM_VCPUS NIMBUSCORE_VM_RAM_MB=$VM_RAM_MB NIMBUSCORE_VM_DISK_GB=$VM_DISK_GB NIMBUSCORE_BASE_IMAGE_NAME='$VM_IMAGE_NAME' NIMBUSCORE_BASE_IMAGE_URL='$VM_IMAGE_URL' NIMBUSCORE_BASE_IMAGE_DOWNLOAD_METHOD='$VM_IMAGE_DOWNLOAD_METHOD' NIMBUSCORE_ENABLE_CLOUD_INIT='$VM_CLOUD_INIT' NIMBUSCORE_CONSOLE_USER='$CONSOLE_USER' NIMBUSCORE_CONSOLE_PASSWORD='$CONSOLE_PASSWORD' NIMBUSCORE_ENABLE_PASSWORD_LOGIN='$ENABLE_PASSWORD_LOGIN' NIMBUSCORE_KEYPAIR_NAME='$VM_KEYPAIR_NAME' NIMBUSCORE_PUBLIC_KEY_B64='$VM_PUBLIC_KEY_B64' NIMBUSCORE_ENABLE_MGMT_NETWORK='$ENABLE_MGMT_NETWORK' NIMBUSCORE_MGMT_VLAN='$MGMT_VLAN' NIMBUSCORE_MGMT_CIDR='$MGMT_CIDR' NIMBUSCORE_MGMT_GATEWAY='$MGMT_GATEWAY' NIMBUSCORE_MGMT_DNS='$MGMT_DNS' bash ${SCRIPTS_DIR}/create_vm.sh $VM_NAME $OVS_NAME $VNC_PORT ${VM_VLANS[*]}"
 
     if [ $? -ne 0 ]; then
         echo "  [ERROR] Fallo al crear VM $VM_NAME. Abortando."
@@ -198,17 +227,11 @@ done
 # ──────────────────────────────────────────────
 echo ""
 if [ "$ENABLE_AUTO_ROUTING" = "true" ]; then
-    echo "[PASO 3] Habilitando ruteo entre VLANs adyacentes en headnode..."
-
-    for (( k=0; k<N_VMS; k++ )); do
-        VLAN_A=$(( VLAN_BASE + k ))
-        VLAN_B=$(( VLAN_BASE + (k + 1) % N_VMS ))
-        echo "  → Ruteo VLAN $VLAN_A ↔ VLAN $VLAN_B"
-        run_headnode_script routing_networks.sh "$VLAN_A" "$VLAN_B"
-    done
+    echo "[PASO 3] NIMBUSCORE_ENABLE_AUTO_ROUTING=true ignorado."
+    echo "  Las VLANs internas ahora son L2 puro: sin gateway, sin DHCP y sin ruteo en headnode."
 else
     echo "[PASO 3] Ruteo automatico entre VLANs desactivado."
-    echo "  Para modo demo centralizado: NIMBUSCORE_ENABLE_AUTO_ROUTING=true"
+    echo "  Las IPs internas deben configurarse manualmente dentro de las VMs."
 fi
 
 # ──────────────────────────────────────────────

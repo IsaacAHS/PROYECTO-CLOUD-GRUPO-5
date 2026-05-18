@@ -29,7 +29,7 @@ DEFAULT_IMAGES = [
         "download_method": "wget-no-check-certificate",
         "cloud_init": False,
         "min_disk_gb": 1,
-        "active": True,
+        "active": False,
     },
     {
         "id": "ubuntu-22",
@@ -59,7 +59,7 @@ DEFAULT_IMAGES = [
         "download_method": "wget-no-check-certificate",
         "cloud_init": False,
         "min_disk_gb": 3,
-        "active": True,
+        "active": False,
     },
     {
         "id": "debian-12",

@@ -55,6 +55,11 @@ ENABLE_CLOUD_INIT="${NIMBUSCORE_ENABLE_CLOUD_INIT:-true}"
 if [ "$ENABLE_CLOUD_INIT" != "true" ] && [ "$ENABLE_CLOUD_INIT" != "false" ]; then
     ENABLE_CLOUD_INIT="true"
 fi
+ENABLE_MGMT_NETWORK="${NIMBUSCORE_ENABLE_MGMT_NETWORK:-true}"
+MGMT_VLAN="${NIMBUSCORE_MGMT_VLAN:-99}"
+MGMT_CIDR="${NIMBUSCORE_MGMT_CIDR:-10.60.9.0/24}"
+MGMT_GATEWAY="${NIMBUSCORE_MGMT_GATEWAY:-10.60.9.1}"
+MGMT_DNS="${NIMBUSCORE_MGMT_DNS:-8.8.8.8}"
 if ! [[ "$DISK_GB" =~ ^[0-9]+$ ]] || [ "$DISK_GB" -lt 1 ] || [ "$DISK_GB" -gt 3 ]; then
     echo "[create_vm] ERROR: NIMBUSCORE_VM_DISK_GB debe ser 1, 2 o 3. Valor recibido: $DISK_GB"
     exit 1
@@ -164,12 +169,20 @@ create_cloud_init_seed() {
         for idx in "${!VLANS[@]}"; do
             local vlan_id="${VLANS[$idx]}"
             local mac_addr
+            local is_mgmt="false"
             mac_addr="$(mac_for_iface "$VM_NAME" "$idx" "$vlan_id")"
+            if [ "$ENABLE_MGMT_NETWORK" = "true" ] && [ "$vlan_id" = "$MGMT_VLAN" ]; then
+                is_mgmt="true"
+            fi
             printf '  eth%s:\n' "$idx"
             printf '    match:\n'
             printf '      macaddress: "%s"\n' "$mac_addr"
             printf '    set-name: eth%s\n' "$idx"
-            printf '    dhcp4: true\n'
+            if [ "$is_mgmt" = "true" ]; then
+                printf '    dhcp4: true\n'
+            else
+                printf '    dhcp4: false\n'
+            fi
             printf '    dhcp6: false\n'
             printf '    optional: true\n'
         done
@@ -235,6 +248,9 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 echo "[create_vm] VM=$VM_NAME VNC=$VNC_PORT OVS=$OVS_NAME vCPUs=$VCPUS RAM=${RAM_MB}MB DISK=${DISK_GB}GB VLANs=${VLANS[*]} KEYPAIR=${KEYPAIR_NAME:-none} CLOUD_INIT=$ENABLE_CLOUD_INIT"
+if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
+    echo "[create_vm] Gestion: VLAN=$MGMT_VLAN DHCP=dinamico GW=$MGMT_GATEWAY DNS=$MGMT_DNS"
+fi
 
 sudo mkdir -p "$IMAGE_DIR"
 ensure_ovs_ready
@@ -275,7 +291,11 @@ for idx in "${!VLANS[@]}"; do
         set port "$TAP_IF" tag="$VLAN_ID" external_ids:vm="$VM_NAME" \
         external_ids:vlan="$VLAN_ID" external_ids:mac="$MAC_ADDR"
 
-    echo "[create_vm] NIC idx=$idx VLAN=$VLAN_ID TAP=$TAP_IF MAC=$MAC_ADDR"
+    if [ "$ENABLE_MGMT_NETWORK" = "true" ] && [ "$VLAN_ID" = "$MGMT_VLAN" ]; then
+        echo "[create_vm] NIC idx=$idx VLAN=$VLAN_ID TAP=$TAP_IF MAC=$MAC_ADDR rol=gestion DHCP=dinamico"
+    else
+        echo "[create_vm] NIC idx=$idx VLAN=$VLAN_ID TAP=$TAP_IF MAC=$MAC_ADDR rol=topologia"
+    fi
 
     NET_ARGS+=(
         -netdev "tap,id=net${idx},ifname=${TAP_IF},script=no,downscript=no"

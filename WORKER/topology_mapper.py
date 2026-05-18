@@ -16,6 +16,15 @@ CONSOLE_USER = os.getenv("NIMBUSCORE_CONSOLE_USER", "nimbus")
 CONSOLE_PASSWORD = os.getenv("NIMBUSCORE_CONSOLE_PASSWORD", "NimbusCore123")
 ENABLE_PASSWORD_LOGIN = os.getenv("NIMBUSCORE_ENABLE_PASSWORD_LOGIN", "true")
 ENABLE_AUTO_ROUTING = os.getenv("NIMBUSCORE_ENABLE_AUTO_ROUTING", "false")
+ENABLE_MGMT_NETWORK = os.getenv("NIMBUSCORE_ENABLE_MGMT_NETWORK", "true")
+MGMT_VLAN = int(os.getenv("NIMBUSCORE_MGMT_VLAN", "99"))
+MGMT_CIDR = os.getenv("NIMBUSCORE_MGMT_CIDR", "10.60.9.0/24")
+MGMT_GATEWAY = os.getenv("NIMBUSCORE_MGMT_GATEWAY", "10.60.9.1")
+MGMT_DNS = os.getenv("NIMBUSCORE_MGMT_DNS", "8.8.8.8")
+MGMT_DHCP_SERVER_IP = os.getenv("NIMBUSCORE_MGMT_DHCP_SERVER_IP", "10.60.9.2")
+MGMT_DHCP_START = os.getenv("NIMBUSCORE_MGMT_DHCP_START", "10.60.9.20")
+MGMT_DHCP_END = os.getenv("NIMBUSCORE_MGMT_DHCP_END", "10.60.9.250")
+MGMT_DHCP_LEASE_TIME = os.getenv("NIMBUSCORE_MGMT_DHCP_LEASE_TIME", "12h")
 MAC_SALT = os.getenv("NIMBUSCORE_MAC_SALT", "nimbuscore")
 VLAN_BASE = int(os.getenv("NIMBUSCORE_VLAN_BASE", "100"))
 DEFAULT_VNC_BASE = int(os.getenv("NIMBUSCORE_VNC_BASE", "5901"))
@@ -181,6 +190,19 @@ def inventory_for_job(job: dict[str, Any]) -> dict[str, Any]:
         "cidr_base": cidr_cursor,
         "vnc_base": vnc_cursor,
         "console_user": CONSOLE_USER,
+        "management_network": {
+            "enabled": bool_from_value(ENABLE_MGMT_NETWORK),
+            "vlan_id": MGMT_VLAN,
+            "cidr": MGMT_CIDR,
+            "gateway": MGMT_GATEWAY,
+            "dns": MGMT_DNS,
+            "dhcp_server_ip": MGMT_DHCP_SERVER_IP,
+            "dhcp_start": MGMT_DHCP_START,
+            "dhcp_end": MGMT_DHCP_END,
+            "dhcp_lease_time": MGMT_DHCP_LEASE_TIME,
+            "dhcp_namespace": f"dhcp-ns-mgmt{MGMT_VLAN}",
+            "addressing": "dhcp-dynamic",
+        },
         "vms": [],
         "networks": [],
         "topologies": [],
@@ -396,12 +418,14 @@ def network_record(
         "link_index": link_index,
         "vlan_id": vlan_id,
         "cidr": f"192.168.{cidr_third}.0/24",
-        "gateway": f"192.168.{cidr_third}.1",
-        "dhcp_start": f"192.168.{cidr_third}.10",
-        "dhcp_end": f"192.168.{cidr_third}.100",
-        "dhcp_namespace": f"dhcp-ns-vlan{vlan_id}",
-        "dhcp_host_interface": f"veth-h-{vlan_id}",
-        "dhcp_namespace_interface": f"veth-ns-{vlan_id}",
+        "addressing": "manual",
+        "dhcp_enabled": False,
+        "gateway": None,
+        "dhcp_start": None,
+        "dhcp_end": None,
+        "dhcp_namespace": None,
+        "dhcp_host_interface": None,
+        "dhcp_namespace_interface": None,
         "connected_vms": vm_names,
     }
 
@@ -430,19 +454,46 @@ def vm_record(
     key_pair = safe_keypair_name(instance.get("key_pair") or DEFAULT_KEYPAIR)
 
     nics = []
-    for iface_index, vlan_id in enumerate(vlans):
+    all_vlans = list(vlans)
+    internal_iface_offset = 0
+    if bool_from_value(ENABLE_MGMT_NETWORK):
+        all_vlans = [MGMT_VLAN, *vlans]
+        internal_iface_offset = 1
+        nics.append({
+            "index": 0,
+            "name": "eth0",
+            "role": "management",
+            "vlan_id": MGMT_VLAN,
+            "cidr": MGMT_CIDR,
+            "addressing": "dhcp-dynamic",
+            "dhcp_enabled": True,
+            "dhcp_reservation": False,
+            "dhcp_namespace": f"dhcp-ns-mgmt{MGMT_VLAN}",
+            "dhcp_range": {
+                "start": MGMT_DHCP_START,
+                "end": MGMT_DHCP_END,
+            },
+            "gateway": MGMT_GATEWAY,
+            "dns": [MGMT_DNS] if MGMT_DNS else [],
+            "cloud_init_applies_network": image_cloud_init,
+            "mac": mac_for_iface(vm_name, 0, MGMT_VLAN),
+            "tap": tap_for_iface(vm_name, 0, MGMT_VLAN),
+            "ssh_user": CONSOLE_USER,
+        })
+
+    for local_index, vlan_id in enumerate(vlans):
+        iface_index = local_index + internal_iface_offset
         cidr_third = cidr_base + (vlan_id - vlan_base)
         nics.append({
             "index": iface_index,
             "name": f"eth{iface_index}",
             "vlan_id": vlan_id,
             "cidr": f"192.168.{cidr_third}.0/24",
-            "gateway": f"192.168.{cidr_third}.1",
-            "dhcp_range": {
-                "start": f"192.168.{cidr_third}.10",
-                "end": f"192.168.{cidr_third}.100",
-            },
-            "dhcp_namespace": f"dhcp-ns-vlan{vlan_id}",
+            "addressing": "manual",
+            "dhcp_enabled": False,
+            "gateway": None,
+            "dhcp_range": None,
+            "dhcp_namespace": None,
             "mac": mac_for_iface(vm_name, iface_index, vlan_id),
             "tap": tap_for_iface(vm_name, iface_index, vlan_id),
         })
@@ -463,7 +514,9 @@ def vm_record(
         "vnc_display": vnc_port - 5900,
         "vnc_target": f"{worker_ip}:{vnc_port}",
         "ovs_name": OVS_NAME,
-        "vlans": vlans,
+        "vlans": all_vlans,
+        "internal_vlans": vlans,
+        "management_vlan": MGMT_VLAN if bool_from_value(ENABLE_MGMT_NETWORK) else None,
         "nics": nics,
         "flavor": flavor,
         "vcpus": vcpus,
@@ -651,6 +704,16 @@ def remote_headnode_command(
         f"NIMBUSCORE_CONSOLE_PASSWORD={shell_quote(CONSOLE_PASSWORD)} "
         f"NIMBUSCORE_ENABLE_PASSWORD_LOGIN={shell_quote(ENABLE_PASSWORD_LOGIN)} "
         f"NIMBUSCORE_ENABLE_AUTO_ROUTING={shell_quote(ENABLE_AUTO_ROUTING)} "
+        f"NIMBUSCORE_MAC_SALT={shell_quote(MAC_SALT)} "
+        f"NIMBUSCORE_ENABLE_MGMT_NETWORK={shell_quote(ENABLE_MGMT_NETWORK)} "
+        f"NIMBUSCORE_MGMT_VLAN={shell_quote(str(MGMT_VLAN))} "
+        f"NIMBUSCORE_MGMT_CIDR={shell_quote(MGMT_CIDR)} "
+        f"NIMBUSCORE_MGMT_GATEWAY={shell_quote(MGMT_GATEWAY)} "
+        f"NIMBUSCORE_MGMT_DNS={shell_quote(MGMT_DNS)} "
+        f"NIMBUSCORE_MGMT_DHCP_SERVER_IP={shell_quote(MGMT_DHCP_SERVER_IP)} "
+        f"NIMBUSCORE_MGMT_DHCP_START={shell_quote(MGMT_DHCP_START)} "
+        f"NIMBUSCORE_MGMT_DHCP_END={shell_quote(MGMT_DHCP_END)} "
+        f"NIMBUSCORE_MGMT_DHCP_LEASE_TIME={shell_quote(MGMT_DHCP_LEASE_TIME)} "
         f"NIMBUSCORE_TOPOLOGY_VM_SPECS={shell_quote(vm_specs)} "
         f"NIMBUSCORE_TOPOLOGY_IMAGE_SPECS={shell_quote(image_specs)} "
         f"NIMBUSCORE_TOPOLOGY_KEYPAIR_SPECS={shell_quote(keypair_specs)} "

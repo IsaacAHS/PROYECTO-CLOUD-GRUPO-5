@@ -1000,14 +1000,38 @@ function renderRuntimeInfo(nd) {
 		return;
 	}
 
-	const nicsHtml = (inv.nics || []).map(nic => `
-		<div class="runtime-nic">
-			<div class="runtime-nic-title">${nic.name || `eth${nic.index}`} · VLAN ${nic.vlan_id}</div>
-			<div class="runtime-row"><span>MAC</span><strong>${nic.mac || '—'}</strong></div>
-			<div class="runtime-row"><span>TAP</span><strong>${nic.tap || '—'}</strong></div>
-			<div class="runtime-row"><span>DHCP</span><strong>${nic.cidr || '—'}</strong></div>
-			<div class="runtime-row"><span>Namespace</span><strong>${nic.dhcp_namespace || '—'}</strong></div>
-		</div>`).join('');
+	const nicsHtml = (inv.nics || []).map(nic => {
+		const isManagement = nic.role === 'management';
+		const ipMode = isManagement
+			? 'DHCP dinámico'
+			: (nic.dhcp_enabled === false ? 'Manual (sin DHCP)' : (nic.dhcp_namespace ? 'DHCP' : 'Manual'));
+		const roleLabel = isManagement ? 'Gestión' : 'Topología';
+		const displayIp = nic.ip_cidr || (!isManagement ? nic.desired_ip_cidr : '');
+		const ipRow = displayIp
+			? `<div class="runtime-row"><span>${nic.ip_cidr ? 'IP' : 'IP sugerida'}</span><strong>${displayIp}</strong></div>`
+			: '';
+		const gatewayRow = nic.gateway
+			? `<div class="runtime-row"><span>Gateway</span><strong>${nic.gateway}</strong></div>`
+			: '';
+		const sshRow = nic.ssh_target && (!isManagement || nic.ip_cidr)
+			? `<div class="runtime-row"><span>SSH</span><strong>${nic.ssh_user || 'nimbus'}@${nic.ssh_target}</strong></div>`
+			: '';
+		const namespaceRow = nic.dhcp_namespace
+			? `<div class="runtime-row"><span>Namespace</span><strong>${nic.dhcp_namespace}</strong></div>`
+			: '';
+		return `
+			<div class="runtime-nic">
+				<div class="runtime-nic-title">${nic.name || `eth${nic.index}`} · ${roleLabel} · VLAN ${nic.vlan_id}</div>
+				<div class="runtime-row"><span>MAC</span><strong>${nic.mac || '—'}</strong></div>
+				<div class="runtime-row"><span>TAP</span><strong>${nic.tap || '—'}</strong></div>
+				<div class="runtime-row"><span>Red sugerida</span><strong>${nic.cidr || '—'}</strong></div>
+				${ipRow}
+				${gatewayRow}
+				${sshRow}
+				<div class="runtime-row"><span>Modo IP</span><strong>${ipMode}</strong></div>
+				${namespaceRow}
+			</div>`;
+	}).join('');
 	const vmName = inv.name || inv.id || '';
 
 	box.innerHTML = `

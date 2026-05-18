@@ -2,6 +2,11 @@
 set -euo pipefail
 
 # Uso: ./create_network_vlan.sh <VLAN_ID> <CIDR> <dhcp|nodhcp> [DHCP_RANGE_START] [DHCP_RANGE_END]
+#
+# En modo nodhcp la VLAN queda como enlace L2 puro:
+#   - no se crea gateway en el headnode
+#   - no se crea namespace DHCP
+#   - no se levanta dnsmasq
 
 VLAN_ID="${1:-}"
 CIDR="${2:-}"
@@ -21,6 +26,11 @@ if [ "$DHCP_FLAG" = "dhcp" ] && { [ -z "$DHCP_START" ] || [ -z "$DHCP_END" ]; };
     exit 1
 fi
 
+if [ "$DHCP_FLAG" != "dhcp" ] && [ "$DHCP_FLAG" != "nodhcp" ]; then
+    echo "Error: DHCP_FLAG debe ser 'dhcp' o 'nodhcp'."
+    exit 1
+fi
+
 NETWORK="${CIDR%/*}"
 PREFIX="${CIDR#*/}"
 IFS='.' read -r O1 O2 O3 O4 <<< "$NETWORK"
@@ -35,7 +45,7 @@ VETH_NS="veth-ns-${VLAN_ID}"
 DNSMASQ_PID="/var/run/dnsmasq-${NS_NAME}.pid"
 DNSMASQ_LEASES="/var/lib/misc/dnsmasq-${NS_NAME}.leases"
 
-echo "[create_network_vlan] VLAN=$VLAN_ID CIDR=$CIDR GW=$GW_IP OVS=$OVS_NAME"
+echo "[create_network_vlan] VLAN=$VLAN_ID CIDR=$CIDR MODE=$DHCP_FLAG OVS=$OVS_NAME"
 
 ensure_ovs_ready() {
     sudo ovs-vsctl --may-exist add-br "$OVS_NAME"
@@ -51,7 +61,47 @@ ensure_ovs_ready() {
     done
 }
 
+cleanup_l3_resources() {
+    if [ -f "$DNSMASQ_PID" ]; then
+        OLD_PID="$(cat "$DNSMASQ_PID" || true)"
+        if [ -n "$OLD_PID" ]; then
+            sudo kill "$OLD_PID" 2>/dev/null || true
+        fi
+        sudo rm -f "$DNSMASQ_PID"
+    fi
+
+    if sudo ip netns list | grep -q "^${NS_NAME}"; then
+        for PID in $(sudo ip netns pids "$NS_NAME" 2>/dev/null || true); do
+            sudo kill "$PID" 2>/dev/null || true
+        done
+    fi
+
+    sudo ovs-vsctl --if-exists del-port "$OVS_NAME" "$VETH_HOST" 2>/dev/null || true
+    sudo ovs-vsctl --if-exists del-port "$OVS_NAME" "$IFACE_NAME" 2>/dev/null || true
+
+    if ip link show "$VETH_HOST" >/dev/null 2>&1; then
+        sudo ip link delete "$VETH_HOST" 2>/dev/null || true
+    fi
+
+    if ip link show "$IFACE_NAME" >/dev/null 2>&1; then
+        sudo ip link delete "$IFACE_NAME" 2>/dev/null || true
+    fi
+
+    if sudo ip netns list | grep -q "^${NS_NAME}"; then
+        sudo ip netns del "$NS_NAME" 2>/dev/null || true
+    fi
+
+    sudo rm -f "$DNSMASQ_PID" "$DNSMASQ_LEASES" "/var/log/dnsmasq-${NS_NAME}.log"
+}
+
 ensure_ovs_ready
+
+if [ "$DHCP_FLAG" = "nodhcp" ]; then
+    cleanup_l3_resources
+    echo "[create_network_vlan] OK L2-only. No se crea DHCP, gateway ni IP en headnode."
+    exit 0
+fi
+
 sudo ovs-vsctl --may-exist add-port "$OVS_NAME" "$IFACE_NAME" \
     -- set interface "$IFACE_NAME" type=internal \
     -- set port "$IFACE_NAME" tag="$VLAN_ID"

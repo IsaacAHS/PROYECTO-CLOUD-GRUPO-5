@@ -15,7 +15,7 @@
       "label": "Cirros 0.6.2 (Google Drive)",
       "url": "https://drive.usercontent.google.com/download?id=1TzJ7mOs-b-Ggwr9lXvcNbYiMVqfTlKH9&export=download&confirm=t",
       "download_method": "wget-no-check-certificate",
-      "active": true
+      "active": false
     },
     {
       "id": "ubuntu-22",
@@ -39,7 +39,7 @@
       "label": "Ubuntu 20.04 Focal (Google Drive)",
       "url": "https://drive.usercontent.google.com/download?id=169719Mq3URSPKf2y6x-uAJ0vluH31i5n&export=download&confirm=t",
       "download_method": "wget-no-check-certificate",
-      "active": true
+      "active": false
     },
     {
       "id": "debian-12",
