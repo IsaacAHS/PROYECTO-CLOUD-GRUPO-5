@@ -201,9 +201,10 @@
 		.legend-item { display: flex; align-items: center; gap: 0.35em; font-size: 0.73em; color: #7f888f; }
 		.legend-icon { width: 1.65em; height: 1.65em; border-radius: 0.25em; display: flex; align-items: center; justify-content: center; font-size: 0.82em; }
 		.li-srv { background: rgba(245,106,106,0.12); color: #f56a6a; }
-		.li-pc  { background: rgba(74,159,213,0.12);  color: #4a9fd5; }
-		.li-rt  { background: rgba(68,176,120,0.12);  color: #44b078; }
-		.li-sw  { background: rgba(160,96,200,0.12);  color: #a060c8; }
+			.li-pc  { background: rgba(74,159,213,0.12);  color: #4a9fd5; }
+			.li-rt  { background: rgba(68,176,120,0.12);  color: #44b078; }
+			.li-sw  { background: rgba(160,96,200,0.12);  color: #a060c8; }
+			.li-mgmt { background: rgba(70,174,160,0.12); color: #46aea0; }
 
 		/* View mode badge */
 		.view-badge { margin-left: auto; display: inline-flex; align-items: center; gap: 0.35em; padding: 0.2em 0.65em; background: rgba(74,159,213,0.08); border: solid 1px rgba(74,159,213,0.25); border-radius: 2em; font-size: 0.7em; font-weight: 600; color: #4a9fd5; white-space: nowrap; }
@@ -220,9 +221,11 @@
 		.topo-node i { font-size: 1.3em; line-height: 1; pointer-events: none; }
 		.node-lbl { font-size: 8.5px; font-weight: 700; font-family: 'Roboto Slab', serif; letter-spacing: 0; line-height: 1; pointer-events: none; }
 		.nt-srv { background: rgba(245,106,106,0.11); border-color: rgba(245,106,106,0.35); color: #f56a6a; }
-		.nt-pc  { background: rgba(74,159,213,0.11);  border-color: rgba(74,159,213,0.35);  color: #4a9fd5; }
-		.nt-rt  { background: rgba(68,176,120,0.11);  border-color: rgba(68,176,120,0.35);  color: #44b078; }
-		.nt-sw  { background: rgba(160,96,200,0.11);  border-color: rgba(160,96,200,0.35);  color: #a060c8; }
+			.nt-pc  { background: rgba(74,159,213,0.11);  border-color: rgba(74,159,213,0.35);  color: #4a9fd5; }
+			.nt-rt  { background: rgba(68,176,120,0.11);  border-color: rgba(68,176,120,0.35);  color: #44b078; }
+			.nt-sw  { background: rgba(160,96,200,0.11);  border-color: rgba(160,96,200,0.35);  color: #a060c8; }
+			.nt-mgmt { width: 68px; height: 54px; border-radius: 50% 50% 44% 44%; background: rgba(70,174,160,0.12); border-color: rgba(70,174,160,0.38); color: #46aea0; }
+			.nt-mgmt .node-lbl { font-size: 7.8px; }
 
 		.canvas-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: #9fa3a6; pointer-events: none; }
 		.canvas-empty i { font-size: 3em; color: rgba(210,215,217,0.85); display: block; margin-bottom: 0.5em; }
@@ -417,24 +420,27 @@
 								</select>
 							</div>
 
-							<div class="field" style="margin-bottom:0.5em">
-								<label>Reglas de seguridad</label>
-							</div>
-
-							<div class="sec-chips" id="nc-chips">
-								<div class="sec-chip" data-port="22"><i class="fas fa-terminal"></i> SSH (22)</div>
-								<div class="sec-chip" data-port="80"><i class="fas fa-globe"></i> HTTP (80)</div>
-								<div class="sec-chip active" data-port="443"><i class="fas fa-lock"></i> HTTPS (443)</div>
-								<div class="sec-chip" data-port="icmp"><i class="fas fa-broadcast-tower"></i> ICMP</div>
-								<div class="sec-chip" data-port="53"><i class="fas fa-server"></i> DNS (53)</div>
-							</div>
-
-							<div class="sec-custom">
-								<div class="sec-custom-head">
-									<span>Reglas personalizadas</span>
+							<!-- Reglas de seguridad ocultas temporalmente: aun no se aplican en el cluster. -->
+							<div class="security-section" hidden>
+								<div class="field" style="margin-bottom:0.5em">
+									<label>Reglas de seguridad</label>
 								</div>
-								<div id="rules-list">
-									<div class="rules-empty" id="rules-empty">Sin reglas personalizadas</div>
+
+								<div class="sec-chips" id="nc-chips">
+									<div class="sec-chip" data-port="22"><i class="fas fa-terminal"></i> SSH (22)</div>
+									<div class="sec-chip" data-port="80"><i class="fas fa-globe"></i> HTTP (80)</div>
+									<div class="sec-chip active" data-port="443"><i class="fas fa-lock"></i> HTTPS (443)</div>
+									<div class="sec-chip" data-port="icmp"><i class="fas fa-broadcast-tower"></i> ICMP</div>
+									<div class="sec-chip" data-port="53"><i class="fas fa-server"></i> DNS (53)</div>
+								</div>
+
+								<div class="sec-custom">
+									<div class="sec-custom-head">
+										<span>Reglas personalizadas</span>
+									</div>
+									<div id="rules-list">
+										<div class="rules-empty" id="rules-empty">Sin reglas personalizadas</div>
+									</div>
 								</div>
 							</div>
 
@@ -473,10 +479,11 @@
 						<span class="canvas-toolbar-title">Vista de topología</span>
 						<div class="node-legend">
 							<div class="legend-item"><div class="legend-icon li-srv"><i class="fas fa-server"></i></div> Servidor</div>
-							<div class="legend-item"><div class="legend-icon li-pc"><i class="fas fa-desktop"></i></div> Computadora</div>
-							<div class="legend-item"><div class="legend-icon li-rt"><i class="fas fa-random"></i></div> Router</div>
-							<div class="legend-item"><div class="legend-icon li-sw"><i class="fas fa-sitemap"></i></div> Switch</div>
-						</div>
+								<div class="legend-item"><div class="legend-icon li-pc"><i class="fas fa-desktop"></i></div> Computadora</div>
+								<div class="legend-item"><div class="legend-icon li-rt"><i class="fas fa-random"></i></div> Router</div>
+								<div class="legend-item"><div class="legend-icon li-sw"><i class="fas fa-sitemap"></i></div> Switch</div>
+								<div class="legend-item"><div class="legend-icon li-mgmt"><i class="fas fa-cloud"></i></div> Gestión</div>
+							</div>
 						<span class="view-badge"><i class="fas fa-eye"></i> Solo lectura</span>
 					</div>
 
@@ -573,6 +580,7 @@ const NODE_TYPES = {
 	pc:  { icon: 'fa-desktop', label: 'PC'  },
 	rt:  { icon: 'fa-random',  label: 'RT'  },
 	sw:  { icon: 'fa-sitemap', label: 'SW'  },
+	mgmt: { icon: 'fa-cloud', label: 'GESTION' },
 };
 const TOPO_COLORS = {
 	arbol:  'rgba(245,106,106,0.5)',
@@ -581,7 +589,10 @@ const TOPO_COLORS = {
 	bus:    'rgba(160,96,200,0.4)',
 	personalizada: 'rgba(120,120,120,0.5)',
 	custom: 'rgba(120,120,120,0.5)',
+	management: 'rgba(70,174,160,0.65)',
 };
+
+const MGMT_NODE_ID = 'mgmt-cloud';
 
 let nodes = [], edges = [], topoEntries = [];
 let selectedNodeId = null;
@@ -589,6 +600,45 @@ let nodeConfigs = {};
 let edgeSeq = 0;
 let vmInventory = [];
 let inventoryStatus = null;
+
+function isManagementNodeId(id) {
+	return String(id || '') === MGMT_NODE_ID;
+}
+
+function isManagementNode(nd) {
+	return !!nd && (nd.isManagement || isManagementNodeId(nd.id));
+}
+
+function isManagementEdge(edge) {
+	if (!edge) return false;
+	return edge.topo === 'management' || edge.tipo === 'gestion' ||
+		isManagementNodeId(edge.from) || isManagementNodeId(edge.to);
+}
+
+function ensureManagementCloud() {
+	const area = document.getElementById('canvas-area');
+	if (!area) return null;
+	let cloud = nodes.find(isManagementNode);
+	if (!cloud) {
+		const W = area.offsetWidth || 700;
+		cloud = {
+			id: MGMT_NODE_ID,
+			x: Math.max(80, W - 86),
+			y: 58,
+			nodeType: 'mgmt',
+			topoId: null,
+			topoIdx: 0,
+			topoNodeIndex: 0,
+			name: 'Gestión',
+			isManagement: true
+		};
+		nodes.push(cloud);
+	}
+	if (!document.getElementById('node-' + cloud.id)) {
+		area.appendChild(createNodeEl(cloud));
+	}
+	return cloud;
+}
 
 function normalizeTopologyType(type) {
 	const value = String(type || '').trim().toLowerCase();
@@ -773,6 +823,17 @@ function applySavedEdges(savedEdges) {
 	savedEdges.forEach(saved => {
 		const id = hasNumericValue(saved.id) ? Number(saved.id) : ++edgeSeq;
 		edgeSeq = Math.max(edgeSeq, id);
+		const isSavedManagement = saved.tipo === 'gestion' || saved.topologia === 'management' || saved.topo === 'management';
+		if (isSavedManagement) {
+			ensureManagementCloud();
+			const from = saved.desde || saved.from;
+			const to = saved.hacia || saved.to;
+			const vmId = isManagementNodeId(from) ? to : from;
+			if (vmId && nodes.some(n => String(n.id) === String(vmId) && !isManagementNode(n))) {
+				edges.push({ id, from: MGMT_NODE_ID, to: String(vmId), topo: 'management', tipo: 'gestion' });
+			}
+			return;
+		}
 		if (saved.tipo === 'bus' && Array.isArray(saved.nodos)) {
 			const busNodes = saved.nodos
 				.map(nodeId => nodes.find(n => String(n.id) === String(nodeId)))
@@ -792,6 +853,7 @@ function applySavedEdges(savedEdges) {
 }
 
 function nodeDisplayName(nd) {
+	if (isManagementNode(nd)) return nd.name || 'Gestión';
 	return nd.name || `Nodo ${nodeOrdinal(nd)}`;
 }
 
@@ -879,7 +941,10 @@ function drawEdges() {
 			e.busNodes.forEach(nd => { html += `<line x1="${nd.x}" y1="${nd.y}" x2="${nd.x}" y2="${busY}" stroke="${TOPO_COLORS.bus}" stroke-width="1.8" opacity="0.7"/>`; });
 		} else {
 			const a = nm[e.from], b = nm[e.to];
-			if (a && b) html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${TOPO_COLORS[e.topo] || 'rgba(160,160,160,0.5)'}" stroke-width="2.2"/>`;
+			if (a && b) {
+				const dash = isManagementEdge(e) ? ' stroke-dasharray="6,5"' : '';
+				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${TOPO_COLORS[e.topo] || 'rgba(160,160,160,0.5)'}" stroke-width="2.2"${dash}/>`;
+			}
 		}
 	});
 	svg.innerHTML = html;
@@ -941,6 +1006,11 @@ function deselectNode() {
 function renderNodeConfig() {
 	const nd = nodes.find(n => n.id === selectedNodeId);
 	if (!nd) { deselectNode(); return; }
+	if (isManagementNode(nd)) {
+		document.getElementById('vm-empty').style.display  = '';
+		document.getElementById('vm-config').style.display = 'none';
+		return;
+	}
 
 	const cfg = nodeConfigs[selectedNodeId] || getNodeConfig(selectedNodeId, nd.topoIdx || 0, nd.topoNodeIndex || 0);
 	nodeConfigs[selectedNodeId] = cfg;
@@ -1162,6 +1232,9 @@ function applySlice(slice) {
 	const savedNodes = Array.isArray(slice.nodos) ? slice.nodos : [];
 	const savedEdges = Array.isArray(slice.enlaces) ? slice.enlaces : [];
 	const hasPersonalizedEdges = savedEdges.some(edge =>
+		edge.tipo !== 'gestion' &&
+		edge.topologia !== 'management' &&
+		edge.topo !== 'management' &&
 		normalizeTopologyType(edge.topologia || edge.topo || '') === 'personalizada'
 	);
 	const topologies = (slice.topologias || []).map((topology, index) => ({

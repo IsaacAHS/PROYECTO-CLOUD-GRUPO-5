@@ -67,6 +67,7 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
         vm_specs = topology_vm_specs(matched_instances, node_count)
         image_specs = topology_image_specs(matched_instances, node_count)
         keypair_specs = topology_keypair_specs(matched_instances, node_count)
+        mgmt_specs = topology_mgmt_specs(matched_instances, node_count)
 
         if topo_type == "lineal":
             commands.append(remote_headnode_command(
@@ -79,6 +80,7 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
                 vm_specs=vm_specs,
                 image_specs=image_specs,
                 keypair_specs=keypair_specs,
+                mgmt_specs=mgmt_specs,
             ))
             vlan_cursor += max(node_count - 1, 1)
             cidr_cursor += max(node_count - 1, 1)
@@ -94,6 +96,7 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
                 vm_specs=vm_specs,
                 image_specs=image_specs,
                 keypair_specs=keypair_specs,
+                mgmt_specs=mgmt_specs,
             ))
             vlan_cursor += node_count
             cidr_cursor += node_count
@@ -111,6 +114,7 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
                 vm_specs=vm_specs,
                 image_specs=image_specs,
                 keypair_specs=keypair_specs,
+                mgmt_specs=mgmt_specs,
                 link_specs=link_specs,
             ))
             vlan_cursor += len(custom_links)
@@ -456,7 +460,8 @@ def vm_record(
     nics = []
     all_vlans = list(vlans)
     internal_iface_offset = 0
-    if bool_from_value(ENABLE_MGMT_NETWORK):
+    management_enabled = bool_from_value(ENABLE_MGMT_NETWORK) and bool_from_value(instance.get("management_enabled", False))
+    if management_enabled:
         all_vlans = [MGMT_VLAN, *vlans]
         internal_iface_offset = 1
         nics.append({
@@ -516,7 +521,8 @@ def vm_record(
         "ovs_name": OVS_NAME,
         "vlans": all_vlans,
         "internal_vlans": vlans,
-        "management_vlan": MGMT_VLAN if bool_from_value(ENABLE_MGMT_NETWORK) else None,
+        "management_enabled": management_enabled,
+        "management_vlan": MGMT_VLAN if management_enabled else None,
         "nics": nics,
         "flavor": flavor,
         "vcpus": vcpus,
@@ -577,7 +583,9 @@ def topology_custom_links(
     topology_id = topology.get("id")
 
     for link in links:
-        if link.get("tipo") == "bus":
+        link_type = str(link.get("tipo") or "").lower()
+        link_topology_name = str(link.get("topologia") or link.get("topo") or "").lower()
+        if link_type in {"bus", "gestion"} or link_topology_name == "management":
             continue
 
         source = link.get("desde") or link.get("from")
@@ -660,6 +668,16 @@ def topology_keypair_specs(matched: list[dict[str, Any]], node_count: int) -> st
     return ";".join(specs)
 
 
+def topology_mgmt_specs(matched: list[dict[str, Any]], node_count: int) -> str:
+    specs = []
+
+    for index in range(node_count):
+        instance = matched[index] if index < len(matched) else {}
+        specs.append(bool_to_shell(bool_from_value(instance.get("management_enabled", False))))
+
+    return ";".join(specs)
+
+
 def safe_image_name(value: str) -> str:
     value = value.lower().strip()
     value = re.sub(r"[^a-z0-9._-]+", "-", value)
@@ -689,6 +707,7 @@ def remote_headnode_command(
     vm_specs: str = "",
     image_specs: str = "",
     keypair_specs: str = "",
+    mgmt_specs: str = "",
     link_specs: str = "",
 ) -> list[str]:
     env = (
@@ -717,6 +736,7 @@ def remote_headnode_command(
         f"NIMBUSCORE_TOPOLOGY_VM_SPECS={shell_quote(vm_specs)} "
         f"NIMBUSCORE_TOPOLOGY_IMAGE_SPECS={shell_quote(image_specs)} "
         f"NIMBUSCORE_TOPOLOGY_KEYPAIR_SPECS={shell_quote(keypair_specs)} "
+        f"NIMBUSCORE_TOPOLOGY_MGMT_SPECS={shell_quote(mgmt_specs)} "
         f"NIMBUSCORE_TOPOLOGY_LINK_SPECS={shell_quote(link_specs)}"
     )
     remote_command = " ".join(

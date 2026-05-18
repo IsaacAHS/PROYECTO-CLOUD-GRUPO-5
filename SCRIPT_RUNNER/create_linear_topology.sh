@@ -52,6 +52,7 @@ DEFAULT_VM_SPEC="${NIMBUSCORE_DEFAULT_VM_SPEC:-1:2048:1}"
 IFS=';' read -r -a VM_SPECS <<< "${NIMBUSCORE_TOPOLOGY_VM_SPECS:-}"
 IFS=';' read -r -a IMAGE_SPECS <<< "${NIMBUSCORE_TOPOLOGY_IMAGE_SPECS:-}"
 IFS=';' read -r -a KEYPAIR_SPECS <<< "${NIMBUSCORE_TOPOLOGY_KEYPAIR_SPECS:-}"
+IFS=';' read -r -a MGMT_SPECS <<< "${NIMBUSCORE_TOPOLOGY_MGMT_SPECS:-}"
 
 vm_spec_for_index() {
     local index="$1"
@@ -73,6 +74,15 @@ keypair_spec_for_index() {
     local index="$1"
     local keypair="${KEYPAIR_SPECS[$index]:-default-key}"
     echo "${keypair:-default-key}"
+}
+
+mgmt_enabled_for_index() {
+    local index="$1"
+    local value="${MGMT_SPECS[$index]:-false}"
+    case "$value" in
+        true|TRUE|1|yes|YES|on|ON) echo "true" ;;
+        *) echo "false" ;;
+    esac
 }
 
 public_key_b64_for_keypair() {
@@ -128,13 +138,22 @@ fi
 
 N_LINKS=$(( N_VMS - 1 ))   # Número de enlaces = N_VMS - 1
 N_COMPUTE=${#COMPUTE_IPS[@]}
+ANY_MGMT_NETWORK="false"
+if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
+    for (( i=0; i<N_VMS; i++ )); do
+        if [ "$(mgmt_enabled_for_index "$i")" = "true" ]; then
+            ANY_MGMT_NETWORK="true"
+            break
+        fi
+    done
+fi
 
 echo "======================================================"
 echo " Creando topología LINEAL: $SLICE_NAME"
 echo " VMs      : $N_VMS"
 echo " VLANs    : $VLAN_BASE → $(( VLAN_BASE + N_LINKS - 1 ))"
-if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
-    echo " Gestion  : VLAN $MGMT_VLAN | ${MGMT_CIDR} | GW $MGMT_GATEWAY"
+if [ "$ANY_MGMT_NETWORK" = "true" ]; then
+    echo " Gestion  : VLAN $MGMT_VLAN | ${MGMT_CIDR} | GW $MGMT_GATEWAY | solo VMs conectadas a nube"
 fi
 echo " VNC      : $VNC_BASE → $(( VNC_BASE + N_VMS - 1 ))"
 echo "======================================================"
@@ -160,7 +179,7 @@ for (( link=0; link<N_LINKS; link++ )); do
     fi
 done
 
-if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
+if [ "$ANY_MGMT_NETWORK" = "true" ]; then
     echo ""
     echo "[PASO 1.5] Preparando DHCP de gestion en VLAN $MGMT_VLAN..."
     run_headnode_script create_access_network.sh
@@ -207,7 +226,7 @@ for (( i=0; i<N_VMS; i++ )); do
     [ -n "$RIGHT_VLAN" ] && INTERNAL_VLANS+=("$RIGHT_VLAN")
     [ -n "$LEFT_VLAN" ] && INTERNAL_VLANS+=("$LEFT_VLAN")
     VM_VLANS=("${INTERNAL_VLANS[@]}")
-    if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
+    if [ "$ENABLE_MGMT_NETWORK" = "true" ] && [ "$(mgmt_enabled_for_index "$i")" = "true" ]; then
         VM_VLANS=("$MGMT_VLAN" "${INTERNAL_VLANS[@]}")
         echo "    Gestion: VLAN ${MGMT_VLAN} | DHCP dinamico | GW ${MGMT_GATEWAY}"
     fi

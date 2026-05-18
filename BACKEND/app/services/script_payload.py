@@ -4,6 +4,7 @@ from app.services.image_catalog import image_details
 
 
 ALLOWED_DISK_GB = {1, 2, 3}
+MGMT_NODE_ID = "mgmt-cloud"
 
 FLAVORS = {
     "m1.tiny": {"vcpus": 1, "ram_mb": 512},
@@ -49,10 +50,35 @@ def topology_node_index(node_id: str) -> int:
         return 0
 
 
+def management_enabled_node_ids(slice_item: dict[str, Any]) -> set[str]:
+    enabled: set[str] = set()
+
+    for link in slice_item.get("enlaces") or []:
+        link_type = str(link.get("tipo") or "").lower()
+        topology_type = str(link.get("topologia") or link.get("topo") or "").lower()
+        if link_type != "gestion" and topology_type != "management":
+            continue
+
+        source = link.get("desde") or link.get("from")
+        target = link.get("hacia") or link.get("to")
+        if source is None or target is None:
+            continue
+
+        source_key = str(source)
+        target_key = str(target)
+        if source_key == MGMT_NODE_ID and target_key != MGMT_NODE_ID:
+            enabled.add(target_key)
+        elif target_key == MGMT_NODE_ID and source_key != MGMT_NODE_ID:
+            enabled.add(source_key)
+
+    return enabled
+
+
 def build_script_variables(
     slice_item: dict[str, Any], placements: list[dict[str, Any]]
 ) -> dict[str, Any]:
     placement_by_node = {item["node_id"]: item for item in placements}
+    management_nodes = management_enabled_node_ids(slice_item)
     instances = []
 
     for index, node in enumerate(slice_item.get("nodos") or []):
@@ -82,6 +108,7 @@ def build_script_variables(
                 "key_pair": cfg.get("llaves") or "default-key",
                 "security_ports": cfg.get("seguridad") or ["22", "443"],
                 "custom_rules": cfg.get("reglas") or [],
+                "management_enabled": node["id"] in management_nodes,
                 "availability_zone": placement.get("availability_zone", "nova:compute-1"),
                 "fixed_ip": f"10.42.0.{10 + index}",
             }

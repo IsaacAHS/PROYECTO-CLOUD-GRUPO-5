@@ -248,9 +248,12 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 echo "[create_vm] VM=$VM_NAME VNC=$VNC_PORT OVS=$OVS_NAME vCPUs=$VCPUS RAM=${RAM_MB}MB DISK=${DISK_GB}GB VLANs=${VLANS[*]} KEYPAIR=${KEYPAIR_NAME:-none} CLOUD_INIT=$ENABLE_CLOUD_INIT"
-if [ "$ENABLE_MGMT_NETWORK" = "true" ]; then
-    echo "[create_vm] Gestion: VLAN=$MGMT_VLAN DHCP=dinamico GW=$MGMT_GATEWAY DNS=$MGMT_DNS"
-fi
+for vlan_id in "${VLANS[@]}"; do
+    if [ "$ENABLE_MGMT_NETWORK" = "true" ] && [ "$vlan_id" = "$MGMT_VLAN" ]; then
+        echo "[create_vm] Gestion: VLAN=$MGMT_VLAN DHCP=dinamico GW=$MGMT_GATEWAY DNS=$MGMT_DNS"
+        break
+    fi
+done
 
 sudo mkdir -p "$IMAGE_DIR"
 ensure_ovs_ready

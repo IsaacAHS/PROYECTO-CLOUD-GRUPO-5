@@ -408,11 +408,12 @@
 
 		.node-legend { display: flex; gap: 0.6em; flex-wrap: wrap; }
 		.legend-item { display: flex; align-items: center; gap: 0.35em; font-size: 0.73em; color: #7f888f; }
-		.legend-icon { width: 1.65em; height: 1.65em; border-radius: 0.25em; display: flex; align-items: center; justify-content: center; font-size: 0.82em; }
-		.li-srv { background: rgba(245,106,106,0.12); color: #f56a6a; }
-		.li-pc  { background: rgba(74,159,213,0.12);  color: #4a9fd5; }
-		.li-rt  { background: rgba(68,176,120,0.12);  color: #44b078; }
-		.li-sw  { background: rgba(160,96,200,0.12);  color: #a060c8; }
+			.legend-icon { width: 1.65em; height: 1.65em; border-radius: 0.25em; display: flex; align-items: center; justify-content: center; font-size: 0.82em; }
+			.li-srv { background: rgba(245,106,106,0.12); color: #f56a6a; }
+			.li-pc { background: rgba(74,159,213,0.12); color: #4a9fd5; }
+			.li-rt { background: rgba(68,176,120,0.12); color: #44b078; }
+			.li-sw { background: rgba(160,96,200,0.12); color: #a060c8; }
+			.li-mgmt { background: rgba(70,174,160,0.12); color: #46aea0; }
 
 		.canvas-actions { display: flex; gap: 0.4em; margin-left: auto; }
 
@@ -504,10 +505,12 @@
 		.topo-node i { font-size: 1.3em; line-height: 1; pointer-events: none; }
 		.node-lbl { font-size: 8.5px; font-weight: 700; font-family: 'Roboto Slab', serif; letter-spacing: 0; line-height: 1; pointer-events: none; }
 
-		.nt-srv { background: rgba(245,106,106,0.11); border-color: rgba(245,106,106,0.35); color: #f56a6a; }
-		.nt-pc  { background: rgba(74,159,213,0.11);  border-color: rgba(74,159,213,0.35);  color: #4a9fd5; }
-		.nt-rt  { background: rgba(68,176,120,0.11);  border-color: rgba(68,176,120,0.35);  color: #44b078; }
-		.nt-sw  { background: rgba(160,96,200,0.11);  border-color: rgba(160,96,200,0.35);  color: #a060c8; }
+			.nt-srv { background: rgba(245,106,106,0.11); border-color: rgba(245,106,106,0.35); color: #f56a6a; }
+			.nt-pc { background: rgba(74,159,213,0.11); border-color: rgba(74,159,213,0.35); color: #4a9fd5; }
+			.nt-rt { background: rgba(68,176,120,0.11); border-color: rgba(68,176,120,0.35); color: #44b078; }
+			.nt-sw { background: rgba(160,96,200,0.11); border-color: rgba(160,96,200,0.35); color: #a060c8; }
+			.nt-mgmt { width: 68px; height: 54px; border-radius: 50% 50% 44% 44%; background: rgba(70,174,160,0.12); border-color: rgba(70,174,160,0.38); color: #46aea0; }
+			.nt-mgmt .node-lbl { font-size: 7.8px; }
 
 		/* Canvas empty */
 		.canvas-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: #9fa3a6; pointer-events: none; }
@@ -779,31 +782,34 @@
 								<div class="keypair-help" id="keypair-help">Solo se listan llaves publicas existentes en el backend.</div>
 							</div>
 
-							<div class="field" style="margin-bottom:0.5em">
-								<label>Reglas de seguridad</label>
-							</div>
+								<!-- Reglas de seguridad ocultas temporalmente: aun no se aplican en el cluster. -->
+								<div class="security-section" hidden>
+									<div class="field" style="margin-bottom:0.5em">
+										<label>Reglas de seguridad</label>
+									</div>
 
-							<div class="sec-chips" id="nc-chips">
-								<div class="sec-chip" onclick="toggleChip(this,'22')"><i class="fas fa-terminal"></i> SSH (22)</div>
-								<div class="sec-chip" onclick="toggleChip(this,'80')"><i class="fas fa-globe"></i> HTTP (80)</div>
-								<div class="sec-chip active" onclick="toggleChip(this,'443')"><i class="fas fa-lock"></i> HTTPS (443)</div>
-								<div class="sec-chip" onclick="toggleChip(this,'icmp')"><i class="fas fa-broadcast-tower"></i> ICMP</div>
-								<div class="sec-chip" onclick="toggleChip(this,'53')"><i class="fas fa-server"></i> DNS (53)</div>
-							</div>
+									<div class="sec-chips" id="nc-chips">
+										<div class="sec-chip" onclick="toggleChip(this,'22')"><i class="fas fa-terminal"></i> SSH (22)</div>
+										<div class="sec-chip" onclick="toggleChip(this,'80')"><i class="fas fa-globe"></i> HTTP (80)</div>
+										<div class="sec-chip active" onclick="toggleChip(this,'443')"><i class="fas fa-lock"></i> HTTPS (443)</div>
+										<div class="sec-chip" onclick="toggleChip(this,'icmp')"><i class="fas fa-broadcast-tower"></i> ICMP</div>
+										<div class="sec-chip" onclick="toggleChip(this,'53')"><i class="fas fa-server"></i> DNS (53)</div>
+									</div>
 
-							<div class="sec-custom">
-								<div class="sec-custom-head">
-									<span>Reglas personalizadas</span>
-									<button type="button" class="btn-add-rule" onclick="addRule()">
-										<i class="fas fa-plus"></i> Agregar
-									</button>
+									<div class="sec-custom">
+										<div class="sec-custom-head">
+											<span>Reglas personalizadas</span>
+											<button type="button" class="btn-add-rule" onclick="addRule()">
+												<i class="fas fa-plus"></i> Agregar
+											</button>
+										</div>
+										<div id="rules-list">
+											<div class="rules-empty" id="rules-empty">Sin reglas personalizadas</div>
+										</div>
+									</div>
 								</div>
-								<div id="rules-list">
-									<div class="rules-empty" id="rules-empty">Sin reglas personalizadas</div>
-								</div>
-							</div>
 
-						</div>
+							</div>
 					</div>
 
 					<!-- Footer -->
@@ -846,6 +852,9 @@
 								<div class="legend-item">
 									<div class="legend-icon li-sw"><i class="fas fa-sitemap"></i></div> Switch
 								</div>
+								<div class="legend-item">
+									<div class="legend-icon li-mgmt"><i class="fas fa-cloud"></i></div> Gestión
+								</div>
 							</div>
 							<div class="canvas-actions">
 								<button class="canvas-action-btn" id="btn-connect" onclick="toggleLinkMode()" title="Modo conectar nodos">
@@ -862,10 +871,10 @@
 							Modo conectar: haz clic en el nodo origen, luego en el destino. Presiona ESC para cancelar.
 						</div>
 
-						<div class="canvas-hint" style="padding:0.3em 1em; font-size:0.7em; color:#9fa3a6; border-bottom: solid 1px rgba(210,215,217,0.4); background:#fafbfc; flex-shrink:0;">
-							<i class="fas fa-info-circle"></i>
-							Clic: configurar VM &middot; Doble clic/clic derecho: cambiar tipo &middot; Selecciona un nodo y usa Eliminar &middot; Conectar disponible en personalizada
-						</div>
+							<div class="canvas-hint" style="padding:0.3em 1em; font-size:0.7em; color:#9fa3a6; border-bottom: solid 1px rgba(210,215,217,0.4); background:#fafbfc; flex-shrink:0;">
+								<i class="fas fa-info-circle"></i>
+								Clic: configurar VM &middot; Doble clic/clic derecho: cambiar tipo &middot; Conecta la nube a una VM para habilitar SSH de gestión
+							</div>
 
 						<div class="canvas-area" id="canvas-area">
 							<svg id="topo-svg"></svg>
@@ -958,7 +967,8 @@ const NODE_TYPES = {
 	srv: { icon: 'fa-server',  label: 'SRV' },
 	pc:  { icon: 'fa-desktop', label: 'PC'  },
 	rt:  { icon: 'fa-random',  label: 'RT'  },
-	sw:  { icon: 'fa-sitemap', label: 'SW'  }
+	sw:  { icon: 'fa-sitemap', label: 'SW'  },
+	mgmt: { icon: 'fa-cloud', label: 'GESTION' }
 };
 
 const TOPO_COLORS = {
@@ -966,8 +976,11 @@ const TOPO_COLORS = {
 	anillo: 'rgba(68,176,120,0.5)',
 	personalizada: 'rgba(120,120,120,0.5)',
 	bus: 'rgba(160,96,200,0.4)',
-	custom: 'rgba(120,120,120,0.5)'
+	custom: 'rgba(120,120,120,0.5)',
+	management: 'rgba(70,174,160,0.65)'
 };
+
+const MGMT_NODE_ID = 'mgmt-cloud';
 
 let topoEntries = [];
 let nodes = [];
@@ -988,6 +1001,58 @@ let imagesLoaded = false;
 let imageUploadInProgress = false;
 let imageUploadLockedNodeId = null;
 
+function isManagementNodeId(id) {
+	return String(id || '') === MGMT_NODE_ID;
+}
+
+function isManagementNode(nd) {
+	return !!nd && (nd.isManagement || isManagementNodeId(nd.id));
+}
+
+function vmNodes() {
+	return nodes.filter(n => !isManagementNode(n));
+}
+
+function isVmNodeId(id) {
+	return nodes.some(n => String(n.id) === String(id) && !isManagementNode(n));
+}
+
+function isManagementEdge(edge) {
+	if (!edge) return false;
+	return edge.topo === 'management' || edge.tipo === 'gestion' ||
+		isManagementNodeId(edge.from) || isManagementNodeId(edge.to);
+}
+
+function edgeConnects(edge, from, to) {
+	return (String(edge.from) === String(from) && String(edge.to) === String(to)) ||
+		(String(edge.from) === String(to) && String(edge.to) === String(from));
+}
+
+function ensureManagementCloud() {
+	const area = document.getElementById('canvas-area');
+	if (!area) return null;
+
+	let cloud = nodes.find(isManagementNode);
+	if (!cloud) {
+		const W = area.offsetWidth || 700;
+		cloud = {
+			id: MGMT_NODE_ID,
+			x: Math.max(80, W - 86),
+			y: 58,
+			nodeType: 'mgmt',
+			topoId: null,
+			name: 'Gestión',
+			isManagement: true
+		};
+		nodes.push(cloud);
+	}
+
+	if (!document.getElementById('node-' + cloud.id)) {
+		area.appendChild(createNodeEl(cloud));
+	}
+	return cloud;
+}
+
 function setTopologyUploadLock(locked, fileName) {
 	imageUploadInProgress = locked;
 	imageUploadLockedNodeId = locked ? selectedNodeId : null;
@@ -1002,7 +1067,7 @@ function setTopologyUploadLock(locked, fileName) {
 
 	const connectBtn = document.getElementById('btn-connect');
 	if (connectBtn) {
-		connectBtn.disabled = locked || ctxReviewOnly || !isCustomTopologyActive();
+		connectBtn.disabled = locked || ctxReviewOnly || vmNodes().length === 0;
 	}
 
 	if (locked) {
@@ -1032,8 +1097,11 @@ function isCustomTopologyActive() {
 
 function canDeleteSelection() {
 	if (ctxReviewOnly || imageUploadInProgress) return false;
-	if (selectedNodeId && nodes.some(n => n.id === selectedNodeId)) return true;
-	if (selectedEdgeId && isCustomTopologyActive() && edges.some(e => e.id === selectedEdgeId)) return true;
+	if (selectedNodeId && nodes.some(n => n.id === selectedNodeId && !isManagementNode(n))) return true;
+	if (selectedEdgeId) {
+		const edge = edges.find(e => e.id === selectedEdgeId);
+		if (edge && (isManagementEdge(edge) || isCustomTopologyActive())) return true;
+	}
 	return false;
 }
 
@@ -1054,12 +1122,13 @@ function syncTopologyModeControls() {
 	}
 
 	const connectBtn = document.getElementById('btn-connect');
-	const canConnect = !ctxReviewOnly && !imageUploadInProgress && isCustomTopologyActive();
+	const hasVmNodes = vmNodes().length > 0;
+	const canConnect = !ctxReviewOnly && !imageUploadInProgress && hasVmNodes;
 	if (connectBtn) {
 		connectBtn.disabled = !canConnect;
 		connectBtn.title = canConnect
-			? 'Conectar nodos de la topología personalizada'
-			: 'Disponible solo para topología personalizada';
+			? 'Conectar nodos o habilitar gestión desde la nube'
+			: 'Agrega nodos para conectar';
 		if (!canConnect) connectBtn.classList.remove('active');
 	}
 
@@ -1207,6 +1276,7 @@ function rebuildTopoGroup(entry, preservePositions) {
 	}
 
 	buildEdgesForGroup(entry.type, newNodes);
+	ensureManagementCloud();
 	drawEdges();
 	updateCanvasEmpty();
 }
@@ -1252,6 +1322,7 @@ function rebuildAllTopos() {
 		bandIdx++;
 	});
 
+	ensureManagementCloud();
 	drawEdges();
 	updateCanvasEmpty();
 }
@@ -1332,6 +1403,7 @@ function rebuildGeneratedEdgesForTopology(topoId) {
 	const groupNodes = topoNodesFor(topoId);
 	const groupIds = new Set(groupNodes.map(n => n.id));
 	edges = edges.filter(e => {
+		if (isManagementEdge(e)) return true;
 		if (e.bus) return !(e.busNodes || []).some(n => groupIds.has(n.id));
 		return !groupIds.has(e.from) && !groupIds.has(e.to);
 	});
@@ -1414,7 +1486,8 @@ function drawEdges() {
 			const a = nm[e.from], b = nm[e.to];
 			if (a && b) {
 				const color = TOPO_COLORS[e.topo] || 'rgba(160,160,160,0.5)';
-				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${selected ? '#f56a6a' : color}" stroke-width="${selected ? 4.2 : 2.2}" pointer-events="none"/>`;
+				const dash = isManagementEdge(e) ? ' stroke-dasharray="6,5"' : '';
+				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${selected ? '#f56a6a' : color}" stroke-width="${selected ? 4.2 : 2.2}"${dash} pointer-events="none"/>`;
 				html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="transparent" stroke-width="12" class="edge-line" data-edge-id="${e.id}" style="cursor:pointer"/>`;
 			}
 		}
@@ -1428,13 +1501,15 @@ function bindEdgeEvents() {
 	document.querySelectorAll('.edge-line').forEach(line => {
 		line.addEventListener('click', e => {
 			e.stopPropagation();
-			if (ctxReviewOnly || imageUploadInProgress || linkMode || !isCustomTopologyActive()) return;
+			const edge = edges.find(item => item.id === Number(line.dataset.edgeId));
+			if (ctxReviewOnly || imageUploadInProgress || linkMode || !(edge && (isManagementEdge(edge) || isCustomTopologyActive()))) return;
 			selectEdge(Number(line.dataset.edgeId));
 		});
 		line.addEventListener('contextmenu', e => {
 			e.preventDefault();
 			e.stopPropagation();
-			if (ctxReviewOnly || imageUploadInProgress || !isCustomTopologyActive()) return;
+			const edge = edges.find(item => item.id === Number(line.dataset.edgeId));
+			if (ctxReviewOnly || imageUploadInProgress || !(edge && (isManagementEdge(edge) || isCustomTopologyActive()))) return;
 			showEdgeCtxMenu(Number(line.dataset.edgeId), e.clientX, e.clientY);
 		});
 	});
@@ -1471,7 +1546,7 @@ function createNodeEl(nd) {
 	// Double click: change type
 	div.addEventListener('dblclick', e => {
 		e.stopPropagation();
-		if (ctxReviewOnly || imageUploadInProgress) return;
+		if (ctxReviewOnly || imageUploadInProgress || isManagementNode(nd)) return;
 		showNodeTypePopover(nd.id, e.clientX, e.clientY);
 	});
 
@@ -1479,7 +1554,7 @@ function createNodeEl(nd) {
 	div.addEventListener('contextmenu', e => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (ctxReviewOnly || imageUploadInProgress) return;
+		if (ctxReviewOnly || imageUploadInProgress || isManagementNode(nd)) return;
 		showCtxMenu(nd.id, e.clientX, e.clientY);
 	});
 
@@ -1492,7 +1567,7 @@ function updateNodeEl(nd) {
 	if (!el) return;
 	el.className = `topo-node nt-${nd.nodeType}`;
 	if (nd.id === selectedNodeId) el.classList.add('selected');
-	if (nodeHasMissingConfig(nd.id)) el.classList.add('invalid');
+	if (!isManagementNode(nd) && nodeHasMissingConfig(nd.id)) el.classList.add('invalid');
 	el.innerHTML = nodeInner(nd);
 }
 
@@ -1578,7 +1653,8 @@ function deselectNode() {
 }
 
 function selectEdge(id) {
-	if (ctxReviewOnly || imageUploadInProgress || !isCustomTopologyActive()) return;
+	const edge = edges.find(e => e.id === id);
+	if (ctxReviewOnly || imageUploadInProgress || !(edge && (isManagementEdge(edge) || isCustomTopologyActive()))) return;
 	deselectNode();
 	selectedEdgeId = id;
 	syncDeleteButtonState();
@@ -1602,6 +1678,12 @@ function defaultConfig() {
 function renderNodeConfig() {
 	const nd = nodes.find(n => n.id === selectedNodeId);
 	if (!nd) { deselectNode(); return; }
+	if (isManagementNode(nd)) {
+		document.getElementById('vm-empty').style.display = '';
+		document.getElementById('vm-config').style.display = 'none';
+		syncDeleteButtonState();
+		return;
+	}
 
 	const cfg = nodeConfigs[selectedNodeId] || (nodeConfigs[selectedNodeId] = defaultConfig());
 
@@ -1643,6 +1725,7 @@ function renderNodeConfig() {
 }
 
 function getNodeDisplayName(nd) {
+	if (isManagementNode(nd)) return nd.name || 'Gestión';
 	return nd.name || `Nodo ${getNodeOrdinal(nd)}`;
 }
 
@@ -2125,7 +2208,7 @@ function addStandaloneNode() {
 function deleteNode(id) {
 	if (ctxReviewOnly || imageUploadInProgress) return;
 	const nd = nodes.find(n => n.id === id);
-	if (!nd) return;
+	if (!nd || isManagementNode(nd)) return;
 	const topoId = nd.topoId;
 	const el = document.getElementById('node-' + id);
 	if (el) el.remove();
@@ -2151,7 +2234,8 @@ function deleteSelectedNode() {
 
 function deleteEdge(id) {
 	if (imageUploadInProgress) return;
-	if (!isCustomTopologyActive()) return;
+	const edge = edges.find(e => e.id === id);
+	if (!edge || (!isManagementEdge(edge) && !isCustomTopologyActive())) return;
 	edges = edges.filter(e => e.id !== id);
 	if (selectedEdgeId === id) selectedEdgeId = null;
 	syncDeleteButtonState();
@@ -2169,7 +2253,7 @@ function deleteSelectedItem() {
 ════════════════════ */
 function toggleLinkMode() {
 	if (ctxReviewOnly || imageUploadInProgress) return;
-	if (!isCustomTopologyActive()) return;
+	if (vmNodes().length === 0) return;
 	linkMode = !linkMode;
 	const btn = document.getElementById('btn-connect');
 	const banner = document.getElementById('link-banner');
@@ -2180,7 +2264,6 @@ function toggleLinkMode() {
 
 function handleLinkClick(nodeId) {
 	if (ctxReviewOnly || imageUploadInProgress) return;
-	if (!isCustomTopologyActive()) return;
 	if (!linkSourceId) {
 		linkSourceId = nodeId;
 		const el = document.getElementById('node-' + nodeId);
@@ -2188,11 +2271,22 @@ function handleLinkClick(nodeId) {
 	} else if (linkSourceId === nodeId) {
 		cancelLink();
 	} else {
-		// Create edge
-		const exists = edges.some(e => (e.from === linkSourceId && e.to === nodeId) || (e.from === nodeId && e.to === linkSourceId));
-		if (!exists) {
-			edges.push({ id: ++edgeSeq, from: linkSourceId, to: nodeId, topo: 'personalizada' });
-			drawEdges();
+		const sourceIsMgmt = isManagementNodeId(linkSourceId);
+		const targetIsMgmt = isManagementNodeId(nodeId);
+		if (sourceIsMgmt || targetIsMgmt) {
+			const vmId = sourceIsMgmt ? nodeId : linkSourceId;
+			if (isVmNodeId(vmId) && !edges.some(e => isManagementEdge(e) && edgeConnects(e, MGMT_NODE_ID, vmId))) {
+				edges.push({ id: ++edgeSeq, from: MGMT_NODE_ID, to: vmId, topo: 'management', tipo: 'gestion' });
+				drawEdges();
+			}
+		} else if (isCustomTopologyActive()) {
+			const exists = edges.some(e => !isManagementEdge(e) && edgeConnects(e, linkSourceId, nodeId));
+			if (!exists) {
+				edges.push({ id: ++edgeSeq, from: linkSourceId, to: nodeId, topo: 'personalizada' });
+				drawEdges();
+			}
+		} else {
+			alert('Para conectar VMs entre sí usa una topología personalizada. La nube de gestión puede conectarse a cualquier VM.');
 		}
 		const srcEl = document.getElementById('node-' + linkSourceId);
 		if (srcEl) srcEl.classList.remove('link-source');
@@ -2215,7 +2309,7 @@ function showNodeTypePopover(nodeId, cx, cy) {
 	if (ctxReviewOnly) return;
 	popoverNodeId = nodeId;
 	const nd = nodes.find(n => n.id === nodeId);
-	if (!nd) return;
+	if (!nd || isManagementNode(nd)) return;
 	const pop = document.getElementById('node-popover');
 	pop.querySelectorAll('.pop-opt').forEach(o => o.classList.toggle('sel', o.dataset.type === nd.nodeType));
 	pop.style.left = (cx + 10) + 'px';
@@ -2232,7 +2326,7 @@ function setNodeType(type) {
 	if (ctxReviewOnly) return;
 	if (!popoverNodeId) return;
 	const nd = nodes.find(n => n.id === popoverNodeId);
-	if (nd) {
+	if (nd && !isManagementNode(nd)) {
 		nd.nodeType = type;
 		updateNodeEl(nd);
 	}
@@ -2245,12 +2339,13 @@ function setNodeType(type) {
 ════════════════════ */
 function showCtxMenu(nodeId, cx, cy) {
 	if (ctxReviewOnly) return;
+	const nd = nodes.find(n => n.id === nodeId);
+	if (!nd || isManagementNode(nd)) return;
 	ctxNodeId = nodeId;
 	selectNode(nodeId);
 	document.getElementById('node-popover').classList.remove('open');
 	document.getElementById('edge-ctx-menu').classList.remove('open');
 	const menu = document.getElementById('ctx-menu');
-	const nd = nodes.find(n => n.id === nodeId);
 	menu.querySelectorAll('.ctx-item[data-type]').forEach(o => o.classList.toggle('sel', nd && o.dataset.type === nd.nodeType));
 	menu.style.left = cx + 'px';
 	menu.style.top  = cy + 'px';
@@ -2266,7 +2361,7 @@ function setCtxNodeType(type) {
 	if (ctxReviewOnly) return;
 	if (!ctxNodeId) return;
 	const nd = nodes.find(n => n.id === ctxNodeId);
-	if (nd) {
+	if (nd && !isManagementNode(nd)) {
 		nd.nodeType = type;
 		updateNodeEl(nd);
 	}
@@ -2283,7 +2378,8 @@ function deleteCtxNode() {
 }
 
 function showEdgeCtxMenu(edgeId, cx, cy) {
-	if (ctxReviewOnly || !isCustomTopologyActive()) return;
+	const edge = edges.find(e => e.id === edgeId);
+	if (ctxReviewOnly || !(edge && (isManagementEdge(edge) || isCustomTopologyActive()))) return;
 	ctxEdgeId = edgeId;
 	selectEdge(edgeId);
 	document.getElementById('node-popover').classList.remove('open');
@@ -2311,7 +2407,7 @@ function deleteCtxEdge() {
 ════════════════════ */
 function updateCanvasEmpty() {
 	const empty = document.getElementById('canvas-empty');
-	empty.style.display = nodes.length === 0 ? '' : 'none';
+	empty.style.display = vmNodes().length === 0 ? '' : 'none';
 }
 
 /* ════════════════════
@@ -2344,7 +2440,7 @@ document.addEventListener('keydown', e => {
 	const mobileQuery = window.matchMedia('(max-width: 1024px)');
 
 	function refreshCanvas() {
-		setTimeout(() => { if (nodes.length) drawEdges(); }, 300);
+		setTimeout(() => { if (nodes.length) { ensureManagementCloud(); drawEdges(); } }, 300);
 	}
 
 	function setSidebarOpen(open) {
@@ -2385,7 +2481,10 @@ document.addEventListener('keydown', e => {
 })();
 
 window.addEventListener('resize', () => {
-	if (nodes.length) drawEdges();
+	if (nodes.length) {
+		ensureManagementCloud();
+		drawEdges();
+	}
 });
 
 // Canvas click deselects if not on node
@@ -2475,6 +2574,7 @@ function clearEditorState() {
 	document.getElementById('btn-del-node').disabled = true;
 	document.getElementById('vm-empty').style.display = '';
 	document.getElementById('vm-config').style.display = 'none';
+	ensureManagementCloud();
 	updateCanvasEmpty();
 }
 
@@ -2552,10 +2652,21 @@ function applySavedEdges(savedEdges) {
 	if (!Array.isArray(savedEdges) || savedEdges.length === 0) return;
 	edges = [];
 	edgeSeq = 0;
+	ensureManagementCloud();
 
 	savedEdges.forEach(saved => {
 		const id = hasNumericValue(saved.id) ? Number(saved.id) : ++edgeSeq;
 		edgeSeq = Math.max(edgeSeq, id);
+		const isSavedManagement = saved.tipo === 'gestion' || saved.topologia === 'management' || saved.topo === 'management';
+		if (isSavedManagement) {
+			const from = saved.desde || saved.from;
+			const to = saved.hacia || saved.to;
+			const vmId = isManagementNodeId(from) ? to : from;
+			if (vmId && isVmNodeId(vmId) && !edges.some(e => isManagementEdge(e) && edgeConnects(e, MGMT_NODE_ID, vmId))) {
+				edges.push({ id, from: MGMT_NODE_ID, to: String(vmId), topo: 'management', tipo: 'gestion' });
+			}
+			return;
+		}
 		if (saved.tipo === 'bus' && Array.isArray(saved.nodos)) {
 			const busNodes = saved.nodos
 				.map(nodeId => nodes.find(n => String(n.id) === String(nodeId)))
@@ -2608,7 +2719,8 @@ function hydrateSliceForReview(slice) {
 	drawEdges();
 	updateCanvasEmpty();
 	nodes.forEach(nd => updateNodeValidationState(nd.id));
-	if (nodes.length > 0) selectNode(nodes[0].id);
+	const firstVm = vmNodes()[0];
+	if (firstVm) selectNode(firstVm.id);
 	syncReviewModeControls();
 }
 
@@ -2706,11 +2818,13 @@ async function loadSliceForReview(sliceId) {
 			alert(`No se pudo cargar la configuración guardada del slice: ${error.message}`);
 		}
 	}
-	})();
+		})();
 
-	syncTopologyModeControls();
-	loadImages();
-	loadKeypairs();
+		ensureManagementCloud();
+		updateCanvasEmpty();
+		syncTopologyModeControls();
+		loadImages();
+		loadKeypairs();
 
 function serializeNodeConfig(cfg) {
 	cfg = cfg || defaultConfig();
@@ -2727,6 +2841,7 @@ function serializeNodeConfig(cfg) {
 }
 
 function missingVmFields(nodeId) {
+	if (isManagementNodeId(nodeId)) return [];
 	const cfg = nodeConfigs[nodeId];
 	if (!cfg) return REQUIRED_VM_FIELDS.map(f => f.label);
 	return REQUIRED_VM_FIELDS
@@ -2755,6 +2870,7 @@ function vmConfigValidationMessages(nodeId) {
 }
 
 function nodeHasMissingConfig(nodeId) {
+	if (isManagementNodeId(nodeId)) return false;
 	return vmConfigValidationMessages(nodeId).length > 0;
 }
 
@@ -2779,7 +2895,7 @@ function validateSliceBeforeSave() {
 		errors.push({ message: 'Solo se permite una topología por slice.' });
 	}
 
-	nodes.forEach(nd => {
+	vmNodes().forEach(nd => {
 		const messages = vmConfigValidationMessages(nd.id);
 		if (messages.length > 0) {
 			errors.push({
@@ -2806,6 +2922,17 @@ function validateSliceBeforeSave() {
 }
 
 function buildSlicePayload(nombre) {
+	const savedNodes = vmNodes();
+	const savedEdges = edges.map(e => {
+		if (e.bus) return { id: e.id, tipo: 'bus', nodos: e.busNodes.map(n => n.id), topologia: e.topo };
+		if (isManagementEdge(e)) {
+			const vmId = isManagementNodeId(e.from) ? e.to : e.from;
+			if (!isVmNodeId(vmId)) return null;
+			return { id: e.id, tipo: 'gestion', desde: MGMT_NODE_ID, hacia: vmId, topologia: 'management' };
+		}
+		return { id: e.id, tipo: 'directo', desde: e.from, hacia: e.to, topologia: e.topo };
+	}).filter(Boolean);
+
 	return {
 		nombre,
 		zona: document.getElementById('zona').value || 'openstack-zone-1',
@@ -2814,7 +2941,7 @@ function buildSlicePayload(nombre) {
 			.filter(t => t.type)
 			.slice(0, 1)
 			.map(t => ({ id: t.id, type: t.type, count: Number(t.count) || 0 })),
-		nodos: nodes.map(n => ({
+		nodos: savedNodes.map(n => ({
 			id: n.id,
 			nombre: n.name || '',
 			tipo: n.nodeType,
@@ -2823,9 +2950,7 @@ function buildSlicePayload(nombre) {
 			y: Math.round(n.y),
 			configuracion: serializeNodeConfig(nodeConfigs[n.id])
 		})),
-		enlaces: edges.map(e => e.bus
-			? { id: e.id, tipo: 'bus', nodos: e.busNodes.map(n => n.id), topologia: e.topo }
-			: { id: e.id, tipo: 'directo', desde: e.from, hacia: e.to, topologia: e.topo })
+		enlaces: savedEdges
 	};
 }
 
