@@ -53,9 +53,12 @@ vm_spec_for_index() {
 image_spec_for_index() {
     local index="$1"
     local spec="${IMAGE_SPECS[$index]:-}"
-    local image_name image_url download_method cloud_init
-    IFS='|' read -r image_name image_url download_method cloud_init <<< "$spec"
-    echo "${image_name:-cirros-0-6-2} ${image_url:-https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img} ${download_method:-auto} ${cloud_init:-false}"
+    local image_name image_url download_method cloud_init cloud_init_mode
+    IFS='|' read -r image_name image_url download_method cloud_init cloud_init_mode <<< "$spec"
+    if [ -z "${cloud_init_mode:-}" ]; then
+        [ "${cloud_init:-false}" = "true" ] && cloud_init_mode="full" || cloud_init_mode="none"
+    fi
+    echo "${image_name:-cirros-0-6-2} ${image_url:-https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img} ${download_method:-auto} ${cloud_init:-false} ${cloud_init_mode}"
 }
 
 keypair_spec_for_index() {
@@ -218,12 +221,12 @@ for (( i=0; i<N_VMS; i++ )); do
 
     echo "  -> VM $VM_IDX/$N_VMS : $VM_NAME | servidor $COMPUTE_IP | VNC $VNC_PORT | VLANs internas: ${INTERNAL_VLANS[*]:-sin-enlaces}"
     read -r VM_VCPUS VM_RAM_MB VM_DISK_GB <<< "$(vm_spec_for_index "$i")"
-    read -r VM_IMAGE_NAME VM_IMAGE_URL VM_IMAGE_DOWNLOAD_METHOD VM_CLOUD_INIT <<< "$(image_spec_for_index "$i")"
+    read -r VM_IMAGE_NAME VM_IMAGE_URL VM_IMAGE_DOWNLOAD_METHOD VM_CLOUD_INIT VM_CLOUD_INIT_MODE <<< "$(image_spec_for_index "$i")"
     VM_KEYPAIR_NAME="$(keypair_spec_for_index "$i")"
     VM_PUBLIC_KEY_B64="$(public_key_b64_for_keypair "$VM_KEYPAIR_NAME")"
     echo "    Flavor efectivo: ${VM_VCPUS} vCPU | ${VM_RAM_MB} MB RAM | ${VM_DISK_GB} GB disco"
     echo "    Imagen: ${VM_IMAGE_NAME} (${VM_IMAGE_URL})"
-    echo "    Cloud-init: ${VM_CLOUD_INIT}"
+    echo "    Cloud-init: ${VM_CLOUD_INIT_MODE}"
     echo "    Par de llaves: ${VM_KEYPAIR_NAME}"
     if [ "$ENABLE_MGMT_NETWORK" = "true" ] && [ "$(mgmt_enabled_for_index "$i")" = "true" ]; then
         VM_VLANS=("$MGMT_VLAN" "${INTERNAL_VLANS[@]}")
@@ -231,7 +234,7 @@ for (( i=0; i<N_VMS; i++ )); do
     fi
 
     ssh ${SSH_OPTS} ${SSH_USER}@${COMPUTE_IP} \
-        "NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' NIMBUSCORE_MAC_SALT='$MAC_SALT' NIMBUSCORE_VM_VCPUS=$VM_VCPUS NIMBUSCORE_VM_RAM_MB=$VM_RAM_MB NIMBUSCORE_VM_DISK_GB=$VM_DISK_GB NIMBUSCORE_BASE_IMAGE_NAME='$VM_IMAGE_NAME' NIMBUSCORE_BASE_IMAGE_URL='$VM_IMAGE_URL' NIMBUSCORE_BASE_IMAGE_DOWNLOAD_METHOD='$VM_IMAGE_DOWNLOAD_METHOD' NIMBUSCORE_ENABLE_CLOUD_INIT='$VM_CLOUD_INIT' NIMBUSCORE_CONSOLE_USER='$CONSOLE_USER' NIMBUSCORE_CONSOLE_PASSWORD='$CONSOLE_PASSWORD' NIMBUSCORE_ENABLE_PASSWORD_LOGIN='$ENABLE_PASSWORD_LOGIN' NIMBUSCORE_KEYPAIR_NAME='$VM_KEYPAIR_NAME' NIMBUSCORE_PUBLIC_KEY_B64='$VM_PUBLIC_KEY_B64' NIMBUSCORE_ENABLE_MGMT_NETWORK='$ENABLE_MGMT_NETWORK' NIMBUSCORE_MGMT_VLAN='$MGMT_VLAN' NIMBUSCORE_MGMT_CIDR='$MGMT_CIDR' NIMBUSCORE_MGMT_GATEWAY='$MGMT_GATEWAY' NIMBUSCORE_MGMT_DNS='$MGMT_DNS' bash ${SCRIPTS_DIR}/create_vm.sh $VM_NAME $OVS_NAME $VNC_PORT ${VM_VLANS[*]}"
+        "NIMBUSCORE_OVS_UPLINKS='$OVS_UPLINKS' NIMBUSCORE_MAC_SALT='$MAC_SALT' NIMBUSCORE_VM_VCPUS=$VM_VCPUS NIMBUSCORE_VM_RAM_MB=$VM_RAM_MB NIMBUSCORE_VM_DISK_GB=$VM_DISK_GB NIMBUSCORE_BASE_IMAGE_NAME='$VM_IMAGE_NAME' NIMBUSCORE_BASE_IMAGE_URL='$VM_IMAGE_URL' NIMBUSCORE_BASE_IMAGE_DOWNLOAD_METHOD='$VM_IMAGE_DOWNLOAD_METHOD' NIMBUSCORE_ENABLE_CLOUD_INIT='$VM_CLOUD_INIT' NIMBUSCORE_CLOUD_INIT_MODE='$VM_CLOUD_INIT_MODE' NIMBUSCORE_CONSOLE_USER='$CONSOLE_USER' NIMBUSCORE_CONSOLE_PASSWORD='$CONSOLE_PASSWORD' NIMBUSCORE_ENABLE_PASSWORD_LOGIN='$ENABLE_PASSWORD_LOGIN' NIMBUSCORE_KEYPAIR_NAME='$VM_KEYPAIR_NAME' NIMBUSCORE_PUBLIC_KEY_B64='$VM_PUBLIC_KEY_B64' NIMBUSCORE_ENABLE_MGMT_NETWORK='$ENABLE_MGMT_NETWORK' NIMBUSCORE_MGMT_VLAN='$MGMT_VLAN' NIMBUSCORE_MGMT_CIDR='$MGMT_CIDR' NIMBUSCORE_MGMT_GATEWAY='$MGMT_GATEWAY' NIMBUSCORE_MGMT_DNS='$MGMT_DNS' bash ${SCRIPTS_DIR}/create_vm.sh $VM_NAME $OVS_NAME $VNC_PORT ${VM_VLANS[*]}"
 done
 
 if [ "$N_LINKS" -gt 1 ]; then

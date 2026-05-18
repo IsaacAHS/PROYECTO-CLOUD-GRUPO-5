@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from app.services.image_catalog import image_details
@@ -43,11 +44,18 @@ def validate_disk_for_image(disk_gb: int, image: dict[str, Any]) -> None:
         )
 
 
-def topology_node_index(node_id: str) -> int:
+def numeric_index(value: Any) -> int | None:
     try:
-        return int(node_id.rsplit("-n", 1)[1])
-    except (IndexError, ValueError):
-        return 0
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def topology_node_index(node_id: str) -> int | None:
+    match = re.search(r"(?:^|-)n(\d+)$", str(node_id or ""))
+    if not match:
+        return None
+    return int(match.group(1))
 
 
 def management_enabled_node_ids(slice_item: dict[str, Any]) -> set[str]:
@@ -79,6 +87,7 @@ def build_script_variables(
 ) -> dict[str, Any]:
     placement_by_node = {item["node_id"]: item for item in placements}
     management_nodes = management_enabled_node_ids(slice_item)
+    topology_counters: dict[str, int] = {}
     instances = []
 
     for index, node in enumerate(slice_item.get("nodos") or []):
@@ -88,6 +97,20 @@ def build_script_variables(
         image = image_details(cfg.get("imagen"))
         disk_gb = disk_gb_from_config(cfg.get("disco"))
         validate_disk_for_image(disk_gb, image)
+        topology_key = str(node.get("topologia_id", ""))
+        fallback_node_index = topology_counters.get(topology_key, 0)
+        topology_counters[topology_key] = fallback_node_index + 1
+        explicit_node_index = numeric_index(node.get("topology_node_index"))
+        if explicit_node_index is None:
+            explicit_node_index = numeric_index(node.get("topologyNodeIndex"))
+        parsed_node_index = topology_node_index(node["id"])
+        node_index = (
+            explicit_node_index
+            if explicit_node_index is not None
+            else parsed_node_index
+            if parsed_node_index is not None
+            else fallback_node_index
+        )
 
         instances.append(
             {
@@ -95,12 +118,13 @@ def build_script_variables(
                 "node_id": node["id"],
                 "node_type": node.get("tipo", "srv"),
                 "topology_id": node.get("topologia_id"),
-                "topology_node_index": topology_node_index(node["id"]),
+                "topology_node_index": node_index,
                 "image": image["id"],
                 "image_name": image["name"],
                 "image_url": image["url"],
                 "image_download_method": image.get("download_method", "auto"),
                 "image_cloud_init": bool(image.get("cloud_init", True)),
+                "image_cloud_init_mode": image.get("cloud_init_mode") or ("full" if image.get("cloud_init") else "none"),
                 "flavor": flavor["name"],
                 "vcpus": flavor["vcpus"],
                 "ram_mb": flavor["ram_mb"],

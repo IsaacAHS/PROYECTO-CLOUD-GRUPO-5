@@ -34,6 +34,7 @@ DEFAULT_IMAGE = {
     "name": "cirros-0.6.2",
     "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",
     "cloud_init": False,
+    "cloud_init_mode": "none",
 }
 DEFAULT_KEYPAIR = "default-key"
 
@@ -454,7 +455,8 @@ def vm_record(
     image_name = safe_image_name(instance.get("image_name") or DEFAULT_IMAGE["name"])
     image_url = instance.get("image_url") or DEFAULT_IMAGE["url"]
     image_download_method = instance.get("image_download_method") or "auto"
-    image_cloud_init = bool_from_value(instance.get("image_cloud_init", DEFAULT_IMAGE["cloud_init"]))
+    image_cloud_init_mode = cloud_init_mode_from_instance(instance)
+    image_cloud_init = image_cloud_init_mode == "full"
     key_pair = safe_keypair_name(instance.get("key_pair") or DEFAULT_KEYPAIR)
 
     nics = []
@@ -483,7 +485,7 @@ def vm_record(
             "cloud_init_applies_network": image_cloud_init,
             "mac": mac_for_iface(vm_name, 0, MGMT_VLAN),
             "tap": tap_for_iface(vm_name, 0, MGMT_VLAN),
-            "ssh_user": CONSOLE_USER,
+            "ssh_user": CONSOLE_USER if image_cloud_init_mode == "full" else None,
         })
 
     for local_index, vlan_id in enumerate(vlans):
@@ -533,6 +535,7 @@ def vm_record(
         "image_url": image_url,
         "image_download_method": image_download_method,
         "image_cloud_init": image_cloud_init,
+        "image_cloud_init_mode": image_cloud_init_mode,
         "key_pair": key_pair,
         "security_ports": instance.get("security_ports") or [],
         "custom_rules": instance.get("custom_rules") or [],
@@ -649,10 +652,9 @@ def topology_image_specs(matched: list[dict[str, Any]], node_count: int) -> str:
         image_name = safe_image_name(instance.get("image_name") or DEFAULT_IMAGE["name"])
         image_url = instance.get("image_url") or DEFAULT_IMAGE["url"]
         download_method = instance.get("image_download_method") or "auto"
-        cloud_init = bool_to_shell(bool_from_value(
-            instance.get("image_cloud_init", DEFAULT_IMAGE["cloud_init"])
-        ))
-        specs.append(f"{image_name}|{image_url}|{download_method}|{cloud_init}")
+        cloud_init_mode = cloud_init_mode_from_instance(instance)
+        cloud_init = bool_to_shell(cloud_init_mode == "full")
+        specs.append(f"{image_name}|{image_url}|{download_method}|{cloud_init}|{cloud_init_mode}")
 
     return ";".join(specs)
 
@@ -695,6 +697,14 @@ def bool_from_value(value: Any) -> bool:
 
 def bool_to_shell(value: bool) -> str:
     return "true" if value else "false"
+
+
+def cloud_init_mode_from_instance(instance: dict[str, Any]) -> str:
+    raw_mode = str(instance.get("image_cloud_init_mode") or "").strip().lower()
+    if raw_mode in {"full", "ssh-key", "none"}:
+        return raw_mode
+    cloud_init = bool_from_value(instance.get("image_cloud_init", DEFAULT_IMAGE["cloud_init"]))
+    return "full" if cloud_init else "none"
 
 
 def safe_keypair_name(value: str) -> str:

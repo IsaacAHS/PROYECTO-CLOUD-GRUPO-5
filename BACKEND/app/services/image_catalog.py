@@ -9,6 +9,7 @@ from typing import Any
 IMAGE_CATALOG_PATH = Path(os.getenv("NIMBUSCORE_IMAGE_CATALOG_PATH", "/data/images.json"))
 IMAGE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 ALLOWED_DOWNLOAD_METHODS = {"auto", "wget-no-check-certificate"}
+ALLOWED_CLOUD_INIT_MODES = {"full", "ssh-key", "none"}
 
 DEFAULT_IMAGES = [
     {
@@ -98,6 +99,15 @@ def infer_cloud_init(item: dict[str, Any], image_id: str, url: str) -> bool:
     return True
 
 
+def infer_cloud_init_mode(item: dict[str, Any], image_id: str, url: str) -> str:
+    raw_mode = str(item.get("cloud_init_mode") or "").strip().lower()
+    if raw_mode in ALLOWED_CLOUD_INIT_MODES:
+        return raw_mode
+    if item.get("source") == "google-drive-rclone":
+        return "ssh-key"
+    return "full" if infer_cloud_init(item, image_id, url) else "none"
+
+
 def min_disk_from_item(item: dict[str, Any], image_id: str, name: str, label: str, url: str) -> int:
     try:
         min_disk_gb = int(item.get("min_disk_gb") or 0)
@@ -128,13 +138,15 @@ def normalize_image(item: dict[str, Any]) -> dict[str, Any]:
     if download_method not in ALLOWED_DOWNLOAD_METHODS:
         raise ValueError(f"Metodo de descarga no soportado: {download_method}")
 
+    cloud_init_mode = infer_cloud_init_mode(item, image_id, url)
     normalized = {
         "id": image_id,
         "name": name,
         "label": label,
         "url": url,
         "download_method": download_method,
-        "cloud_init": infer_cloud_init(item, image_id, url),
+        "cloud_init": cloud_init_mode == "full",
+        "cloud_init_mode": cloud_init_mode,
         "min_disk_gb": min_disk_from_item(item, image_id, name, label, url),
         "active": bool(item.get("active", True)),
     }

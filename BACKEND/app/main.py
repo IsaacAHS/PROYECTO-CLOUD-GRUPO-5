@@ -187,6 +187,7 @@ class ImageCreate(BaseModel):
     url: str = Field(min_length=1)
     download_method: str = "auto"
     cloud_init: bool | None = None
+    cloud_init_mode: str | None = None
     min_disk_gb: int | None = None
     active: bool = True
 
@@ -571,6 +572,7 @@ async def upload_image_to_drive(
                         "download_method", "wget-no-check-certificate"
                     ),
                     "cloud_init": False,
+                    "cloud_init_mode": "ssh-key",
                     "min_disk_gb": max(1, math.ceil(size_bytes / (1024**3))),
                     "active": active,
                     "source": "google-drive-rclone",

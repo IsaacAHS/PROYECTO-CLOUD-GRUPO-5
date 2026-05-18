@@ -2923,6 +2923,15 @@ function validateSliceBeforeSave() {
 
 function buildSlicePayload(nombre) {
 	const savedNodes = vmNodes();
+	const nodeIndexById = new Map();
+	const topoCounters = new Map();
+	savedNodes.forEach(n => {
+		const topoKey = String(n.topoId ?? '');
+		const fallbackIndex = topoCounters.get(topoKey) || 0;
+		topoCounters.set(topoKey, fallbackIndex + 1);
+		const match = String(n.id || '').match(/(?:^|-)n(\d+)$/);
+		nodeIndexById.set(n.id, match ? Number(match[1]) : fallbackIndex);
+	});
 	const savedEdges = edges.map(e => {
 		if (e.bus) return { id: e.id, tipo: 'bus', nodos: e.busNodes.map(n => n.id), topologia: e.topo };
 		if (isManagementEdge(e)) {
@@ -2946,6 +2955,7 @@ function buildSlicePayload(nombre) {
 			nombre: n.name || '',
 			tipo: n.nodeType,
 			topologia_id: n.topoId,
+			topology_node_index: nodeIndexById.get(n.id) ?? 0,
 			x: Math.round(n.x),
 			y: Math.round(n.y),
 			configuracion: serializeNodeConfig(nodeConfigs[n.id])

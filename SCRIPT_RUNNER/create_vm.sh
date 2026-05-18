@@ -55,6 +55,14 @@ ENABLE_CLOUD_INIT="${NIMBUSCORE_ENABLE_CLOUD_INIT:-true}"
 if [ "$ENABLE_CLOUD_INIT" != "true" ] && [ "$ENABLE_CLOUD_INIT" != "false" ]; then
     ENABLE_CLOUD_INIT="true"
 fi
+CLOUD_INIT_MODE="${NIMBUSCORE_CLOUD_INIT_MODE:-}"
+if [ -z "$CLOUD_INIT_MODE" ]; then
+    [ "$ENABLE_CLOUD_INIT" = "true" ] && CLOUD_INIT_MODE="full" || CLOUD_INIT_MODE="none"
+fi
+case "$CLOUD_INIT_MODE" in
+    full|ssh-key|none) ;;
+    *) CLOUD_INIT_MODE="full" ;;
+esac
 ENABLE_MGMT_NETWORK="${NIMBUSCORE_ENABLE_MGMT_NETWORK:-true}"
 MGMT_VLAN="${NIMBUSCORE_MGMT_VLAN:-99}"
 MGMT_CIDR="${NIMBUSCORE_MGMT_CIDR:-10.60.9.0/24}"
@@ -101,6 +109,7 @@ create_cloud_init_seed() {
     local public_key=""
     local tmp_seed
     local quoted_console_password
+    local -a seed_files
 
     if [ -n "$PUBLIC_KEY_B64" ]; then
         public_key="$(printf '%s' "$PUBLIC_KEY_B64" | base64 -d)"
@@ -124,90 +133,112 @@ create_cloud_init_seed() {
         echo "[create_vm] ERROR: llave publica vacia: $public_key_path"
         exit 1
     fi
+    if [ "$CLOUD_INIT_MODE" = "ssh-key" ] && [ -z "$public_key" ]; then
+        echo "[create_vm] ERROR: cloud-init ssh-key requiere una llave publica valida."
+        exit 1
+    fi
 
     sudo mkdir -p "$CLOUD_INIT_DIR"
     tmp_seed="$(mktemp -d)"
 
     quoted_console_password="$(yaml_double_quote "$CONSOLE_PASSWORD")"
-    {
-        printf '#cloud-config\n'
-        printf 'hostname: %s\n' "$VM_NAME"
-        printf 'manage_etc_hosts: true\n'
-        printf 'ssh_pwauth: %s\n' "$ENABLE_PASSWORD_LOGIN"
-        printf 'disable_root: false\n'
-        printf 'users:\n'
-        printf '  - default\n'
-        printf '  - name: %s\n' "$CONSOLE_USER"
-        printf '    gecos: NimbusCore Console User\n'
-        printf '    groups: sudo\n'
-        printf '    sudo: ALL=(ALL) NOPASSWD:ALL\n'
-        printf '    shell: /bin/bash\n'
-        printf '    lock_passwd: false\n'
-        if [ -n "$public_key" ]; then
-            printf '    ssh_authorized_keys:\n'
-            printf '      - %s\n' "$public_key"
-        fi
-        printf 'chpasswd:\n'
-        printf '  expire: false\n'
-        printf '  users:\n'
-        printf '    - name: %s\n' "$CONSOLE_USER"
-        printf '      password: %s\n' "$quoted_console_password"
-        printf '      type: text\n'
-        if [ -n "$public_key" ]; then
+    if [ "$CLOUD_INIT_MODE" = "ssh-key" ]; then
+        {
+            printf '#cloud-config\n'
             printf 'ssh_authorized_keys:\n'
             printf '  - %s\n' "$public_key"
-        fi
-    } > "${tmp_seed}/user-data"
+        } > "${tmp_seed}/user-data"
+    else
+        {
+            printf '#cloud-config\n'
+            printf 'hostname: %s\n' "$VM_NAME"
+            printf 'manage_etc_hosts: true\n'
+            printf 'ssh_pwauth: %s\n' "$ENABLE_PASSWORD_LOGIN"
+            printf 'disable_root: false\n'
+            printf 'users:\n'
+            printf '  - default\n'
+            printf '  - name: %s\n' "$CONSOLE_USER"
+            printf '    gecos: NimbusCore Console User\n'
+            printf '    groups: sudo\n'
+            printf '    sudo: ALL=(ALL) NOPASSWD:ALL\n'
+            printf '    shell: /bin/bash\n'
+            printf '    lock_passwd: false\n'
+            if [ -n "$public_key" ]; then
+                printf '    ssh_authorized_keys:\n'
+                printf '      - %s\n' "$public_key"
+            fi
+            printf 'chpasswd:\n'
+            printf '  expire: false\n'
+            printf '  users:\n'
+            printf '    - name: %s\n' "$CONSOLE_USER"
+            printf '      password: %s\n' "$quoted_console_password"
+            printf '      type: text\n'
+            if [ -n "$public_key" ]; then
+                printf 'ssh_authorized_keys:\n'
+                printf '  - %s\n' "$public_key"
+            fi
+        } > "${tmp_seed}/user-data"
+
+        {
+            printf 'version: 2\n'
+            if [ "${#VLANS[@]}" -eq 0 ]; then
+                printf 'ethernets: {}\n'
+            else
+                printf 'ethernets:\n'
+            fi
+            for idx in "${!VLANS[@]}"; do
+                local vlan_id="${VLANS[$idx]}"
+                local mac_addr
+                local is_mgmt="false"
+                mac_addr="$(mac_for_iface "$VM_NAME" "$idx" "$vlan_id")"
+                if [ "$ENABLE_MGMT_NETWORK" = "true" ] && [ "$vlan_id" = "$MGMT_VLAN" ]; then
+                    is_mgmt="true"
+                fi
+                printf '  eth%s:\n' "$idx"
+                printf '    match:\n'
+                printf '      macaddress: "%s"\n' "$mac_addr"
+                printf '    set-name: eth%s\n' "$idx"
+                if [ "$is_mgmt" = "true" ]; then
+                    printf '    dhcp4: true\n'
+                else
+                    printf '    dhcp4: false\n'
+                fi
+                printf '    dhcp6: false\n'
+                printf '    optional: true\n'
+            done
+        } > "${tmp_seed}/network-config"
+    fi
 
     {
-        printf 'version: 2\n'
-        if [ "${#VLANS[@]}" -eq 0 ]; then
-            printf 'ethernets: {}\n'
-        else
-            printf 'ethernets:\n'
+        printf 'instance-id: %s\n' "$VM_NAME"
+        if [ "$CLOUD_INIT_MODE" = "full" ]; then
+            printf 'local-hostname: %s\n' "$VM_NAME"
         fi
-        for idx in "${!VLANS[@]}"; do
-            local vlan_id="${VLANS[$idx]}"
-            local mac_addr
-            local is_mgmt="false"
-            mac_addr="$(mac_for_iface "$VM_NAME" "$idx" "$vlan_id")"
-            if [ "$ENABLE_MGMT_NETWORK" = "true" ] && [ "$vlan_id" = "$MGMT_VLAN" ]; then
-                is_mgmt="true"
-            fi
-            printf '  eth%s:\n' "$idx"
-            printf '    match:\n'
-            printf '      macaddress: "%s"\n' "$mac_addr"
-            printf '    set-name: eth%s\n' "$idx"
-            if [ "$is_mgmt" = "true" ]; then
-                printf '    dhcp4: true\n'
-            else
-                printf '    dhcp4: false\n'
-            fi
-            printf '    dhcp6: false\n'
-            printf '    optional: true\n'
-        done
-    } > "${tmp_seed}/network-config"
-
-    cat > "${tmp_seed}/meta-data" <<EOF
-instance-id: ${VM_NAME}
-local-hostname: ${VM_NAME}
-EOF
+    } > "${tmp_seed}/meta-data"
 
     SEED_ISO="${CLOUD_INIT_DIR}/${VM_NAME}-seed.iso"
     sudo rm -f "$SEED_ISO"
 
     if command -v cloud-localds >/dev/null 2>&1; then
-        sudo cloud-localds --network-config="${tmp_seed}/network-config" \
-            "$SEED_ISO" "${tmp_seed}/user-data" "${tmp_seed}/meta-data"
+        if [ "$CLOUD_INIT_MODE" = "full" ]; then
+            sudo cloud-localds --network-config="${tmp_seed}/network-config" \
+                "$SEED_ISO" "${tmp_seed}/user-data" "${tmp_seed}/meta-data"
+        else
+            sudo cloud-localds "$SEED_ISO" "${tmp_seed}/user-data" "${tmp_seed}/meta-data"
+        fi
     elif command -v genisoimage >/dev/null 2>&1; then
+        seed_files=(user-data meta-data)
+        if [ "$CLOUD_INIT_MODE" = "full" ]; then
+            seed_files+=(network-config)
+        fi
         (
             cd "$tmp_seed"
-            sudo genisoimage -quiet -output "$SEED_ISO" -volid cidata -joliet -rock user-data meta-data network-config
+            sudo genisoimage -quiet -output "$SEED_ISO" -volid cidata -joliet -rock "${seed_files[@]}"
         )
     else
         rm -rf "$tmp_seed"
         echo "[create_vm] WARN: no existe cloud-localds ni genisoimage; la VM se creara sin cloud-init."
-        if [ "$REQUIRE_KEYPAIR" = "true" ]; then
+        if [ "$REQUIRE_KEYPAIR" = "true" ] || [ "$CLOUD_INIT_MODE" = "ssh-key" ]; then
             echo "[create_vm] ERROR: instala cloud-image-utils o genisoimage para inyectar cloud-init."
             exit 1
         fi
@@ -217,7 +248,7 @@ EOF
     sudo chmod 0644 "$SEED_ISO"
     rm -rf "$tmp_seed"
     CLOUD_INIT_ARGS=(-drive "file=${SEED_ISO},format=raw,media=cdrom,readonly=on")
-    echo "[create_vm] Cloud-init seed creado: $SEED_ISO usuario_consola=$CONSOLE_USER ssh_password_login=$ENABLE_PASSWORD_LOGIN llave=${KEYPAIR_NAME:-none}"
+    echo "[create_vm] Cloud-init seed creado: $SEED_ISO mode=$CLOUD_INIT_MODE usuario_consola=$CONSOLE_USER ssh_password_login=$ENABLE_PASSWORD_LOGIN llave=${KEYPAIR_NAME:-none}"
 }
 
 download_base_image() {
@@ -247,7 +278,7 @@ if [ -f "$PID_FILE" ]; then
     sudo rm -f "$PID_FILE"
 fi
 
-echo "[create_vm] VM=$VM_NAME VNC=$VNC_PORT OVS=$OVS_NAME vCPUs=$VCPUS RAM=${RAM_MB}MB DISK=${DISK_GB}GB VLANs=${VLANS[*]} KEYPAIR=${KEYPAIR_NAME:-none} CLOUD_INIT=$ENABLE_CLOUD_INIT"
+echo "[create_vm] VM=$VM_NAME VNC=$VNC_PORT OVS=$OVS_NAME vCPUs=$VCPUS RAM=${RAM_MB}MB DISK=${DISK_GB}GB VLANs=${VLANS[*]} KEYPAIR=${KEYPAIR_NAME:-none} CLOUD_INIT_MODE=$CLOUD_INIT_MODE"
 for vlan_id in "${VLANS[@]}"; do
     if [ "$ENABLE_MGMT_NETWORK" = "true" ] && [ "$vlan_id" = "$MGMT_VLAN" ]; then
         echo "[create_vm] Gestion: VLAN=$MGMT_VLAN DHCP=dinamico GW=$MGMT_GATEWAY DNS=$MGMT_DNS"
@@ -274,7 +305,7 @@ if [ ! -f "$VM_DISK" ]; then
     sudo qemu-img create -f qcow2 -F qcow2 -b "$BASE_IMAGE_PATH" "$VM_DISK" "${DISK_GB}G"
 fi
 
-if [ "$ENABLE_CLOUD_INIT" = "true" ]; then
+if [ "$CLOUD_INIT_MODE" != "none" ]; then
     create_cloud_init_seed
 else
     echo "[create_vm] Cloud-init desactivado para imagen $BASE_IMAGE_NAME. Se respetan usuarios, claves y red internos de la imagen."
