@@ -93,18 +93,18 @@ def infer_cloud_init(item: dict[str, Any], image_id: str, url: str) -> bool:
     if image_id == "cirros" or image_id.endswith("-drive"):
         return False
     if item.get("source") == "google-drive-rclone":
-        return False
+        return True
     if "drive.usercontent.google.com" in url or "drive.google.com" in url:
         return False
     return True
 
 
 def infer_cloud_init_mode(item: dict[str, Any], image_id: str, url: str) -> str:
+    if item.get("source") == "google-drive-rclone":
+        return "full"
     raw_mode = str(item.get("cloud_init_mode") or "").strip().lower()
     if raw_mode in ALLOWED_CLOUD_INIT_MODES:
         return raw_mode
-    if item.get("source") == "google-drive-rclone":
-        return "ssh-key"
     return "full" if infer_cloud_init(item, image_id, url) else "none"
 
 

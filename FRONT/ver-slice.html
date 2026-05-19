@@ -1087,7 +1087,7 @@ function renderRuntimeInfo(nd) {
 			const gatewayRow = nic.gateway
 				? `<div class="runtime-row"><span>Gateway</span><strong>${nic.gateway}</strong></div>`
 				: '';
-			const sshUser = nic.ssh_user || (inv.image_cloud_init_mode === 'ssh-key' ? 'usuario-imagen' : 'nimbus');
+			const sshUser = nic.ssh_user || (inv.image_cloud_init_mode === 'full' ? 'nimbus' : 'usuario-imagen');
 			const sshRow = nic.ssh_target && (!isManagement || nic.ip_cidr)
 				? `<div class="runtime-row"><span>SSH</span><strong>${sshUser}@${nic.ssh_target}</strong></div>`
 				: '';

@@ -571,8 +571,8 @@ async def upload_image_to_drive(
                     "download_method": upload_result.get(
                         "download_method", "wget-no-check-certificate"
                     ),
-                    "cloud_init": False,
-                    "cloud_init_mode": "ssh-key",
+                    "cloud_init": True,
+                    "cloud_init_mode": "full",
                     "min_disk_gb": max(1, math.ceil(size_bytes / (1024**3))),
                     "active": active,
                     "source": "google-drive-rclone",
