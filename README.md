@@ -1,88 +1,95 @@
 # NimbusCore
 
-NimbusCore es una aplicacion de gestion de slices que crea topologias sobre un cluster Linux usando **Script Runner**, **QEMU/KVM** y **Open vSwitch**. En el enfoque actual, `server4` concentra la aplicacion y tambien actua como head node de red.
+NimbusCore es una aplicacion de gestion de slices que crea topologias sobre un cluster Linux usando **Script Runner**, **QEMU/KVM** y **Open vSwitch**. En fase 2, la instancia `App` concentra la aplicacion y tambien actua como head node Linux mientras se integra el cluster OpenStack.
 
 ## Componentes
 
 ```text
-FRONT/
+apps/web-ui/
   Interfaz web estatica.
 
-API_Gateway/
+apps/api-gateway/
   Nginx. Sirve el frontend y reenvia /api/ hacia el backend.
 
-BACKEND/
+apps/slice-manager/
   API FastAPI. Guarda plantillas, cursos, slices asignados, jobs y endpoints de despliegue.
 
-NOVNC/
+apps/console-access/
   Contenedor noVNC + websockify.
   Expone consolas VNC de QEMU dentro del navegador usando tokens.
 
-WORKER/
+drivers/linux/worker/
   Lee jobs desde /jobs y ejecuta comandos SSH hacia el head node.
 
-SCRIPT_RUNNER/
+drivers/linux/scripts/
   Scripts Bash para crear VLANs, DHCP, TAPs, VMs QEMU y reglas de forwarding.
 ```
 
 ## Arquitectura Actual
 
-La prueba actual usa `server4` como **app/control server + head node**:
+La prueba actual usa `App` como **app/control server + head node Linux**:
 
 ```text
 Cliente/local
   Maquina desde donde se abre el navegador y RealVNC Viewer.
 
-server4 = app/control server + head node
-  IP interna asumida: 10.0.10.4
-  Acceso externo usado en pruebas: ubuntu@10.20.12.227 -p 5804
+App = app/control server + head node Linux
+  Acceso: ubuntu@10.20.11.195
+  IP interna en la red Linux: 10.0.10.5
   Ejecuta Docker Compose de NimbusCore:
     - API Gateway
-    - Frontend
-    - Backend
-    - Worker
-    - noVNC/websockify
+    - Web UI
+    - Slice Manager
+    - Linux Driver
+    - Console Access/noVNC
   Ejecuta Script Runner como head node:
     - Open vSwitch
     - VLANs del slice
     - namespaces DHCP
     - forwarding/routing entre VLANs
-  Debe tener SSH sin password hacia si mismo usando 10.0.10.4.
-  Debe tener SSH sin password hacia server1, server2 y server3.
+  Debe tener SSH sin password hacia si mismo usando 10.0.10.5.
+  Debe tener SSH sin password hacia server1, server2, server3 y server4 del cluster Linux usando 10.0.10.1-10.0.10.4.
 
 server1 = worker de computo
-  IP interna: 10.0.10.1
-  Acceso externo usado en pruebas: ubuntu@10.20.12.227 -p 5801
+  Acceso externo usado en pruebas: ubuntu@10.20.11.13 -p 5811
+  IP interna desde App: 10.0.10.1
   Ejecuta QEMU/KVM, OVS, TAPs y VMs.
 
 server2 = worker de computo
-  IP interna: 10.0.10.2
+  Acceso externo usado en pruebas: ubuntu@10.20.11.13 -p 5812
+  IP interna desde App: 10.0.10.2
   Ejecuta QEMU/KVM, OVS, TAPs y VMs.
 
 server3 = worker de computo
-  IP interna: 10.0.10.3
+  Acceso externo usado en pruebas: ubuntu@10.20.11.13 -p 5813
+  IP interna desde App: 10.0.10.3
+  Ejecuta QEMU/KVM, OVS, TAPs y VMs.
+
+server4 = worker de computo
+  Acceso externo usado en pruebas: ubuntu@10.20.11.13 -p 5814
+  IP interna desde App: 10.0.10.4
   Ejecuta QEMU/KVM, OVS, TAPs y VMs.
 ```
 
-Si la IP interna real de `server4` no es `10.0.10.4`, cambia `NIMBUSCORE_HEADNODE_IP` en `docker-compose.yml` o exportala antes de levantar Docker Compose.
+El despliegue usa las IPs internas directas. Los accesos por `10.20.11.13 -p 5811-5814` quedan solo para administracion manual desde fuera del cluster.
 
 Flujo completo:
 
 ```text
 Navegador
-  -> tunel SSH al server4
+  -> tunel SSH a App
   -> API Gateway :8080
-  -> Backend
+  -> Slice Manager
   -> job JSON en volumen /jobs
-  -> Worker en Docker dentro de server4
-  -> SSH a ubuntu@10.0.10.4
-  -> SCRIPT_RUNNER/create_linear_topology.sh, create_ring_topology.sh o create_custom_topology.sh en server4
-  -> server4 crea VLANs, DHCP y forwarding localmente
-  -> server4 hace SSH a server1/server2/server3
+  -> Linux Driver en Docker dentro de App
+  -> SSH a ubuntu@10.0.10.5
+  -> drivers/linux/scripts/create_linear_topology.sh, create_ring_topology.sh o create_custom_topology.sh en App
+  -> App crea VLANs, DHCP de gestion y recursos de head node localmente
+  -> App hace SSH a 10.0.10.1/10.0.10.2/10.0.10.3/10.0.10.4
   -> workers crean VMs QEMU y TAPs en OVS
 ```
 
-El contenedor `worker` no ejecuta OVS directamente dentro del contenedor. Hace SSH al host `server4`, y el host ejecuta los scripts con `sudo`.
+El contenedor `linux-driver` no ejecuta OVS directamente dentro del contenedor. Hace SSH al host `App`, y el host ejecuta los scripts con `sudo`.
 
 ## Túneles Para Usar La App
 
@@ -91,7 +98,7 @@ El puerto recomendado es `8080`, porque ahi esta el API Gateway y por tanto func
 Desde tu maquina local:
 
 ```bash
-ssh -N -L 8080:localhost:8080 -p 5804 ubuntu@10.20.12.227
+ssh -N -L 8080:localhost:8080 ubuntu@10.20.11.195
 ```
 
 Luego abre:
@@ -103,7 +110,7 @@ http://localhost:8080/login.html
 Tambien se puede tunelar `8081`, pero es solo el frontend directo. Sirve para inspeccionar la UI, pero no es el camino recomendado porque no enruta `/api`:
 
 ```bash
-ssh -N -L 8081:localhost:8081 -p 5804 ubuntu@10.20.12.227
+ssh -N -L 8081:localhost:8081 ubuntu@10.20.11.195
 ```
 
 ## Túneles Para VNC De Las VMs
@@ -111,7 +118,8 @@ ssh -N -L 8081:localhost:8081 -p 5804 ubuntu@10.20.12.227
 Las VMs se exponen por VNC en el worker donde fueron creadas. Con la configuracion actual:
 
 ```yaml
-NIMBUSCORE_COMPUTE_IPS: 10.0.10.1,10.0.10.2,10.0.10.3
+NIMBUSCORE_HEADNODE_IP: 10.0.10.5
+NIMBUSCORE_COMPUTE_IPS: 10.0.10.1,10.0.10.2,10.0.10.3,10.0.10.4
 NIMBUSCORE_OVS_UPLINKS: ens4
 NIMBUSCORE_VNC_BASE: 5901
 NIMBUSCORE_VNC_BLOCK_SIZE: 100
@@ -121,11 +129,11 @@ NIMBUSCORE_CIDR_BASE: 10
 NIMBUSCORE_CIDR_BLOCK_SIZE: 20
 ```
 
-El worker reserva un bloque de puertos VNC por slice en `SCRIPT_RUNS/vnc_allocations.json`. Asi evita que varios slices empiecen todos en `5901`.
+El worker reserva un bloque de puertos VNC por slice en `runtime/script-runs/vnc_allocations.json`. Asi evita que varios slices empiecen todos en `5901`.
 
-Tambien reserva un bloque de VLANs y subredes por slice en `SCRIPT_RUNS/network_allocations.json`. Asi evita que varios slices usen todos `VLAN 100` y `192.168.10.0/24`.
+Tambien reserva un bloque de VLANs y subredes por slice en `runtime/script-runs/network_allocations.json`. Asi evita que varios slices usen todos `VLAN 100` y `192.168.10.0/24`.
 
-`NIMBUSCORE_OVS_UPLINKS` indica que interfaz fisica se usa como transporte L2 entre el `br-int` de `server4` y el `br-int` de los workers. En las pruebas se usa `ens4`. No uses `ens3` si es la interfaz de gestion/SSH.
+`NIMBUSCORE_OVS_UPLINKS` indica que interfaz fisica se usa como transporte L2 entre el `br-int` de `App` y el `br-int` de los workers. En las pruebas se usa `ens4`. No uses `ens3` si es la interfaz de gestion/SSH.
 
 Ejemplo:
 
@@ -145,18 +153,18 @@ vm2 -> server2 -> 10.0.10.2:5902
 vm3 -> server3 -> 10.0.10.3:5903
 ```
 
-Si tu laboratorio mantiene puertos externos `5801`, `5802`, `5803` para `server1`, `server2`, `server3`, puedes abrir tres tuneles separados:
+Si necesitas abrir VNC manualmente y solo llegas a los workers por el gateway, usa los puertos externos de fase 2:
 
 ```bash
-ssh -NL 5901:127.0.0.1:5901 ubuntu@10.20.12.227 -p 5801
-ssh -NL 5902:127.0.0.1:5902 ubuntu@10.20.12.227 -p 5802
-ssh -NL 5903:127.0.0.1:5903 ubuntu@10.20.12.227 -p 5803
+ssh -NL 5901:127.0.0.1:5901 ubuntu@10.20.11.13 -p 5811
+ssh -NL 5902:127.0.0.1:5902 ubuntu@10.20.11.13 -p 5812
+ssh -NL 5903:127.0.0.1:5903 ubuntu@10.20.11.13 -p 5813
 ```
 
-Si todas las VMs estan temporalmente en `server1`, este tunel tambien sirve:
+Si necesitas acceder al worker 4:
 
 ```bash
-ssh -NL 5901:127.0.0.1:5901 -NL 5902:localhost:5902 -NL 5903:localhost:5903 ubuntu@10.20.12.227 -p 5801
+ssh -NL 5904:127.0.0.1:5904 ubuntu@10.20.11.13 -p 5814
 ```
 
 Luego abre RealVNC Viewer en:
@@ -169,7 +177,7 @@ Luego abre RealVNC Viewer en:
 
 ## Consola noVNC Desde La Interfaz
 
-Como `server4` puede llegar directamente a los puertos VNC de los workers:
+Como `App` debe poder llegar directamente a los puertos VNC de los workers:
 
 ```text
 10.0.10.1:5901
@@ -182,7 +190,7 @@ NimbusCore incluye un contenedor `novnc` con `websockify`. El usuario ya no nece
 El unico tunel necesario para la app sigue siendo:
 
 ```bash
-ssh -N -L 8080:localhost:8080 -p 5804 ubuntu@10.20.12.227
+ssh -N -L 8080:localhost:8080 ubuntu@10.20.11.195
 ```
 
 Flujo:
@@ -191,7 +199,7 @@ Flujo:
 Usuario selecciona una VM en ver-slice.html
   -> boton "Abrir consola noVNC"
   -> POST /api/slices/{slice_id}/vms/{vm_name}/console
-  -> backend busca worker_ip y vnc_port en SCRIPT_RUNS/vm_inventory.json
+  -> backend busca worker_ip y vnc_port en runtime/script-runs/vm_inventory.json
   -> backend escribe token en el volumen compartido nimbuscore_novnc_tokens
   -> websockify usa ese token para conectar al VNC real de QEMU
   -> navegador abre /novnc/vnc.html por el API Gateway
@@ -226,7 +234,7 @@ Cirros:
 
 Si cambias `NIMBUSCORE_CONSOLE_USER` o `NIMBUSCORE_CONSOLE_PASSWORD`, esas credenciales aplican a las VMs nuevas que reciban cloud-init. Las VMs ya creadas no se modifican.
 
-## Docker En server4
+## Docker En App
 
 Instalacion usada para Docker:
 
@@ -248,18 +256,18 @@ sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
-Comandos de ejecucion del proyecto en `server4`:
+Comandos de ejecucion del proyecto en `App`:
 
 ```bash
 sudo docker compose build --no-cache
 sudo docker compose up -d
-sudo docker compose logs -f worker
+sudo docker compose logs -f linux-driver
 ```
 
 Si solo cambiaste configuracion del gateway o los volumenes del backend, recrea esos servicios:
 
 ```bash
-sudo docker compose up -d --force-recreate backend api-gateway
+sudo docker compose up -d --force-recreate slice-manager api-gateway
 ```
 
 Para detener:
@@ -270,7 +278,7 @@ sudo docker compose down
 
 ## Preparar SSH
 
-El worker corre dentro de Docker en `server4`, pero necesita usar una llave SSH para entrar al **host server4** y para que `server4` entre a los workers.
+El `linux-driver` corre dentro de Docker en `App`, pero necesita usar una llave SSH para entrar al **host App** y para que `App` entre a los workers.
 
 Llave usada en la prueba:
 
@@ -278,32 +286,34 @@ Llave usada en la prueba:
 ssh-keygen -t ecdsa -b 256 -C "a20212529@pucp.edu.pe"
 ```
 
-Copiar llave desde `server4` hacia el propio head node por su IP interna:
+Copiar llave desde `App` hacia el propio head node:
 
 ```bash
-ssh-copy-id -i ~/.ssh/id_ecdsa.pub ubuntu@10.0.10.4
+ssh-copy-id -i ~/.ssh/id_ecdsa.pub ubuntu@10.0.10.5
 ```
 
-Copiar llave desde `server4` hacia los workers:
+Copiar llave desde `App` hacia los workers por la red interna:
 
 ```bash
 ssh-copy-id -i ~/.ssh/id_ecdsa.pub ubuntu@10.0.10.1
 ssh-copy-id -i ~/.ssh/id_ecdsa.pub ubuntu@10.0.10.2
 ssh-copy-id -i ~/.ssh/id_ecdsa.pub ubuntu@10.0.10.3
+ssh-copy-id -i ~/.ssh/id_ecdsa.pub ubuntu@10.0.10.4
 ```
 
-Validar desde el contenedor `worker` que puede entrar al host `server4`:
+Validar desde el contenedor `linux-driver` que puede entrar al host `App`:
 
 ```bash
-sudo docker compose exec worker ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@10.0.10.4 hostname
+sudo docker compose exec linux-driver ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@10.0.10.5 hostname
 ```
 
-Validar desde `server4` que puede entrar a los workers:
+Validar desde `App` que puede entrar a los workers:
 
 ```bash
 ssh ubuntu@10.0.10.1 hostname
 ssh ubuntu@10.0.10.2 hostname
 ssh ubuntu@10.0.10.3 hostname
+ssh ubuntu@10.0.10.4 hostname
 ```
 
 Si cualquiera de esos comandos pide password, el despliegue automatico no va a funcionar.
@@ -331,18 +341,18 @@ ubuntu ALL=(ALL) NOPASSWD:ALL
 Debe estar configurado en:
 
 ```text
-server4:
+App:
   para crear VLANs, namespaces, dnsmasq, iptables y OVS.
 
-server1/server2/server3:
+server1/server2/server3/server4:
   para crear TAPs, puertos OVS, discos qcow2 y VMs QEMU.
 ```
 
 En un entorno mas estricto, conviene limitar ese permiso solo a `ovs-vsctl`, `ip`, `iptables`, `dnsmasq`, `qemu-system-x86_64` y `qemu-img`.
 
-## Preparar server4 Como Head Node
+## Preparar App Como Head Node Linux
 
-`server4` necesita Docker y tambien herramientas de red para actuar como head node:
+`App` necesita Docker y tambien herramientas de red para actuar como head node Linux:
 
 ```bash
 sudo apt update
@@ -355,7 +365,7 @@ sudo sysctl --system
 
 No agregues `ens3` a OVS si es la interfaz de gestion. Mover la interfaz de gestion al bridge puede cortar la conexion SSH.
 
-## Preparar server1/server2/server3 Como Workers
+## Preparar server1/server2/server3/server4 Como Workers
 
 Cada worker necesita QEMU/KVM y OVS:
 
@@ -380,13 +390,13 @@ ls -l /dev/kvm
 
 ## Distribuir Script Runner
 
-Cada vez que se modifiquen scripts locales, hay que copiarlos a `server4` y a todos los workers.
+Cada vez que se modifiquen scripts locales, hay que copiarlos a `App` y a todos los workers.
 
-En `server4`, desde la raiz del proyecto:
+En `App`, desde la raiz del proyecto:
 
 ```bash
 rm -rf /home/ubuntu/script_runner
-cp -r SCRIPT_RUNNER /home/ubuntu/script_runner
+cp -r drivers/linux/scripts /home/ubuntu/script_runner
 chmod +x /home/ubuntu/script_runner/*.sh
 ```
 
@@ -394,17 +404,21 @@ En los workers:
 
 ```bash
 ssh ubuntu@10.0.10.1 "rm -rf /home/ubuntu/script_runner"
-scp -r SCRIPT_RUNNER ubuntu@10.0.10.1:/home/ubuntu/script_runner
+scp -r drivers/linux/scripts ubuntu@10.0.10.1:/home/ubuntu/script_runner
 
 ssh ubuntu@10.0.10.2 "rm -rf /home/ubuntu/script_runner"
-scp -r SCRIPT_RUNNER ubuntu@10.0.10.2:/home/ubuntu/script_runner
+scp -r drivers/linux/scripts ubuntu@10.0.10.2:/home/ubuntu/script_runner
 
 ssh ubuntu@10.0.10.3 "rm -rf /home/ubuntu/script_runner"
-scp -r SCRIPT_RUNNER ubuntu@10.0.10.3:/home/ubuntu/script_runner
+scp -r drivers/linux/scripts ubuntu@10.0.10.3:/home/ubuntu/script_runner
+
+ssh ubuntu@10.0.10.4 "rm -rf /home/ubuntu/script_runner"
+scp -r drivers/linux/scripts ubuntu@10.0.10.4:/home/ubuntu/script_runner
 
 ssh ubuntu@10.0.10.1 "chmod +x /home/ubuntu/script_runner/*.sh"
 ssh ubuntu@10.0.10.2 "chmod +x /home/ubuntu/script_runner/*.sh"
 ssh ubuntu@10.0.10.3 "chmod +x /home/ubuntu/script_runner/*.sh"
+ssh ubuntu@10.0.10.4 "chmod +x /home/ubuntu/script_runner/*.sh"
 ```
 
 ## Preparar Pares De Llaves Para VMs
@@ -413,18 +427,18 @@ Hay dos llaves distintas en el proyecto:
 
 ```text
 llave de control:
-  permite que server4 controle server4/server1/server2/server3 por SSH.
+  permite que App controle App/server1/server2/server3/server4 por SSH.
 
 llaves de VMs:
   son las que el usuario selecciona en el frontend.
-  Ahora se listan desde los archivos .pub reales que existen en server4.
+  Ahora se listan desde los archivos .pub reales que existen en App.
 ```
 
 La llave privada de una VM se queda en el cliente/usuario. NimbusCore solo conserva la llave publica `.pub` para inyectarla en la VM con cloud-init.
 
-Cuando creas una llave desde la interfaz, el archivo `.pem` se descarga en la maquina donde tienes abierto el navegador. Aunque entres a la interfaz por tunel SSH, la descarga queda en tu equipo local. En `server4` solo queda la publica, por ejemplo `/home/ubuntu/nimbuscore-keys/key-dev.pub`; por eso no deberia existir `/home/ubuntu/nimbuscore-keys/key-dev.pem`.
+Cuando creas una llave desde la interfaz, el archivo `.pem` se descarga en la maquina donde tienes abierto el navegador. Aunque entres a la interfaz por tunel SSH, la descarga queda en tu equipo local. En `App` solo queda la publica, por ejemplo `/home/ubuntu/nimbuscore-keys/key-dev.pub`; por eso no deberia existir `/home/ubuntu/nimbuscore-keys/key-dev.pem`.
 
-En `server4`, el directorio fuente de verdad es:
+En `App`, el directorio fuente de verdad es:
 
 ```text
 /home/ubuntu/nimbuscore-keys
@@ -453,14 +467,14 @@ cp ~/.ssh/key-dev.pub /home/ubuntu/nimbuscore-keys/key-dev.pub
 
 El frontend ya no muestra `key-dev`, `key-prod`, etc. hardcodeados. Solo muestra lo que devuelve `/api/keypairs`. Si no hay ninguna llave, la UI permite crear una. Al crearla, el backend devuelve la llave privada una sola vez para descargarla y guarda la publica en `/home/ubuntu/nimbuscore-keys`.
 
-No es necesario copiar las llaves publicas a todos los workers. Los scripts de topologia se ejecutan en `server4`, leen la `.pub` desde `/home/ubuntu/nimbuscore-keys`, la pasan al worker codificada en base64 y `create_vm.sh` la usa para crear el ISO cloud-init.
+No es necesario copiar las llaves publicas a todos los workers. Los scripts de topologia se ejecutan en `App`, leen la `.pub` desde `/home/ubuntu/nimbuscore-keys`, la pasan al worker codificada en base64 y `create_vm.sh` la usa para crear el ISO cloud-init.
 
 ## Preparar Catalogo De Imagenes
 
 Las imagenes disponibles ya no estan hardcodeadas en el frontend. El backend las lee desde:
 
 ```text
-BACKEND_DATA/images.json
+data/json-store/images.json
 ```
 
 En Docker Compose ese archivo se monta como:
@@ -514,9 +528,9 @@ Para subir una imagen local desde la interfaz:
 POST /api/images/upload
 ```
 
-El backend guarda el archivo temporalmente en `/image-uploads`, ejecuta `IMAGE_RUNNER/upload_image_to_drive.sh`, sube el archivo a Google Drive con `rclone`, crea/obtiene un enlace publico y registra la imagen en `BACKEND_DATA/images.json`.
+El backend guarda el archivo temporalmente en `/image-uploads`, ejecuta `services/image-manager/runner/upload_image_to_drive.sh`, sube el archivo a Google Drive con `rclone`, crea/obtiene un enlace publico y registra la imagen en `data/json-store/images.json`.
 
-En `server4` el archivo de configuracion de rclone queda en el host:
+En `App` el archivo de configuracion de rclone queda en el host:
 
 ```text
 /home/ubuntu/.config/rclone/rclone.conf
@@ -542,7 +556,7 @@ Si `NIMBUSCORE_RCLONE_REMOTE` queda vacio, el script usa el primer remote devuel
 
 La subida debe hacerse entrando por el API Gateway (`http://localhost:8080`) y no por el frontend directo (`8081`). El gateway permite subir archivos grandes en `/api/images/upload`; si aparece `413`, significa que algun proxy en el camino sigue limitando el tamano del cuerpo HTTP.
 
-Al subir una imagen local, el backend genera el ID desde el nombre del archivo. Si ese ID ya existe en `BACKEND_DATA/images.json`, la subida se rechaza antes de copiar el archivo a Drive. Para registrar una variante nueva, renombra el archivo local antes de subirlo. Las imagenes subidas por esta ruta se registran con `cloud_init=false`.
+Al subir una imagen local, el backend genera el ID desde el nombre del archivo. Si ese ID ya existe en `data/json-store/images.json`, la subida se rechaza antes de copiar el archivo a Drive. Para registrar una variante nueva, renombra el archivo local antes de subirlo. Las imagenes subidas por esta ruta se registran con `cloud_init=false`.
 
 Metodos soportados:
 
@@ -594,19 +608,19 @@ El usuario de consola se crea con sudo sin password para facilitar la prueba:
 nimbus ALL=(ALL) NOPASSWD:ALL
 ```
 
-Para entrar luego a la VM, usas la llave privada correspondiente. Desde `server4`, si tuvieras la llave privada ahi, bastaria con:
+Para entrar luego a la VM, usas la llave privada correspondiente. Desde `App`, si tuvieras la llave privada ahi, bastaria con:
 
 ```bash
 ssh -i key-dev.pem nimbus@<IP_DE_LA_VM>
 ```
 
-Pero en la prueba real la llave privada queda en tu maquina local, asi que el acceso recomendado es usar `server4` como salto:
+Pero en la prueba real la llave privada queda en tu maquina local, asi que el acceso recomendado es usar `App` como salto:
 
 ```bash
 chmod 600 key-dev.pem
 
 ssh -i key-dev.pem \
-  -o ProxyCommand="ssh -p 5804 -W %h:%p ubuntu@10.20.12.227" \
+  -o ProxyCommand="ssh -W %h:%p ubuntu@10.20.11.195" \
   -o IPQoS=none \
   -o KexAlgorithms=ecdh-sha2-nistp256 \
   nimbus@<IP_DE_LA_VM>
@@ -616,7 +630,7 @@ Ejemplo observado:
 
 ```bash
 ssh -i key-dev.pem \
-  -o ProxyCommand="ssh -p 5804 -W %h:%p ubuntu@10.20.12.227" \
+  -o ProxyCommand="ssh -W %h:%p ubuntu@10.20.11.195" \
   -o IPQoS=none \
   -o KexAlgorithms=ecdh-sha2-nistp256 \
   nimbus@192.168.10.57
@@ -630,7 +644,7 @@ Tambien puedes dejarlo en `~/.ssh/config`:
 Host nimbus-vm-*
   User nimbus
   IdentityFile ~/Documentos/CLOUD/PROYECTO/IMAGENES/key-dev.pem
-  ProxyCommand ssh -p 5804 -W %h:%p ubuntu@10.20.12.227
+  ProxyCommand ssh -W %h:%p ubuntu@10.20.11.195
   IPQoS none
   KexAlgorithms ecdh-sha2-nistp256
 ```
@@ -653,7 +667,7 @@ Para Cirros, el usuario por defecto sigue siendo:
 cirros / gocubsgo
 ```
 
-Los scripts de topologia se ejecutan en `server4`. Por defecto usan:
+Los scripts de topologia se ejecutan en `App`. Por defecto usan:
 
 ```bash
 NIMBUSCORE_HEADNODE_LOCAL=true
@@ -662,11 +676,11 @@ NIMBUSCORE_HEADNODE_LOCAL=true
 Eso significa:
 
 ```text
-server4:
+App:
   crea VLANs, DHCP y forwarding localmente.
 
-server1/server2/server3:
-  reciben create_vm.sh por SSH desde server4.
+server1/server2/server3/server4:
+  reciben create_vm.sh por SSH desde App.
   crean las VMs y sus TAPs.
 ```
 
@@ -675,7 +689,7 @@ server1/server2/server3:
 Variables principales en `docker-compose.yml`:
 
 ```yaml
-backend:
+slice-manager:
   NIMBUSCORE_KEYPAIR_DIR: /keypairs
   NIMBUSCORE_IMAGE_CATALOG_PATH: /data/images.json
   NIMBUSCORE_SLICE_STORE_PATH: /data/slices.json
@@ -686,17 +700,17 @@ backend:
   NIMBUSCORE_NOVNC_TOKEN_FILE: /novnc-tokens/tokens.cfg
   NIMBUSCORE_NOVNC_PUBLIC_BASE: /novnc
 
-backend volumes:
+slice-manager volumes:
   /home/ubuntu/nimbuscore-keys:/keypairs
-  ./BACKEND_DATA:/data
-  ./SCRIPT_RUNS:/script-runs:ro
+  ./data/json-store:/data
+  ./runtime/script-runs:/script-runs:ro
   nimbuscore_novnc_tokens:/novnc-tokens
 
-worker:
+linux-driver:
 NIMBUSCORE_SCRIPT_DRY_RUN: "false"
 NIMBUSCORE_VM_INVENTORY_PATH: /script-runs/vm_inventory.json
-NIMBUSCORE_HEADNODE_IP: 10.0.10.4
-NIMBUSCORE_COMPUTE_IPS: 10.0.10.1,10.0.10.2,10.0.10.3
+NIMBUSCORE_HEADNODE_IP: 10.0.10.5
+NIMBUSCORE_COMPUTE_IPS: 10.0.10.1,10.0.10.2,10.0.10.3,10.0.10.4
 NIMBUSCORE_OVS_UPLINKS: ens4
 NIMBUSCORE_REMOTE_SCRIPTS_DIR: /home/ubuntu/script_runner
 NIMBUSCORE_KEYPAIR_DIR: /home/ubuntu/nimbuscore-keys
@@ -717,32 +731,32 @@ NIMBUSCORE_CIDR_BLOCK_SIZE: 20
 La persistencia simple del proyecto vive en archivos JSON:
 
 ```text
-BACKEND_DATA/images.json:
+data/json-store/images.json:
   catalogo de imagenes disponibles para el frontend y backend.
 
-BACKEND_DATA/academic.json:
+data/json-store/academic.json:
   cursos y alumnos base del sistema.
   por ahora siempre existen 2 cursos, cada uno con 3 alumnos.
 
-BACKEND_DATA/slice_templates.json:
+data/json-store/slice_templates.json:
   plantillas de slices creadas desde configurar-slice.html.
   guardar una plantilla no crea VMs ni ejecuta el worker.
 
-BACKEND_DATA/slices.json:
+data/json-store/slices.json:
   slices reales de la aplicacion.
   en el flujo academico actual se crean al asignar una plantilla a un curso:
   1 slice por alumno del curso.
 
-BACKEND_DATA/deployments.json:
+data/json-store/deployments.json:
   historial/estado conocido de deployments.
 
-SCRIPT_RUNS/vnc_allocations.json:
+runtime/script-runs/vnc_allocations.json:
   bloques VNC asignados por slice.
 
-SCRIPT_RUNS/network_allocations.json:
+runtime/script-runs/network_allocations.json:
   bloques VLAN/CIDR asignados por slice.
 
-SCRIPT_RUNS/vm_inventory.json:
+runtime/script-runs/vm_inventory.json:
   inventario real planificado/ejecutado por slice.
   guarda VMs, worker, VNC, VLANs, NICs, MACs, TAPs, imagen, flavor, disco y llave.
 
@@ -754,29 +768,30 @@ volumen Docker nimbuscore_novnc_tokens:
   el backend escribe el target VNC y el contenedor novnc lo consume con websockify.
 ```
 
-Los slices ya no dependen solo de memoria. Si reinicias el contenedor `backend`, se vuelven a cargar desde `BACKEND_DATA/slices.json`.
+Los slices ya no dependen solo de memoria. Si reinicias el contenedor `backend`, se vuelven a cargar desde `data/json-store/slices.json`.
 
 Para empezar una demo desde cero:
 
 ```bash
 sudo docker compose down -v
-rm -rf SCRIPT_RUNS
+rm -rf runtime/script-runs
+mkdir -p runtime/script-runs
 
-cat > BACKEND_DATA/slices.json <<'EOF'
+cat > data/json-store/slices.json <<'EOF'
 {
   "updated_at": "2026-05-10T00:00:00+00:00",
   "slices": {}
 }
 EOF
 
-cat > BACKEND_DATA/slice_templates.json <<'EOF'
+cat > data/json-store/slice_templates.json <<'EOF'
 {
   "updated_at": "2026-05-10T00:00:00+00:00",
   "templates": {}
 }
 EOF
 
-cat > BACKEND_DATA/deployments.json <<'EOF'
+cat > data/json-store/deployments.json <<'EOF'
 {
   "updated_at": "2026-05-10T00:00:00+00:00",
   "deployments": {}
@@ -787,7 +802,7 @@ sudo docker compose build --no-cache
 sudo docker compose up -d
 ```
 
-Si hay VMs antiguas corriendo, destruyelas o apagarlas antes de resetear `SCRIPT_RUNS`; si no, los contadores VNC/VLAN/CIDR pueden empezar desde cero y chocar con recursos existentes.
+Si hay VMs antiguas corriendo, destruyelas o apagarlas antes de resetear `runtime/script-runs`; si no, los contadores VNC/VLAN/CIDR pueden empezar desde cero y chocar con recursos existentes.
 
 `NIMBUSCORE_SCRIPT_DRY_RUN`:
 
@@ -805,7 +820,7 @@ La asignacion de VMs a workers es round-robin usando `NIMBUSCORE_COMPUTE_IPS`.
 El inventario real de VMs se genera en el worker con los mismos valores usados para ejecutar los scripts. Queda guardado en:
 
 ```text
-SCRIPT_RUNS/vm_inventory.json
+runtime/script-runs/vm_inventory.json
 ```
 
 El backend lo expone dentro de:
@@ -847,16 +862,16 @@ Si un nodo no tiene flavor o disco seleccionado, se usa el default efectivo:
 La asignacion de puertos VNC se guarda en:
 
 ```text
-SCRIPT_RUNS/vnc_allocations.json
+runtime/script-runs/vnc_allocations.json
 ```
 
 La asignacion de VLANs y subredes se guarda en:
 
 ```text
-SCRIPT_RUNS/network_allocations.json
+runtime/script-runs/network_allocations.json
 ```
 
-Si borras `SCRIPT_RUNS/` mientras siguen VMs prendidas, los contadores vuelven a empezar desde `NIMBUSCORE_VNC_BASE`, `NIMBUSCORE_VLAN_BASE` y `NIMBUSCORE_CIDR_BASE`; podrias chocar con VNC, VLANs o rangos DHCP existentes.
+Si borras `runtime/script-runs/` mientras siguen VMs prendidas, los contadores vuelven a empezar desde `NIMBUSCORE_VNC_BASE`, `NIMBUSCORE_VLAN_BASE` y `NIMBUSCORE_CIDR_BASE`; podrias chocar con VNC, VLANs o rangos DHCP existentes.
 
 ## Flujo De Creacion Desde El Frontend
 
@@ -866,7 +881,7 @@ En el flujo actual de la interfaz, `configurar-slice.html` crea **plantillas**, 
 Guardar cambios
   -> valida que cada VM tenga flavor, disco, imagen y par de llaves
   -> POST /api/slice-templates
-  -> guarda la plantilla en BACKEND_DATA/slice_templates.json
+  -> guarda la plantilla en data/json-store/slice_templates.json
 ```
 
 Desde `slices.html`, cada plantilla tiene dos acciones:
@@ -880,7 +895,7 @@ Asignar:
   abre asignar-slice.html con la plantilla seleccionada.
 ```
 
-En `asignar-slice.html` se elige un curso. Por ahora los cursos son fijos y persistidos en `BACKEND_DATA/academic.json`:
+En `asignar-slice.html` se elige un curso. Por ahora los cursos son fijos y persistidos en `data/json-store/academic.json`:
 
 ```text
 TEL141:
@@ -896,7 +911,7 @@ Al asignar una plantilla a un curso:
 Crear slices por alumno
   -> POST /api/slice-templates/{template_id}/assign-to-course
   -> crea 1 slice por cada alumno del curso
-  -> guarda los slices en BACKEND_DATA/slices.json
+  -> guarda los slices en data/json-store/slices.json
   -> no despliega VMs todavia
 ```
 
@@ -930,7 +945,7 @@ Apagar:
   -> el backend crea un job destroy_topology usando el inventario real del slice
   -> el worker entra por SSH al worker de cada VM
   -> ejecuta delete_vm.sh para matar QEMU, quitar TAPs de OVS y borrar el disco qcow2 de la VM
-  -> ejecuta delete_network_vlan.sh en server4 para eliminar namespaces DHCP, dnsmasq, veths, puertos vlan<ID> y reglas FORWARD del slice.
+  -> ejecuta delete_network_vlan.sh en App para eliminar namespaces DHCP, dnsmasq, veths, puertos vlan<ID> y reglas FORWARD del slice.
 ```
 
 La accion `Apagar` no borra la plantilla ni la asignacion academica. Destruye las VMs y redes runtime del slice desplegado. El slice queda en estado `DESTRUIDO` y puede volver a desplegarse despues usando la misma reserva VLAN/CIDR/VNC que ya tenia ese slice.
@@ -938,10 +953,10 @@ La accion `Apagar` no borra la plantilla ni la asignacion academica. Destruye la
 Ejemplo de comando generado:
 
 ```bash
-ssh ubuntu@10.0.10.4 \
+ssh ubuntu@10.0.10.5 \
   NIMBUSCORE_HEADNODE_LOCAL=true \
   NIMBUSCORE_REMOTE_SCRIPTS_DIR='/home/ubuntu/script_runner' \
-  NIMBUSCORE_COMPUTE_IPS='10.0.10.1,10.0.10.2,10.0.10.3' \
+  NIMBUSCORE_COMPUTE_IPS='10.0.10.1,10.0.10.2,10.0.10.3,10.0.10.4' \
   NIMBUSCORE_OVS_UPLINKS='ens4' \
   bash '/home/ubuntu/script_runner/create_linear_topology.sh' \
   'slice-de-red' '3' '100' '5901' '10'
@@ -1019,7 +1034,7 @@ Ejemplo:
 ./create_network_vlan.sh 100 192.168.10.0/24 dhcp 192.168.10.10 192.168.10.100
 ```
 
-En `server4` crea:
+En `App` crea:
 
 ```text
 br-int
@@ -1060,7 +1075,7 @@ Ejemplo:
 ./delete_network_vlan.sh 100 br-int
 ```
 
-En `server4` elimina los recursos runtime de esa VLAN:
+En `App` elimina los recursos runtime de esa VLAN:
 
 ```text
 dnsmasq:
@@ -1087,7 +1102,7 @@ Este script no toca `ens4` ni los uplinks OVS. Solo limpia los recursos creados 
 ./routing_networks.sh <VLAN_A> <VLAN_B>
 ```
 
-Habilita forwarding entre dos VLANs en `server4` con iptables. Esto permite que las redes creadas se comuniquen pasando por el head node.
+Habilita forwarding entre dos VLANs en `App` con iptables. Esto permite que las redes creadas se comuniquen pasando por el head node.
 
 Importante: los scripts de creacion de topologias ya no lo ejecutan automaticamente. Queda disponible solo para pruebas manuales o para modo demo centralizado. Si se quiere reactivar ese comportamiento al crear una topologia:
 
@@ -1203,18 +1218,18 @@ eth0 -> 192.168.11.39/24  VLAN 101
 eth1 -> 192.168.10.57/24  VLAN 100
 ```
 
-Importante: `server4` puede enrutar entre VLANs usando `routing_networks.sh`, pero ese ruteo automatico esta desactivado por defecto. Con el comportamiento actual, el head node crea las VLANs y DHCP, pero no conecta redes distintas entre si automaticamente.
+Importante: `App` puede enrutar entre VLANs usando `routing_networks.sh`, pero ese ruteo automatico esta desactivado por defecto. Con el comportamiento actual, el head node crea las VLANs y DHCP, pero no conecta redes distintas entre si automaticamente.
 
 Si se activa `NIMBUSCORE_ENABLE_AUTO_ROUTING=true`, entonces el trafico entre extremos puede pasar por el head node:
 
 ```text
-vm1 -> server4 -> vm3
+vm1 -> App -> vm3
 ```
 
 Si se requiere una topologia estricta donde el trafico pase por la VM intermedia, habria que cambiar el modelo:
 
 ```text
-server4:
+App:
   solo DHCP/red por enlace
   sin forwarding entre VLANs
 
@@ -1225,11 +1240,11 @@ vm intermedia:
 
 ## Transporte Entre OVS
 
-Los scripts crean TAPs y VLANs en los bridges OVS, pero asumen que existe conectividad L2 para transportar esas VLANs entre `server4` y los workers.
+Los scripts crean TAPs y VLANs en los bridges OVS, pero asumen que existe conectividad L2 para transportar esas VLANs entre `App` y los workers.
 
-Si `br-int` de `server4` y `br-int` de `server1/server2/server3` no comparten un trunk, VXLAN, GRE o una configuracion equivalente, las VMs pueden crearse pero no necesariamente recibiran DHCP ni tendran conectividad con las redes del head node.
+Si `br-int` de `App` y `br-int` de `server1/server2/server3/server4` no comparten un trunk, VXLAN, GRE o una configuracion equivalente, las VMs pueden crearse pero no necesariamente recibiran DHCP ni tendran conectividad con las redes del head node.
 
-En el laboratorio actual se usa `ens4` como troncal L2. Esa interfaz debe estar dentro de `br-int` tanto en `server4` como en los workers. `ens3` queda fuera porque es la interfaz de gestion/SSH.
+En el laboratorio actual se usa `ens4` como troncal L2. Esa interfaz debe estar dentro de `br-int` tanto en `App` como en los workers. `ens3` queda fuera porque es la interfaz de gestion/SSH.
 
 Los scripts intentan agregar las interfaces definidas en `NIMBUSCORE_OVS_UPLINKS`, pero tambien puedes validar o corregir manualmente asi:
 
@@ -1239,14 +1254,14 @@ sudo ip link set ens4 up
 sudo ovs-vsctl --may-exist add-port br-int ens4
 ```
 
-En `server4`, esto debe mostrar un puerto `ens4`:
+En `App`, esto debe mostrar un puerto `ens4`:
 
 ```bash
 sudo ovs-vsctl list port ens4
 sudo ovs-vsctl show
 ```
 
-Si `sudo ovs-vsctl list port ens4` responde `no row "ens4" in table Port`, el DHCP puede llegar hasta la interfaz fisica de `server4` pero no entrar al bridge ni al namespace DHCP.
+Si `sudo ovs-vsctl list port ens4` responde `no row "ens4" in table Port`, el DHCP puede llegar hasta la interfaz fisica de `App` pero no entrar al bridge ni al namespace DHCP.
 
 Validaciones utiles:
 
@@ -1256,7 +1271,7 @@ sudo ovs-vsctl show
 sudo ovs-vsctl list port | grep -E "name|tag|external_ids"
 ps aux | grep qemu
 
-# server4
+# App
 sudo ovs-vsctl show
 sudo ovs-vsctl list port ens4
 ip a | grep vlan
@@ -1269,14 +1284,14 @@ sudo iptables -L FORWARD -n -v
 Si algunas VMs reciben IP y otras no, revisa en este orden:
 
 ```bash
-# En server4: confirmar namespaces DHCP
+# En App: confirmar namespaces DHCP
 sudo ip netns list
 
-# En server4: confirmar direccion y socket DHCP del namespace
+# En App: confirmar direccion y socket DHCP del namespace
 sudo ip netns exec dhcp-ns-vlan100 ip -br addr
 sudo ip netns exec dhcp-ns-vlan100 ss -lunp
 
-# En server4: confirmar dnsmasq y leases de una VLAN
+# En App: confirmar dnsmasq y leases de una VLAN
 sudo cat /var/lib/misc/dnsmasq-dhcp-ns-vlan100.leases
 sudo tail -n 80 /var/log/dnsmasq-dhcp-ns-vlan100.log
 
@@ -1287,10 +1302,10 @@ ip link | grep tap
 # En worker: ver si salen DHCP Discover por la troncal
 sudo tcpdump -eni ens4 'vlan 100 and (udp port 67 or udp port 68)'
 
-# En server4: ver si llegan DHCP Discover por la troncal
+# En App: ver si llegan DHCP Discover por la troncal
 sudo tcpdump -eni ens4 'vlan 100 and (udp port 67 or udp port 68)'
 
-# En server4: ver si llegan al namespace DHCP
+# En App: ver si llegan al namespace DHCP
 sudo ip netns exec dhcp-ns-vlan100 tcpdump -eni veth-ns-100 'udp port 67 or udp port 68'
 
 # En la VM Ubuntu/Debian: pedir DHCP manual si necesitas probar
@@ -1303,13 +1318,13 @@ Interpretacion rapida:
 
 ```text
 La VM no aparece en leases:
-  el DHCP discover no esta llegando al dnsmasq. Revisa trunk/VXLAN/GRE entre server4 y el worker, o tags VLAN en OVS.
+  el DHCP discover no esta llegando al dnsmasq. Revisa trunk/VXLAN/GRE entre App y el worker, o tags VLAN en OVS.
 
-Ves DHCP Discover en ens4 de server4 pero no en veth-ns-100:
-  normalmente ens4 no esta agregado a br-int en server4, br-int esta abajo, o el puerto veth-h-100 no esta taggeado correctamente.
+Ves DHCP Discover en ens4 de App pero no en veth-ns-100:
+  normalmente ens4 no esta agregado a br-int en App, br-int esta abajo, o el puerto veth-h-100 no esta taggeado correctamente.
 
-No ves DHCP Discover en ens4 de server4:
-  revisa el transporte L2 entre worker y server4: switch, VLAN permitida, trunk, cableado virtual o ens4 en el worker.
+No ves DHCP Discover en ens4 de App:
+  revisa el transporte L2 entre worker y App: switch, VLAN permitida, trunk, cableado virtual o ens4 en el worker.
 
 La VM aparece en leases, pero no tiene IP:
   revisa cloud-init/netplan dentro de la VM. En VMs nuevas, NimbusCore ya genera network-config para todas las NICs.
@@ -1466,7 +1481,7 @@ zona de disponibilidad:
 
 reglas de seguridad:
   no se aplican por VM todavia.
-  el acceso SSH desde local depende del salto por server4 y de la conectividad OVS/VLAN, no de un security group implementado por NimbusCore.
+  el acceso SSH desde local depende del salto por App y de la conectividad OVS/VLAN, no de un security group implementado por NimbusCore.
 
 nodos[].tipo:
   se guarda y se muestra en el canvas como Servidor, Computadora, Router o Switch.

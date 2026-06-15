@@ -1,15 +1,15 @@
 services:
-  frontend:
+  web-ui:
     build:
-      context: ./FRONT
-    container_name: nimbuscore-frontend
+      context: ./apps/web-ui
+    container_name: nimbuscore-web-ui
     ports:
       - "8081:80"
 
-  backend:
+  slice-manager:
     build:
-      context: ./BACKEND
-    container_name: nimbuscore-backend
+      context: ./apps/slice-manager
+    container_name: nimbuscore-slice-manager
     environment:
       NIMBUSCORE_JOB_DIR: /jobs
       NIMBUSCORE_KEYPAIR_DIR: /keypairs
@@ -31,24 +31,24 @@ services:
     volumes:
       - nimbuscore_jobs:/jobs
       - ${NIMBUSCORE_KEYPAIR_DIR:-/home/ubuntu/nimbuscore-keys}:/keypairs
-      - ./BACKEND_DATA:/data
-      - ./SCRIPT_RUNS:/script-runs:ro
+      - ./data/json-store:/data
+      - ./runtime/script-runs:/script-runs:ro
       - nimbuscore_novnc_tokens:/novnc-tokens
-      - ./IMAGE_UPLOADS:/image-uploads
-      - ./IMAGE_RUNNER:/image-runner:ro
+      - ./services/image-manager/uploads:/image-uploads
+      - ./services/image-manager/runner:/image-runner:ro
       - ${NIMBUSCORE_RCLONE_CONFIG_DIR:-/home/ubuntu/.config/rclone}:/root/.config/rclone
 
-  worker:
+  linux-driver:
     build:
-      context: ./WORKER
-    container_name: nimbuscore-worker
+      context: ./drivers/linux/worker
+    container_name: nimbuscore-linux-driver
     environment:
       NIMBUSCORE_JOB_DIR: /jobs
       NIMBUSCORE_RUN_DIR: /script-runs
       NIMBUSCORE_VM_INVENTORY_PATH: /script-runs/vm_inventory.json
       NIMBUSCORE_SCRIPT_DRY_RUN: "false"
-      NIMBUSCORE_HEADNODE_IP: "${NIMBUSCORE_HEADNODE_IP:-10.0.10.4}"
-      NIMBUSCORE_COMPUTE_IPS: "${NIMBUSCORE_COMPUTE_IPS:-10.0.10.1,10.0.10.2,10.0.10.3}"
+      NIMBUSCORE_HEADNODE_IP: "${NIMBUSCORE_HEADNODE_IP:-10.0.10.5}"
+      NIMBUSCORE_COMPUTE_IPS: "${NIMBUSCORE_COMPUTE_IPS:-10.0.10.1,10.0.10.2,10.0.10.3,10.0.10.4}"
       NIMBUSCORE_REMOTE_SCRIPTS_DIR: /home/ubuntu/script_runner
       NIMBUSCORE_KEYPAIR_DIR: "${NIMBUSCORE_KEYPAIR_DIR:-/home/ubuntu/nimbuscore-keys}"
       NIMBUSCORE_OVS_UPLINKS: "${NIMBUSCORE_OVS_UPLINKS:-ens4}"
@@ -66,23 +66,23 @@ services:
       NIMBUSCORE_MGMT_DHCP_START: "${NIMBUSCORE_MGMT_DHCP_START:-10.60.9.20}"
       NIMBUSCORE_MGMT_DHCP_END: "${NIMBUSCORE_MGMT_DHCP_END:-10.60.9.250}"
       NIMBUSCORE_MGMT_DHCP_LEASE_TIME: "${NIMBUSCORE_MGMT_DHCP_LEASE_TIME:-12h}"
-      NIMBUSCORE_VLAN_BASE: 100
-      NIMBUSCORE_VLAN_BLOCK_SIZE: 100
-      NIMBUSCORE_VNC_BASE: 5901
-      NIMBUSCORE_VNC_BLOCK_SIZE: 100
-      NIMBUSCORE_CIDR_BASE: 10
-      NIMBUSCORE_CIDR_BLOCK_SIZE: 20
+      NIMBUSCORE_VLAN_BASE: "${NIMBUSCORE_VLAN_BASE:-100}"
+      NIMBUSCORE_VLAN_BLOCK_SIZE: "${NIMBUSCORE_VLAN_BLOCK_SIZE:-100}"
+      NIMBUSCORE_VNC_BASE: "${NIMBUSCORE_VNC_BASE:-5901}"
+      NIMBUSCORE_VNC_BLOCK_SIZE: "${NIMBUSCORE_VNC_BLOCK_SIZE:-100}"
+      NIMBUSCORE_CIDR_BASE: "${NIMBUSCORE_CIDR_BASE:-10}"
+      NIMBUSCORE_CIDR_BLOCK_SIZE: "${NIMBUSCORE_CIDR_BLOCK_SIZE:-20}"
     depends_on:
-      - backend
+      - slice-manager
     volumes:
       - nimbuscore_jobs:/jobs
-      - ./SCRIPT_RUNS:/script-runs
+      - ./runtime/script-runs:/script-runs
       - ${NIMBUSCORE_SSH_DIR:-/home/ubuntu/.ssh}:/root/.ssh:ro
 
-  novnc:
+  console-access:
     build:
-      context: ./NOVNC
-    container_name: nimbuscore-novnc
+      context: ./apps/console-access
+    container_name: nimbuscore-console-access
     volumes:
       - nimbuscore_novnc_tokens:/tokens
     expose:
@@ -92,13 +92,13 @@ services:
     image: nginx:1.27-alpine
     container_name: nimbuscore-api-gateway
     depends_on:
-      - frontend
-      - backend
-      - novnc
+      - web-ui
+      - slice-manager
+      - console-access
     ports:
       - "8080:80"
     volumes:
-      - ./API_Gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./apps/api-gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
   nimbuscore_jobs:

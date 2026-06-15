@@ -1,0 +1,30 @@
+#!/bin/bash
+set -euo pipefail
+
+INTERFACES="$@"
+OVS_NAME="${NIMBUSCORE_OVS_NAME:-br-int}"
+OVS_UPLINKS="${NIMBUSCORE_OVS_UPLINKS:-}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${SCRIPT_DIR}/ovs_common.sh" ]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/ovs_common.sh"
+fi
+
+INTERFACES="${INTERFACES} ${OVS_UPLINKS}"
+INTERFACES="$(echo "$INTERFACES" | xargs)"
+
+if [ -z "$INTERFACES" ]; then
+    echo "Uso: $0 <InterfacesAConectar>"
+    echo "Ejemplo: $0 ens4 ens5"
+    echo "No pases ens3 si es tu interfaz de gestion."
+    exit 1
+fi
+
+if declare -F nimbuscore_ensure_ovs_ready >/dev/null 2>&1; then
+    nimbuscore_ensure_ovs_ready "$OVS_NAME" "$INTERFACES" "[compute_init]"
+else
+    sudo ovs-vsctl --may-exist add-br "$OVS_NAME"
+    sudo ip link set "$OVS_NAME" up
+fi
+
+echo "[compute_init] OK"
