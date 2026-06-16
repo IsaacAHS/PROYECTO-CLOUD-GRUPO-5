@@ -665,8 +665,13 @@
 							<label>Nombre del slice <span class="req">*</span></label>
 							<input type="text" id="nombre-slice" placeholder="Ej. Topología Árbol Lab 1" />
 						</div>
-						<!-- Zona de disponibilidad pausada por ahora: el backend usa openstack-zone-1 por defecto. -->
-						<input type="hidden" id="zona" value="openstack-zone-1" />
+						<div class="field">
+							<label>Zona de disponibilidad <span class="req">*</span></label>
+							<select id="zona">
+								<option value="linux-zone-1">Cluster Linux</option>
+								<option value="openstack-zone-1">Cluster OpenStack</option>
+							</select>
+						</div>
 					</div>
 
 					<hr class="config-divider" />
@@ -751,7 +756,7 @@
 								<label>Imagen <span class="req">*</span></label>
 								<div class="img-tabs">
 									<button class="img-tab active" id="tab-select" onclick="setImgMode('select')">Seleccionar</button>
-									<button class="img-tab" id="tab-upload" onclick="setImgMode('upload')">Subir</button>
+									<button class="img-tab" id="tab-upload" onclick="setImgMode('upload')" hidden>Subir</button>
 								</div>
 								<div id="img-select-wrap">
 									<select id="nc-imagen" onchange="saveNodeConfig()">
@@ -962,6 +967,11 @@ const REQUIRED_VM_FIELDS = [
 ];
 
 const ALLOWED_DISK_GB = [1, 2, 3];
+const DEFAULT_ZONE_ID = 'linux-zone-1';
+const FALLBACK_AVAILABILITY_ZONES = [
+	{ id: 'linux-zone-1', label: 'Cluster Linux', implemented: true },
+	{ id: 'openstack-zone-1', label: 'Cluster OpenStack', implemented: false }
+];
 
 const NODE_TYPES = {
 	srv: { icon: 'fa-server',  label: 'SRV' },
@@ -998,8 +1008,51 @@ let availableKeypairs = [];
 let keypairsLoaded = false;
 let availableImages = [];
 let imagesLoaded = false;
+let availabilityZones = FALLBACK_AVAILABILITY_ZONES.slice();
+const ENABLE_IMAGE_UPLOADS = false;
 let imageUploadInProgress = false;
 let imageUploadLockedNodeId = null;
+
+function syncImageUploadFeature() {
+	const uploadTab = document.getElementById('tab-upload');
+	const uploadWrap = document.getElementById('img-upload-wrap');
+	if (uploadTab) uploadTab.hidden = !ENABLE_IMAGE_UPLOADS;
+	if (!ENABLE_IMAGE_UPLOADS && uploadWrap) uploadWrap.style.display = 'none';
+}
+
+function renderAvailabilityZones(selectedValue) {
+	const select = document.getElementById('zona');
+	if (!select) return;
+	const currentValue = selectedValue || select.value || DEFAULT_ZONE_ID;
+	select.innerHTML = '';
+	availabilityZones.forEach(zone => {
+		const option = document.createElement('option');
+		option.value = zone.id;
+		option.textContent = zone.label || zone.name || zone.id;
+		select.appendChild(option);
+	});
+	if (!availabilityZones.some(zone => zone.id === currentValue)) {
+		const option = document.createElement('option');
+		option.value = currentValue;
+		option.textContent = currentValue;
+		select.appendChild(option);
+	}
+	select.value = currentValue;
+}
+
+async function loadAvailabilityZones(preferredValue) {
+	try {
+		const response = await fetch('/api/availability-zones');
+		if (!response.ok) throw new Error(`API /availability-zones respondio ${response.status}`);
+		const zones = await response.json();
+		if (Array.isArray(zones) && zones.length > 0) availabilityZones = zones;
+	} catch (error) {
+		console.warn('No se pudieron cargar zonas de disponibilidad.', error);
+		availabilityZones = FALLBACK_AVAILABILITY_ZONES.slice();
+	}
+	renderAvailabilityZones(preferredValue);
+	syncReviewModeControls();
+}
 
 function isManagementNodeId(id) {
 	return String(id || '') === MGMT_NODE_ID;
@@ -2008,14 +2061,22 @@ function downloadPrivateKey(name, privateKey) {
 
 function setImgMode(mode, doSave) {
 	if (ctxReviewOnly && doSave !== false) return;
+	if (!ENABLE_IMAGE_UPLOADS && mode === 'upload') mode = 'select';
 	if (doSave !== false && selectedNodeId) {
 		const cfg = nodeConfigs[selectedNodeId];
 		if (cfg) cfg.imagenMode = mode;
 	}
-	document.getElementById('tab-select').classList.toggle('active', mode === 'select');
-	document.getElementById('tab-upload').classList.toggle('active', mode === 'upload');
-	document.getElementById('img-select-wrap').style.display = mode === 'select' ? '' : 'none';
-	document.getElementById('img-upload-wrap').style.display = mode === 'upload' ? '' : 'none';
+	const selectTab = document.getElementById('tab-select');
+	const uploadTab = document.getElementById('tab-upload');
+	const selectWrap = document.getElementById('img-select-wrap');
+	const uploadWrap = document.getElementById('img-upload-wrap');
+	if (selectTab) selectTab.classList.toggle('active', mode === 'select');
+	if (uploadTab) {
+		uploadTab.hidden = !ENABLE_IMAGE_UPLOADS;
+		uploadTab.classList.toggle('active', mode === 'upload');
+	}
+	if (selectWrap) selectWrap.style.display = mode === 'select' ? '' : 'none';
+	if (uploadWrap) uploadWrap.style.display = ENABLE_IMAGE_UPLOADS && mode === 'upload' ? '' : 'none';
 }
 
 function updateUploadImageState(cfg, state) {
@@ -2046,6 +2107,9 @@ function updateUploadImageState(cfg, state) {
 }
 
 async function uploadImageFile(file) {
+	if (!ENABLE_IMAGE_UPLOADS) {
+		throw new Error('La subida de imagenes esta deshabilitada temporalmente.');
+	}
 	const formData = new FormData();
 	formData.append('file', file);
 	formData.append('label', file.name);
@@ -2063,6 +2127,11 @@ async function uploadImageFile(file) {
 
 async function onFileChange(input) {
 	if (ctxReviewOnly) return;
+	if (!ENABLE_IMAGE_UPLOADS) {
+		input.value = '';
+		alert('La subida de imagenes esta deshabilitada temporalmente.');
+		return;
+	}
 	const file = input.files[0];
 	const uploadButton = document.getElementById('btn-upload-image');
 	if (!file) {
@@ -2699,7 +2768,7 @@ function hydrateSliceForReview(slice) {
 	const sliceName = slice.nombre || '';
 	updateReviewLabels(sliceName);
 	document.getElementById('nombre-slice').value = sliceName;
-	document.getElementById('zona').value = slice.zona || '';
+	renderAvailabilityZones(slice.zona || DEFAULT_ZONE_ID);
 
 	(slice.topologias || []).slice(0, 1).forEach((topology, index) => {
 		const rawId = topology.id !== undefined ? topology.id : index + 1;
@@ -2823,6 +2892,8 @@ async function loadSliceForReview(sliceId) {
 		ensureManagementCloud();
 		updateCanvasEmpty();
 		syncTopologyModeControls();
+		syncImageUploadFeature();
+		loadAvailabilityZones();
 		loadImages();
 		loadKeypairs();
 
@@ -2894,6 +2965,9 @@ function validateSliceBeforeSave() {
 	if (runnableTopologies.length > 1) {
 		errors.push({ message: 'Solo se permite una topología por slice.' });
 	}
+	if (!document.getElementById('zona').value) {
+		errors.push({ message: 'Selecciona una zona de disponibilidad.' });
+	}
 
 	vmNodes().forEach(nd => {
 		const messages = vmConfigValidationMessages(nd.id);
@@ -2944,7 +3018,7 @@ function buildSlicePayload(nombre) {
 
 	return {
 		nombre,
-		zona: document.getElementById('zona').value || 'openstack-zone-1',
+		zona: document.getElementById('zona').value || DEFAULT_ZONE_ID,
 		curso_id: ctxCourseId,
 		topologias: topoEntries
 			.filter(t => t.type)

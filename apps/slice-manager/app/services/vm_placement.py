@@ -1,28 +1,26 @@
 from typing import Any
 
-
-OPENSTACK_HOSTS = ["compute-1", "compute-2", "compute-3"]
-LINUX_HOSTS = ["10.0.10.1", "10.0.10.2", "10.0.10.3", "10.0.10.4"]
+from app.services.availability_zones import DEFAULT_ZONE_ID, require_availability_zone
 
 
 def place_vms(slice_item: dict[str, Any]) -> list[dict[str, Any]]:
     placements = []
     nodes = slice_item.get("nodos") or []
+    zone = require_availability_zone(slice_item.get("zona") or DEFAULT_ZONE_ID)
+    hosts = zone["hosts"]
 
     for index, node in enumerate(nodes):
-        cfg = node.get("configuracion") or {}
-        flavor = cfg.get("flavor") or "m1.small"
-        target = "linux" if flavor.startswith("linux.") else "openstack"
-        hosts = LINUX_HOSTS if target == "linux" else OPENSTACK_HOSTS
         host = hosts[index % len(hosts)]
 
         placements.append(
             {
                 "node_id": node["id"],
-                "target": target,
+                "target": zone["driver"],
+                "driver": zone["driver"],
+                "zone": zone["id"],
                 "host": host,
-                "availability_zone": f"nova:{host}" if target == "openstack" else host,
-                "reason": "round-robin demo hardcodeado",
+                "availability_zone": zone["id"],
+                "reason": f"round-robin en {zone['label']}",
             }
         )
 

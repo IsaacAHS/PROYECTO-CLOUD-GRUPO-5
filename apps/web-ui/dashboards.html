@@ -72,6 +72,33 @@
 		.dash-live { display: flex; align-items: center; gap: 0.55em; font-size: 0.75em; color: #9fa3a6; flex-shrink: 0; }
 		.dash-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #6acf6e; box-shadow: 0 0 0 2px rgba(106,207,110,0.25); animation: pulse-dot 2.2s ease-in-out infinite; flex-shrink: 0; }
 		@keyframes pulse-dot { 0%,100% { box-shadow: 0 0 0 2px rgba(106,207,110,0.25); } 50% { box-shadow: 0 0 0 5px rgba(106,207,110,0.08); } }
+		.dash-actions { display: flex; align-items: center; gap: 0.75em; flex-wrap: wrap; justify-content: flex-end; }
+		.zone-select {
+			height: 2.6em;
+			min-width: 190px;
+			border-radius: 0.35em;
+			border: solid 1px rgba(210,215,217,0.9);
+			background: #fff;
+			color: #3d4449;
+			font-size: 0.78em;
+			padding: 0 2.4em 0 0.85em;
+		}
+		.btn-refresh {
+			height: 2.6em;
+			border-radius: 0.35em;
+			border: solid 1px #f56a6a;
+			background: transparent;
+			color: #f56a6a;
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.7em;
+			font-weight: 700;
+			letter-spacing: 0.05em;
+			text-transform: uppercase;
+			padding: 0 1em;
+			cursor: pointer;
+		}
+		.btn-refresh:hover { background: rgba(245,106,106,0.07); }
+		.btn-refresh:disabled { opacity: 0.55; cursor: wait; }
 
 		/* ══ GRID ══ */
 		.dash-grid {
@@ -114,6 +141,42 @@
 
 		/* ══ CHART AREA ══ */
 		.chart-area { position: relative; flex: 1; min-height: 0; }
+		.hosts-table-wrap { overflow-x: auto; margin-top: 0.2em; }
+		.hosts-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+		.hosts-table th,
+		.hosts-table td {
+			border-bottom: solid 1px rgba(210,215,217,0.7);
+			padding: 0.75em 0.8em;
+			text-align: left;
+			vertical-align: middle;
+			font-size: 0.78em;
+		}
+		.hosts-table th {
+			font-family: 'Roboto Slab', serif;
+			font-size: 0.66em;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: #3d4449;
+			background: #f8f9fa;
+		}
+		.hosts-table tbody tr:last-child td { border-bottom: 0; }
+		.host-name { color: #3d4449; font-family: 'Roboto Slab', serif; font-weight: 700; }
+		.status-pill {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.4em;
+			border-radius: 999px;
+			padding: 0.2em 0.7em;
+			font-size: 0.72em;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+		}
+		.status-pill::before { content: ""; width: 0.55em; height: 0.55em; border-radius: 50%; background: currentColor; }
+		.status-online { color: #2e9e4f; background: rgba(106,207,110,0.12); }
+		.status-offline { color: #c44b4b; background: rgba(245,106,106,0.12); }
+		.status-unknown, .status-degraded { color: #b1842c; background: rgba(245,192,106,0.16); }
+		.metric-muted { color: #9fa3a6; }
 
 		/* ══ SPANS ══ */
 		.span-2 { grid-column: span 2; }
@@ -189,6 +252,14 @@
 					<span class="dash-live-dot"></span>
 					<span id="last-update">En vivo</span>
 				</div>
+				<div class="dash-actions">
+					<select id="zone-filter" class="zone-select" aria-label="Zona de disponibilidad">
+						<option value="">Todas las zonas</option>
+					</select>
+					<button type="button" id="refresh-monitoring" class="btn-refresh">
+						<i class="fas fa-sync-alt"></i> Actualizar
+					</button>
+				</div>
 			</div>
 
 			<div class="dash-grid">
@@ -198,40 +269,40 @@
 					<p class="card-title">Clusters Online</p>
 					<p class="card-sub">Estado actual de clústeres</p>
 					<div class="gauge-wrap">
-						<canvas id="chart-clusters"></canvas>
-						<div class="gauge-center">
-							<span class="gauge-val" id="val-clusters">11</span>
-							<span class="gauge-lbl">de 14 online</span>
+							<canvas id="chart-clusters"></canvas>
+							<div class="gauge-center">
+								<span class="gauge-val" id="val-clusters">0</span>
+								<span class="gauge-lbl">de 0 online</span>
+							</div>
 						</div>
 					</div>
-				</div>
 
 				<div class="chart-card">
 					<p class="card-title">CPU Disponible</p>
 					<p class="card-sub">Capacidad libre en todos los nodos</p>
 					<div class="gauge-wrap">
-						<canvas id="chart-cpu"></canvas>
-						<div class="gauge-center">
-							<span class="gauge-val" id="val-cpu">63%</span>
-							<span class="gauge-lbl">libre</span>
+							<canvas id="chart-cpu"></canvas>
+							<div class="gauge-center">
+								<span class="gauge-val" id="val-cpu">0%</span>
+								<span class="gauge-lbl">libre</span>
+							</div>
 						</div>
-					</div>
 				</div>
 
 				<div class="chart-card">
 					<p class="card-title">RAM Disponible</p>
 					<p class="card-sub">Memoria libre en todos los nodos</p>
 					<div class="gauge-wrap">
-						<canvas id="chart-ram"></canvas>
-						<div class="gauge-center">
-							<span class="gauge-val" id="val-ram">71%</span>
-							<span class="gauge-lbl">libre</span>
+							<canvas id="chart-ram"></canvas>
+							<div class="gauge-center">
+								<span class="gauge-val" id="val-ram">0%</span>
+								<span class="gauge-lbl">libre</span>
+							</div>
 						</div>
 					</div>
-				</div>
 
 				<!-- ── Fila 2: Solicitudes + Distribución de Slices ── -->
-				<div class="chart-card span-2">
+				<div class="chart-card span-2" style="display:none">
 					<p class="card-title">Solicitudes</p>
 					<p class="card-sub">Solicitudes procesadas en las últimas 24 horas</p>
 					<div class="chart-area" style="height:220px">
@@ -239,7 +310,7 @@
 					</div>
 				</div>
 
-				<div class="chart-card">
+				<div class="chart-card" style="display:none">
 					<p class="card-title">Distribución de Slices</p>
 					<p class="card-sub">Por tipo de topología</p>
 					<div class="gauge-wrap" style="min-height:220px">
@@ -248,7 +319,7 @@
 				</div>
 
 				<!-- ── Fila 3: Tráfico Gateway (ancho completo) ── -->
-				<div class="chart-card span-3">
+				<div class="chart-card span-3" style="display:none">
 					<p class="card-title">Tráfico Gateway</p>
 					<p class="card-sub">Tráfico entrante y saliente — Mbps</p>
 					<div class="chart-area" style="height:195px">
@@ -256,18 +327,18 @@
 					</div>
 				</div>
 
-				<!-- ── Fila 4: Cluster Linux + Cluster OpenStack + Carga por Servidor ── -->
+				<!-- ── Fila 4: Recursos asignados + Carga por Servidor ── -->
 				<div class="chart-card">
 					<p class="card-title">Cluster Linux</p>
-					<p class="card-sub">Nodos activos por distribución</p>
+					<p class="card-sub">vCPU asignadas por worker</p>
 					<div class="chart-area" style="height:215px">
 						<canvas id="chart-linux"></canvas>
 					</div>
 				</div>
 
 				<div class="chart-card">
-					<p class="card-title">Cluster OpenStack</p>
-					<p class="card-sub">Recursos activos por servicio</p>
+					<p class="card-title">RAM Asignada</p>
+					<p class="card-sub">RAM asignada por worker</p>
 					<div class="chart-area" style="height:215px">
 						<canvas id="chart-openstack"></canvas>
 					</div>
@@ -278,6 +349,32 @@
 					<p class="card-sub">Uso de CPU por nodo</p>
 					<div class="chart-area" style="height:215px">
 						<canvas id="chart-carga"></canvas>
+					</div>
+				</div>
+
+				<div class="chart-card span-3">
+					<p class="card-title">Detalle por Worker</p>
+					<p class="card-sub">Capacidad, uso real y recursos asignados para placement</p>
+					<div class="hosts-table-wrap">
+						<table class="hosts-table">
+							<thead>
+								<tr>
+									<th>Worker</th>
+									<th>Zona</th>
+									<th>Estado</th>
+									<th>CPU real</th>
+									<th>RAM real</th>
+									<th>Asignado</th>
+									<th>Disponible</th>
+									<th>VMs</th>
+								</tr>
+							</thead>
+							<tbody id="monitoring-hosts-body">
+								<tr>
+									<td colspan="8" class="metric-muted">Cargando métricas...</td>
+								</tr>
+							</tbody>
+						</table>
 					</div>
 				</div>
 
@@ -305,7 +402,7 @@ const chartClusters = new Chart(document.getElementById('chart-clusters'), {
 	type: 'doughnut',
 	data: {
 		labels: ['Online', 'Offline'],
-		datasets: [{ data: [11, 3], backgroundColor: [C_GREEN, C_GRAY], borderWidth: 0 }]
+		datasets: [{ data: [0, 100], backgroundColor: [C_GREEN, C_GRAY], borderWidth: 0 }]
 	},
 	options: {
 		cutout: '74%',
@@ -320,7 +417,7 @@ const chartClusters = new Chart(document.getElementById('chart-clusters'), {
 /* ════════════════════════════════════════
    2. CPU DISPONIBLE — donut gauge
 ════════════════════════════════════════ */
-const cpuData = [63, 37];
+const cpuData = [0, 100];
 const chartCpu = new Chart(document.getElementById('chart-cpu'), {
 	type: 'doughnut',
 	data: {
@@ -340,7 +437,7 @@ const chartCpu = new Chart(document.getElementById('chart-cpu'), {
 /* ════════════════════════════════════════
    3. RAM DISPONIBLE — donut gauge
 ════════════════════════════════════════ */
-const ramData = [71, 29];
+const ramData = [0, 100];
 const chartRam = new Chart(document.getElementById('chart-ram'), {
 	type: 'doughnut',
 	data: {
@@ -402,7 +499,7 @@ const chartSolic = new Chart(document.getElementById('chart-solicitudes'), {
 /* ════════════════════════════════════════
    5. DISTRIBUCIÓN DE SLICES — donut
 ════════════════════════════════════════ */
-new Chart(document.getElementById('chart-slices'), {
+const chartSlices = new Chart(document.getElementById('chart-slices'), {
 	type: 'doughnut',
 	data: {
 		labels: ['Lineal', 'Árbol', 'Estrella', 'Anillo', 'Personalizada'],
@@ -482,20 +579,14 @@ const chartGW = new Chart(document.getElementById('chart-gateway'), {
 /* ════════════════════════════════════════
    7. CLUSTER LINUX — bar chart
 ════════════════════════════════════════ */
-new Chart(document.getElementById('chart-linux'), {
+const chartLinux = new Chart(document.getElementById('chart-linux'), {
 	type: 'bar',
 	data: {
-		labels: ['Ubuntu 22.04', 'Ubuntu 20.04', 'Debian 12', 'CentOS 9', 'Fedora 38'],
+		labels: [],
 		datasets: [{
-			label: 'Nodos',
-			data: [8, 5, 4, 3, 2],
-			backgroundColor: [
-				'rgba(245,106,106,0.85)',
-				'rgba(245,106,106,0.65)',
-				'rgba(245,106,106,0.45)',
-				'rgba(245,106,106,0.28)',
-				'rgba(245,106,106,0.14)',
-			],
+			label: 'vCPU asignadas',
+			data: [],
+			backgroundColor: 'rgba(245,106,106,0.72)',
 			borderColor: 'rgba(245,106,106,0.4)',
 			borderWidth: 1,
 			borderRadius: 4,
@@ -524,20 +615,14 @@ new Chart(document.getElementById('chart-linux'), {
 /* ════════════════════════════════════════
    8. CLUSTER OPENSTACK — bar chart
 ════════════════════════════════════════ */
-new Chart(document.getElementById('chart-openstack'), {
+const chartOpenStack = new Chart(document.getElementById('chart-openstack'), {
 	type: 'bar',
 	data: {
-		labels: ['Nova', 'Cinder', 'Neutron', 'Keystone', 'Glance'],
+		labels: [],
 		datasets: [{
-			label: 'Recursos',
-			data: [24, 18, 12, 9, 6],
-			backgroundColor: [
-				'rgba(74,159,213,0.85)',
-				'rgba(74,159,213,0.65)',
-				'rgba(74,159,213,0.45)',
-				'rgba(74,159,213,0.28)',
-				'rgba(74,159,213,0.14)',
-			],
+			label: 'RAM asignada GB',
+			data: [],
+			backgroundColor: 'rgba(74,159,213,0.72)',
 			borderColor: 'rgba(74,159,213,0.4)',
 			borderWidth: 1,
 			borderRadius: 4,
@@ -566,11 +651,11 @@ new Chart(document.getElementById('chart-openstack'), {
 /* ════════════════════════════════════════
    9. CARGA POR SERVIDOR — horizontal bar
 ════════════════════════════════════════ */
-const loadVals = [78, 45, 92, 31, 67, 55];
-new Chart(document.getElementById('chart-carga'), {
+const loadVals = [];
+const chartCarga = new Chart(document.getElementById('chart-carga'), {
 	type: 'bar',
 	data: {
-		labels: ['srv-node-01', 'srv-node-02', 'srv-node-03', 'srv-node-04', 'srv-node-05', 'srv-node-06'],
+		labels: [],
 		datasets: [{
 			label: 'CPU %',
 			data: loadVals,
@@ -617,48 +702,180 @@ new Chart(document.getElementById('chart-carga'), {
 })();
 
 /* ════════════════════════════════════════
-   SIMULACIÓN DE DATOS EN VIVO
+   MONITOREO REAL
 ════════════════════════════════════════ */
-let liveTick = 0;
+const zoneFilter = document.getElementById('zone-filter');
+const refreshButton = document.getElementById('refresh-monitoring');
+const lastUpdateEl = document.getElementById('last-update');
+const hostsBody = document.getElementById('monitoring-hosts-body');
 
-function liveUpdate() {
-	liveTick++;
-
-	/* Solicitudes: desplazar buffer y añadir nuevo valor */
-	const lastSolic = chartSolic.data.datasets[0].data.at(-1);
-	const newSolic  = Math.max(10, Math.min(200, Math.round(lastSolic + (Math.random() - 0.47) * 20)));
-	chartSolic.data.datasets[0].data.shift();
-	chartSolic.data.datasets[0].data.push(newSolic);
-	chartSolic.update('none');
-
-	/* Tráfico Gateway */
-	const newIn  = Math.max(0,  Math.min(120, Math.round(chartGW.data.datasets[0].data.at(-1) + (Math.random() - 0.48) * 12)));
-	const newOut = Math.max(0,  Math.min(100, Math.round(chartGW.data.datasets[1].data.at(-1) + (Math.random() - 0.48) * 10)));
-	chartGW.data.datasets[0].data.shift(); chartGW.data.datasets[0].data.push(newIn);
-	chartGW.data.datasets[1].data.shift(); chartGW.data.datasets[1].data.push(newOut);
-	chartGW.update('none');
-
-	/* CPU y RAM cada 3 ticks */
-	if (liveTick % 3 === 0) {
-		const cpuFree = Math.max(10, Math.min(90, Math.round(chartCpu.data.datasets[0].data[0] + (Math.random() - 0.5) * 5)));
-		chartCpu.data.datasets[0].data = [cpuFree, 100 - cpuFree];
-		chartCpu.update();
-		document.getElementById('val-cpu').textContent = cpuFree + '%';
-
-		const ramFree = Math.max(10, Math.min(90, Math.round(chartRam.data.datasets[0].data[0] + (Math.random() - 0.5) * 4)));
-		chartRam.data.datasets[0].data = [ramFree, 100 - ramFree];
-		chartRam.update();
-		document.getElementById('val-ram').textContent = ramFree + '%';
-	}
-
-	/* Timestamp */
-	const secs = liveTick * 3;
-	document.getElementById('last-update').textContent =
-		secs < 60 ? `Actualizado hace ${secs}s` : 'Actualizado recientemente';
-	if (secs >= 60) liveTick = 0;
+function safeNumber(value, fallback = 0) {
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-setInterval(liveUpdate, 3000);
+function percent(value, digits = 0) {
+	if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+	return `${Number(value).toFixed(digits)}%`;
+}
+
+function formatMb(value) {
+	if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+	const number = Number(value);
+	if (Math.abs(number) >= 1024) return `${(number / 1024).toFixed(1)} GB`;
+	return `${Math.round(number)} MB`;
+}
+
+function setGauge(chart, value) {
+	const normalized = Math.max(0, Math.min(100, Math.round(safeNumber(value))));
+	chart.data.datasets[0].data = [normalized, 100 - normalized];
+	chart.update();
+	return normalized;
+}
+
+function hostLabel(host) {
+	return host.hostname || host.host_id || 'worker';
+}
+
+function sum(hosts, reader) {
+	return hosts.reduce((total, host) => total + safeNumber(reader(host)), 0);
+}
+
+function statusClass(status) {
+	if (status === 'online') return 'status-online';
+	if (status === 'offline') return 'status-offline';
+	if (status === 'degraded') return 'status-degraded';
+	return 'status-unknown';
+}
+
+function renderHostsTable(hosts) {
+	if (!hosts.length) {
+		hostsBody.innerHTML = '<tr><td colspan="8" class="metric-muted">No hay métricas disponibles para la zona seleccionada.</td></tr>';
+		return;
+	}
+
+	hostsBody.innerHTML = hosts.map(host => {
+		const capacity = host.capacity || {};
+		const usage = host.real_usage || {};
+		const allocations = host.allocations || {};
+		const available = host.available_by_allocation || {};
+		const assigned = `${allocations.allocated_vcpus || 0} vCPU · ${formatMb(allocations.allocated_ram_mb || 0)}`;
+		const free = `${available.vcpus ?? '—'} vCPU · ${formatMb(available.ram_mb)}`;
+		const vmCount = `${allocations.running_vms || 0} activas · ${allocations.planned_vms || 0} planificadas`;
+		const errorTitle = Array.isArray(host.errors) && host.errors.length ? ` title="${host.errors.join(' | ').replace(/"/g, '&quot;')}"` : '';
+
+		return `
+			<tr${errorTitle}>
+				<td>
+					<span class="host-name">${hostLabel(host)}</span><br>
+					<span class="metric-muted">${capacity.vcpus_total ?? '—'} vCPU · ${formatMb(capacity.ram_total_mb)} · ${capacity.disk_total_gb ?? '—'} GB disco</span>
+				</td>
+				<td>${host.zone || '—'}</td>
+				<td><span class="status-pill ${statusClass(host.status)}">${host.status || 'unknown'}</span></td>
+				<td>${percent(usage.cpu_used_percent, 1)}</td>
+				<td>${formatMb(usage.ram_used_mb)} <span class="metric-muted">(${percent(usage.ram_used_percent, 1)})</span></td>
+				<td>${assigned}</td>
+				<td>${free}</td>
+				<td>${vmCount}</td>
+			</tr>
+		`;
+	}).join('');
+}
+
+function updateClusterCharts(hosts) {
+	const onlineHosts = hosts.filter(host => host.status === 'online');
+	const offlineHosts = hosts.length - onlineHosts.length;
+	const totalHosts = hosts.length;
+
+	chartClusters.data.datasets[0].data = [onlineHosts.length, Math.max(offlineHosts, 0)];
+	chartClusters.update();
+	document.getElementById('val-clusters').textContent = onlineHosts.length;
+	document.querySelector('#val-clusters + .gauge-lbl').textContent = `de ${totalHosts} online`;
+
+	const effectiveVcpus = sum(hosts, host => host.effective_capacity?.vcpus);
+	const availableVcpus = sum(hosts, host => host.available_by_allocation?.vcpus);
+	const cpuFreeByAllocation = effectiveVcpus > 0 ? (availableVcpus / effectiveVcpus) * 100 : 0;
+	const cpuFree = setGauge(chartCpu, cpuFreeByAllocation);
+	document.getElementById('val-cpu').textContent = `${cpuFree}%`;
+
+	const effectiveRam = sum(hosts, host => host.effective_capacity?.ram_mb);
+	const availableRam = sum(hosts, host => host.available_by_allocation?.ram_mb);
+	const ramFreeByAllocation = effectiveRam > 0 ? (availableRam / effectiveRam) * 100 : 0;
+	const ramFree = setGauge(chartRam, ramFreeByAllocation);
+	document.getElementById('val-ram').textContent = `${ramFree}%`;
+
+	const labels = hosts.map(hostLabel);
+	const allocatedVcpus = hosts.map(host => safeNumber(host.allocations?.allocated_vcpus));
+	const allocatedRamGb = hosts.map(host => Number((safeNumber(host.allocations?.allocated_ram_mb) / 1024).toFixed(2)));
+	const cpuUsage = hosts.map(host => safeNumber(host.real_usage?.cpu_used_percent));
+
+	chartLinux.data.labels = labels;
+	chartLinux.data.datasets[0].data = allocatedVcpus;
+	chartLinux.update();
+
+	chartOpenStack.data.labels = labels;
+	chartOpenStack.data.datasets[0].data = allocatedRamGb;
+	chartOpenStack.update();
+
+	chartCarga.data.labels = labels;
+	chartCarga.data.datasets[0].data = cpuUsage;
+	chartCarga.data.datasets[0].backgroundColor = cpuUsage.map(v =>
+		v >= 85 ? 'rgba(245,106,106,0.85)' :
+		v >= 60 ? 'rgba(245,192,106,0.82)' :
+		          'rgba(106,207,110,0.78)'
+	);
+	chartCarga.update();
+}
+
+async function loadAvailabilityZones() {
+	try {
+		const response = await fetch('/api/availability-zones');
+		if (!response.ok) throw new Error(`API /availability-zones respondio ${response.status}`);
+		const zones = await response.json();
+		if (!Array.isArray(zones)) return;
+		zoneFilter.innerHTML = '<option value="">Todas las zonas</option>';
+		zones.forEach(zone => {
+			const option = document.createElement('option');
+			option.value = zone.id;
+			option.textContent = `${zone.name || zone.id} (${zone.driver || 'driver'})`;
+			zoneFilter.appendChild(option);
+		});
+		const defaultLinux = zones.find(zone => zone.id === 'linux-zone-1');
+		if (defaultLinux) zoneFilter.value = defaultLinux.id;
+	} catch (error) {
+		console.warn('No se pudieron cargar zonas de disponibilidad', error);
+	}
+}
+
+async function refreshMonitoring() {
+	refreshButton.disabled = true;
+	lastUpdateEl.textContent = 'Actualizando...';
+	try {
+		const zoneId = zoneFilter.value;
+		const url = zoneId ? `/api/monitoring/hosts?zone_id=${encodeURIComponent(zoneId)}` : '/api/monitoring/hosts';
+		const response = await fetch(url, { cache: 'no-store' });
+		if (!response.ok) throw new Error(`API /monitoring/hosts respondio ${response.status}`);
+		const snapshot = await response.json();
+		const hosts = Array.isArray(snapshot.hosts) ? snapshot.hosts : [];
+
+		updateClusterCharts(hosts);
+		renderHostsTable(hosts);
+		const updatedAt = snapshot.updated_at ? new Date(snapshot.updated_at) : new Date();
+		lastUpdateEl.textContent = `Actualizado ${updatedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+	} catch (error) {
+		console.error(error);
+		hostsBody.innerHTML = `<tr><td colspan="8" class="metric-muted">No se pudieron cargar las métricas: ${error.message}</td></tr>`;
+		lastUpdateEl.textContent = 'Error al actualizar';
+	} finally {
+		refreshButton.disabled = false;
+	}
+}
+
+refreshButton.addEventListener('click', refreshMonitoring);
+zoneFilter.addEventListener('change', refreshMonitoring);
+
+loadAvailabilityZones().finally(refreshMonitoring);
+setInterval(refreshMonitoring, 15000);
 </script>
 
 </body>

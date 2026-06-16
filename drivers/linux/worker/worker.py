@@ -377,9 +377,16 @@ def process_destroy_job(path: Path, job: dict) -> None:
     log(f"job={job['id']} SUCCESS")
 
 
+def job_driver(job: dict) -> str:
+    script_data = job.get("script_runner", {})
+    return str(job.get("driver") or script_data.get("driver") or "linux").lower()
+
+
 def process_job(path: Path) -> None:
     job = json.loads(path.read_text(encoding="utf-8"))
     if job.get("status") != "QUEUED":
+        return
+    if job_driver(job) != "linux":
         return
 
     log(f"job={job['id']} recibido desde {path}")

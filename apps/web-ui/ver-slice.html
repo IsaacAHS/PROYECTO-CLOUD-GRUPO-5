@@ -338,8 +338,18 @@
 				<!-- ── CONFIG PANEL ── -->
 				<div class="config-panel">
 
-					<!-- Zona de disponibilidad pausada por ahora: se conserva oculta para compatibilidad con la API. -->
-					<input type="hidden" id="zona" value="openstack-zone-1" />
+					<div class="config-section">
+						<p class="config-subtitle"><i class="fas fa-layer-group"></i> Configuración del slice</p>
+						<div class="field">
+							<label>Zona de disponibilidad</label>
+							<select id="zona" disabled>
+								<option value="linux-zone-1">Cluster Linux</option>
+								<option value="openstack-zone-1">Cluster OpenStack</option>
+							</select>
+						</div>
+					</div>
+
+					<hr class="config-divider" />
 
 					<!-- Topologías (read-only list) -->
 					<div class="config-section" style="padding-top:1.1em">
@@ -1255,8 +1265,9 @@ function applySlice(slice) {
 	document.getElementById('edit-link').href =
 		`configurar-slice.html?slice=${slice.id || sliceId}&curso=${encodeURIComponent(courseId)}&nombre=${encodeURIComponent(courseNom)}&slicenombre=${encodeURIComponent(title)}`;
 
-	ensureSelectOption('zona', slice.zona || '', slice.zona || '');
-	document.getElementById('zona').value = slice.zona || '';
+	const zoneValue = slice.zona || 'linux-zone-1';
+	ensureSelectOption('zona', zoneValue, zoneValue);
+	document.getElementById('zona').value = zoneValue;
 	renderTopoList(topologies);
 	buildCanvas(topologies);
 	applySavedNodeData(savedNodes);
@@ -1270,6 +1281,7 @@ function applySlice(slice) {
 
 function applyDemoSlice() {
 	const demo = DEMO_SLICES[sliceId] || DEMO_SLICES['1'];
+	ensureSelectOption('zona', demo.zona, demo.zona);
 	document.getElementById('zona').value = demo.zona;
 	renderTopoList(demo.topos);
 	buildCanvas(demo.topos);

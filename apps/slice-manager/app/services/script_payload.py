@@ -1,6 +1,7 @@
 import re
 from typing import Any
 
+from app.services.availability_zones import DEFAULT_ZONE_ID
 from app.services.image_catalog import image_details
 
 
@@ -141,7 +142,7 @@ def build_script_variables(
     return {
         "slice_name": slice_item["nombre"],
         "slice_id": slice_item["id"],
-        "zone": slice_item.get("zona") or "openstack-zone-1",
+        "zone": slice_item.get("zona") or DEFAULT_ZONE_ID,
         "network_cidr": "10.42.0.0/24",
         "subnet_gateway": "10.42.0.1",
         "instances": instances,

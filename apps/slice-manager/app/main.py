@@ -17,9 +17,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.services.academic_store import get_course, load_courses
+from app.monitoring import monitoring_snapshot
+from app.services.availability_zones import (
+    DEFAULT_ZONE_ID,
+    list_availability_zones,
+    require_availability_zone,
+)
+from app.drivers import (
+    DeployJobRequest,
+    DestroyJobRequest,
+    DriverNotImplementedError,
+    select_cluster_driver,
+)
 from app.services.job_store import read_job, write_job
 from app.services.image_catalog import list_images, upsert_image
-from app.services.script_payload import build_script_variables
 from app.services.slice_store import (
     load_deployments,
     load_slices,
@@ -28,7 +39,6 @@ from app.services.slice_store import (
 )
 from app.services.slice_template_store import read_templates, write_templates
 from app.services.vm_inventory_store import inventory_for_slice
-from app.services.vm_placement import place_vms
 
 
 app = FastAPI(title="NimbusCore API", version="0.1.0")
@@ -40,6 +50,7 @@ IMAGE_UPLOAD_DIR = Path(os.getenv("NIMBUSCORE_IMAGE_UPLOAD_DIR", "/image-uploads
 IMAGE_UPLOAD_SCRIPT = Path(
     os.getenv("NIMBUSCORE_IMAGE_UPLOAD_SCRIPT", "/image-runner/upload_image_to_drive.sh")
 )
+ENABLE_IMAGE_UPLOADS = os.getenv("NIMBUSCORE_ENABLE_IMAGE_UPLOADS", "false").lower() == "true"
 KEEP_IMAGE_UPLOADS = os.getenv("NIMBUSCORE_KEEP_IMAGE_UPLOADS", "false").lower() == "true"
 IMAGE_UPLOAD_TIMEOUT = int(os.getenv("NIMBUSCORE_IMAGE_UPLOAD_TIMEOUT", "3600"))
 IMAGE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -153,6 +164,13 @@ def keypair_item(public_key_path: Path) -> dict[str, str]:
     }
 
 
+def normalize_zone_or_400(zone_id: str | None) -> str:
+    try:
+        return str(require_availability_zone(zone_id or DEFAULT_ZONE_ID)["id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -160,7 +178,7 @@ class LoginRequest(BaseModel):
 
 class SliceCreate(BaseModel):
     nombre: str = Field(min_length=1)
-    zona: str = "openstack-zone-1"
+    zona: str = DEFAULT_ZONE_ID
     topologias: list[dict[str, Any]] = Field(default_factory=list)
     nodos: list[dict[str, Any]] = Field(default_factory=list)
     enlaces: list[dict[str, Any]] = Field(default_factory=list)
@@ -410,6 +428,19 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/availability-zones")
+def get_availability_zones() -> list[dict[str, Any]]:
+    return list_availability_zones()
+
+
+@app.get("/monitoring/hosts")
+def get_monitoring_hosts(zone_id: str | None = None) -> dict[str, Any]:
+    try:
+        return monitoring_snapshot(zone_id).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.post("/auth/login")
 def login(payload: LoginRequest) -> dict[str, Any]:
     if not payload.username or not payload.password:
@@ -512,7 +543,14 @@ def create_keypair(payload: KeypairCreate) -> dict[str, str]:
 
 @app.get("/images")
 def get_images() -> list[dict[str, Any]]:
-    return list_images()
+    images = list_images()
+    if not ENABLE_IMAGE_UPLOADS:
+        images = [
+            image
+            for image in images
+            if image.get("source") != "google-drive-rclone"
+        ]
+    return images
 
 
 @app.post("/images", status_code=201)
@@ -533,6 +571,13 @@ async def upload_image_to_drive(
     label: str | None = Form(None),
     active: bool = Form(True),
 ) -> dict[str, Any]:
+    if not ENABLE_IMAGE_UPLOADS:
+        await file.close()
+        raise HTTPException(
+            status_code=501,
+            detail="La subida de imagenes a Drive esta deshabilitada temporalmente.",
+        )
+
     original_name = sanitize_uploaded_image_name(file.filename or "")
     clean_id = (image_id or image_id_from_filename(original_name)).strip()
     if not IMAGE_ID_RE.match(clean_id):
@@ -607,10 +652,11 @@ def list_slice_templates() -> list[dict[str, Any]]:
 @app.post("/slice-templates", status_code=201)
 def create_slice_template(payload: SliceCreate) -> dict[str, Any]:
     template_id = f"tpl-{uuid4().hex[:8]}"
+    zone_id = normalize_zone_or_400(payload.zona)
     item = {
         "id": template_id,
         "nombre": payload.nombre,
-        "zona": payload.zona,
+        "zona": zone_id,
         "estado": "PLANTILLA",
         "curso_id": payload.curso_id,
         "topologias": payload.topologias,
@@ -639,7 +685,10 @@ def update_slice_template(template_id: str, payload: SliceUpdate) -> dict[str, A
     if not item:
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
 
-    item.update(payload.model_dump(exclude_unset=True))
+    changes = payload.model_dump(exclude_unset=True)
+    if "zona" in changes:
+        changes["zona"] = normalize_zone_or_400(changes["zona"])
+    item.update(changes)
     item["estado"] = "PLANTILLA"
     item["updated_at"] = now_iso()
     write_templates(SLICE_TEMPLATES)
@@ -673,6 +722,7 @@ def assign_template_to_course(
             detail="Este curso ya tiene un set de slices asignado.",
         )
 
+    zone_id = normalize_zone_or_400(template.get("zona"))
     created = []
     for student in course.get("alumnos", []):
         slice_id = f"slice-{uuid4().hex[:8]}"
@@ -680,7 +730,7 @@ def assign_template_to_course(
             "id": slice_id,
             "template_id": template_id,
             "nombre": f"{template['nombre']} - {student['nombre']}",
-            "zona": template.get("zona") or "openstack-zone-1",
+            "zona": zone_id,
             "estado": "ASIGNADO",
             "curso_id": course["id"],
             "curso_nombre": course["nombre"],
@@ -724,10 +774,11 @@ def list_slices() -> list[dict[str, Any]]:
 @app.post("/slices", status_code=201)
 def create_slice(payload: SliceCreate) -> dict[str, Any]:
     slice_id = f"slice-{uuid4().hex[:8]}"
+    zone_id = normalize_zone_or_400(payload.zona)
     item = {
         "id": slice_id,
         "nombre": payload.nombre,
-        "zona": payload.zona,
+        "zona": zone_id,
         "estado": "CREADO",
         "curso_id": payload.curso_id,
         "topologias": payload.topologias,
@@ -763,6 +814,8 @@ def update_slice(slice_id: str, payload: SliceUpdate) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Slice no encontrado")
 
     changes = payload.model_dump(exclude_unset=True)
+    if "zona" in changes:
+        changes["zona"] = normalize_zone_or_400(changes["zona"])
     item.update(changes)
     item["updated_at"] = now_iso()
     save_slices(SLICES)
@@ -789,15 +842,34 @@ def deploy_slice(slice_id: str) -> dict[str, Any]:
             save_slices(SLICES)
             save_deployments(DEPLOYMENTS)
         ensure_slice_can_start_deploy(slice_id, item)
+        try:
+            driver = select_cluster_driver(item)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not driver.implemented:
+            raise HTTPException(status_code=501, detail=driver.not_implemented_message())
+        item["zona"] = driver.zone_id
 
         job_id = f"job-{uuid4().hex[:8]}"
         item["estado"] = "DESPLEGANDO"
         item["vm_inventory"] = empty_inventory(slice_id, "QUEUED")
         item["updated_at"] = now_iso()
         save_slices(SLICES)
-        placements = place_vms(item)
         try:
-            script_variables = build_script_variables(item, placements)
+            deployment = driver.build_deploy_job(
+                DeployJobRequest(
+                    job_id=job_id,
+                    slice_item=item,
+                    created_at=now_iso(),
+                )
+            )
+        except DriverNotImplementedError as exc:
+            item["estado"] = "CREADO"
+            item["vm_inventory"] = empty_inventory(slice_id, "FAILED")
+            item["vm_inventory"]["message"] = str(exc)
+            item["updated_at"] = now_iso()
+            save_slices(SLICES)
+            raise HTTPException(status_code=501, detail=str(exc)) from exc
         except ValueError as exc:
             item["estado"] = "ERROR"
             item["vm_inventory"] = empty_inventory(slice_id, "FAILED")
@@ -806,26 +878,15 @@ def deploy_slice(slice_id: str) -> dict[str, Any]:
             save_slices(SLICES)
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        deployment = {
-            "id": job_id,
-            "slice_id": slice_id,
-            "status": "QUEUED",
-            "message": "Job creado. El worker ejecutara Script Runner segun la configuracion actual.",
-            "placements": placements,
-            "script_runner": {
-                "action": "create_topology",
-                "variables": script_variables,
-            },
-            "created_at": now_iso(),
-            "updated_at": now_iso(),
-        }
         DEPLOYMENTS[job_id] = deployment
         save_deployments(DEPLOYMENTS)
         write_job(deployment)
 
+    script_variables = deployment.get("script_runner", {}).get("variables", {})
     app_log(
         f"deploy solicitado slice_id={slice_id} job_id={job_id} "
-        f"job_dir=/jobs topologias={script_variables.get('topologies')}"
+        f"driver={deployment.get('driver')} job_dir=/jobs "
+        f"topologias={script_variables.get('topologies')}"
     )
     return deployment
 
@@ -848,32 +909,41 @@ def destroy_slice(slice_id: str) -> dict[str, Any]:
                 status_code=409,
                 detail="El slice no tiene inventario de VMs o redes para destruir",
             )
+        try:
+            driver = select_cluster_driver(item)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not driver.implemented:
+            raise HTTPException(status_code=501, detail=driver.not_implemented_message())
+        item["zona"] = driver.zone_id
 
         job_id = f"job-{uuid4().hex[:8]}"
         item["estado"] = "DESTRUYENDO"
         item["updated_at"] = now_iso()
         save_slices(SLICES)
+        try:
+            deployment = driver.build_destroy_job(
+                DestroyJobRequest(
+                    job_id=job_id,
+                    slice_item=item,
+                    inventory=inventory,
+                    created_at=now_iso(),
+                )
+            )
+        except DriverNotImplementedError as exc:
+            item["estado"] = "ACTIVO"
+            item["updated_at"] = now_iso()
+            save_slices(SLICES)
+            raise HTTPException(status_code=501, detail=str(exc)) from exc
 
-        deployment = {
-            "id": job_id,
-            "slice_id": slice_id,
-            "status": "QUEUED",
-            "message": "Job creado. El worker destruira las VMs registradas en el inventario.",
-            "script_runner": {
-                "action": "destroy_topology",
-                "variables": {
-                    "inventory": deepcopy(inventory),
-                },
-                "vm_inventory": deepcopy(inventory),
-            },
-            "created_at": now_iso(),
-            "updated_at": now_iso(),
-        }
         DEPLOYMENTS[job_id] = deployment
         save_deployments(DEPLOYMENTS)
         write_job(deployment)
 
-    app_log(f"destroy solicitado slice_id={slice_id} job_id={job_id}")
+    app_log(
+        f"destroy solicitado slice_id={slice_id} job_id={job_id} "
+        f"driver={deployment.get('driver')}"
+    )
     return deployment
 
 

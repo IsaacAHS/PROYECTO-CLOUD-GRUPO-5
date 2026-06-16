@@ -21,8 +21,20 @@ services:
       NIMBUSCORE_VM_INVENTORY_PATH: /script-runs/vm_inventory.json
       NIMBUSCORE_NOVNC_TOKEN_FILE: /novnc-tokens/tokens.cfg
       NIMBUSCORE_NOVNC_PUBLIC_BASE: /novnc
+      NIMBUSCORE_ENABLE_IMAGE_UPLOADS: "${NIMBUSCORE_ENABLE_IMAGE_UPLOADS:-false}"
       NIMBUSCORE_IMAGE_UPLOAD_DIR: /image-uploads
       NIMBUSCORE_IMAGE_UPLOAD_SCRIPT: /image-runner/upload_image_to_drive.sh
+      NIMBUSCORE_DEFAULT_ZONE: "${NIMBUSCORE_DEFAULT_ZONE:-linux-zone-1}"
+      NIMBUSCORE_COMPUTE_IPS: "${NIMBUSCORE_COMPUTE_IPS:-10.0.10.1,10.0.10.2,10.0.10.3,10.0.10.4}"
+      NIMBUSCORE_OPENSTACK_COMPUTE_HOSTS: "${NIMBUSCORE_OPENSTACK_COMPUTE_HOSTS:-compute-1,compute-2,compute-3}"
+      NIMBUSCORE_SSH_USER: "${NIMBUSCORE_SSH_USER:-ubuntu}"
+      NIMBUSCORE_SSH_OPTS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+      NIMBUSCORE_MONITOR_SSH_TIMEOUT: "${NIMBUSCORE_MONITOR_SSH_TIMEOUT:-8}"
+      NIMBUSCORE_MONITOR_MAX_WORKERS: "${NIMBUSCORE_MONITOR_MAX_WORKERS:-4}"
+      NIMBUSCORE_MONITOR_CACHE_TTL_SECONDS: "${NIMBUSCORE_MONITOR_CACHE_TTL_SECONDS:-15}"
+      NIMBUSCORE_CPU_ALLOCATION_RATIO: "${NIMBUSCORE_CPU_ALLOCATION_RATIO:-1.0}"
+      NIMBUSCORE_RAM_ALLOCATION_RATIO: "${NIMBUSCORE_RAM_ALLOCATION_RATIO:-1.0}"
+      NIMBUSCORE_RESERVED_RAM_MB: "${NIMBUSCORE_RESERVED_RAM_MB:-0}"
       NIMBUSCORE_RCLONE_REMOTE: "${NIMBUSCORE_RCLONE_REMOTE:-}"
       NIMBUSCORE_RCLONE_FOLDER: "${NIMBUSCORE_RCLONE_FOLDER:-NimbusCore/images}"
       RCLONE_CONFIG: /root/.config/rclone/rclone.conf
@@ -33,6 +45,7 @@ services:
       - ${NIMBUSCORE_KEYPAIR_DIR:-/home/ubuntu/nimbuscore-keys}:/keypairs
       - ./data/json-store:/data
       - ./runtime/script-runs:/script-runs:ro
+      - ${NIMBUSCORE_SSH_DIR:-/home/ubuntu/.ssh}:/root/.ssh:ro
       - nimbuscore_novnc_tokens:/novnc-tokens
       - ./services/image-manager/uploads:/image-uploads
       - ./services/image-manager/runner:/image-runner:ro
