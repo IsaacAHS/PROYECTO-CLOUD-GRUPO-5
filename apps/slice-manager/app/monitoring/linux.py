@@ -30,6 +30,11 @@ if [ -z "$df_line" ]; then
   df_line="$(df -Pm / 2>/dev/null | awk 'NR==2 {print $2" "$3" "$5}' || true)"
 fi
 qemu_processes="$(pgrep -fc 'qemu-system' 2>/dev/null || true)"
+qemu_vm_names="$(ps -eo args= 2>/dev/null \
+  | awk '/qemu-system/ { for (i=1; i<NF; i++) if ($i == "-name") { print $(i+1); break } }' \
+  | sed 's/,.*//' \
+  | sort -u \
+  | paste -sd, -)"
 printf 'hostname=%s\n' "$hostname_value"
 printf 'vcpus_total=%s\n' "$vcpus_total"
 printf 'mem_total_kb=%s\n' "$mem_total_kb"
@@ -38,6 +43,7 @@ printf 'cpu_a=%s\n' "$cpu_a"
 printf 'cpu_b=%s\n' "$cpu_b"
 printf 'df_line=%s\n' "$df_line"
 printf 'qemu_processes=%s\n' "${qemu_processes:-0}"
+printf 'qemu_vm_names=%s\n' "${qemu_vm_names:-}"
 """
 
 
@@ -95,9 +101,23 @@ def parse_df_line(value: str) -> tuple[int | None, float | None]:
     return total_gb, used_percent
 
 
-def allocations_by_host() -> dict[str, HostAllocations]:
+def vm_matches_running_process(vm: dict[str, Any], running_names: set[str] | None) -> bool:
+    if not running_names:
+        return False
+    candidates = {
+        str(vm.get("name") or "").strip(),
+        str(vm.get("id") or "").strip(),
+    }
+    candidates.discard("")
+    return bool(candidates & running_names)
+
+
+def allocations_by_host(
+    running_names_by_host: dict[str, set[str]] | None = None,
+) -> dict[str, HostAllocations]:
     counters: dict[str, dict[str, int]] = {}
     store = load_inventory_store()
+    running_names_by_host = running_names_by_host or {}
 
     for inventory in store.get("slices", {}).values():
         if not isinstance(inventory, dict):
@@ -114,6 +134,10 @@ def allocations_by_host() -> dict[str, HostAllocations]:
             if not host:
                 continue
 
+            is_running = status in RUNNING_VM_STATUSES or vm_matches_running_process(
+                vm,
+                running_names_by_host.get(host),
+            )
             host_counter = counters.setdefault(
                 host,
                 {
@@ -127,7 +151,7 @@ def allocations_by_host() -> dict[str, HostAllocations]:
             host_counter["allocated_vcpus"] += int_value(vm.get("vcpus"), 0)
             host_counter["allocated_ram_mb"] += int_value(vm.get("ram_mb"), 0)
             host_counter["allocated_disk_gb"] += int_value(vm.get("disk_gb"), 0)
-            if status in RUNNING_VM_STATUSES:
+            if is_running:
                 host_counter["running_vms"] += 1
             else:
                 host_counter["planned_vms"] += 1
@@ -188,6 +212,15 @@ class LinuxMonitor:
             )
 
         data = parse_key_values(result.stdout)
+        qemu_vm_names = {
+            name.strip()
+            for name in data.get("qemu_vm_names", "").split(",")
+            if name.strip()
+        }
+        host_allocations = allocations_by_host({host: qemu_vm_names}).get(
+            host,
+            allocations.get(host, HostAllocations()),
+        )
         mem_total_mb = int_value(data.get("mem_total_kb"), 0) // 1024
         mem_available_mb = int_value(data.get("mem_available_kb"), 0) // 1024
         mem_used_mb = max(mem_total_mb - mem_available_mb, 0) if mem_total_mb else None
@@ -217,7 +250,7 @@ class LinuxMonitor:
                 disk_used_percent=disk_used_percent,
                 qemu_processes=int_value(data.get("qemu_processes"), 0),
             ),
-            allocations=allocations.get(host, HostAllocations()),
+            allocations=host_allocations,
             policy=default_overbooking_policy(),
             source="linux-ssh",
         )

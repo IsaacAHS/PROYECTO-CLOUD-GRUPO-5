@@ -33,8 +33,8 @@ DEFAULT_VM_SPEC = {"vcpus": 1, "ram_mb": 2048, "disk_gb": 1}
 DEFAULT_IMAGE = {
     "name": "cirros-0.6.2",
     "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",
-    "cloud_init": False,
-    "cloud_init_mode": "none",
+    "cloud_init": True,
+    "cloud_init_mode": "full",
 }
 DEFAULT_KEYPAIR = "default-key"
 
@@ -69,6 +69,7 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
         image_specs = topology_image_specs(matched_instances, node_count)
         keypair_specs = topology_keypair_specs(matched_instances, node_count)
         mgmt_specs = topology_mgmt_specs(matched_instances, node_count)
+        worker_specs = topology_worker_specs(matched_instances, node_count)
 
         if topo_type == "lineal":
             commands.append(remote_headnode_command(
@@ -82,6 +83,7 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
                 image_specs=image_specs,
                 keypair_specs=keypair_specs,
                 mgmt_specs=mgmt_specs,
+                compute_ips=worker_specs,
             ))
             vlan_cursor += max(node_count - 1, 1)
             cidr_cursor += max(node_count - 1, 1)
@@ -98,6 +100,7 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
                 image_specs=image_specs,
                 keypair_specs=keypair_specs,
                 mgmt_specs=mgmt_specs,
+                compute_ips=worker_specs,
             ))
             vlan_cursor += node_count
             cidr_cursor += node_count
@@ -117,6 +120,7 @@ def script_commands_for_job(job: dict[str, Any]) -> list[list[str]]:
                 keypair_specs=keypair_specs,
                 mgmt_specs=mgmt_specs,
                 link_specs=link_specs,
+                compute_ips=worker_specs,
             ))
             vlan_cursor += len(custom_links)
             cidr_cursor += len(custom_links)
@@ -312,12 +316,13 @@ def append_linear_inventory(
             vlans.append(vlan_base + index)
         if index > 0:
             vlans.append(vlan_base + index - 1)
+        instance = matched_instances[index] if index < len(matched_instances) else {}
         inventory["vms"].append(vm_record(
             topology_record,
             matched_instances,
             index,
             vnc_base + index,
-            compute_ips[index % len(compute_ips)],
+            worker_ip_for_instance(instance, index, compute_ips),
             vlans,
             vlan_base,
             cidr_base,
@@ -352,12 +357,13 @@ def append_ring_inventory(
     for index in range(node_count):
         right_vlan = vlan_base + (index % node_count)
         left_vlan = vlan_base + ((index - 1 + node_count) % node_count)
+        instance = matched_instances[index] if index < len(matched_instances) else {}
         inventory["vms"].append(vm_record(
             topology_record,
             matched_instances,
             index,
             vnc_base + index,
-            compute_ips[index % len(compute_ips)],
+            worker_ip_for_instance(instance, index, compute_ips),
             [right_vlan, left_vlan],
             vlan_base,
             cidr_base,
@@ -397,12 +403,13 @@ def append_custom_inventory(
         ))
 
     for index in range(node_count):
+        instance = matched_instances[index] if index < len(matched_instances) else {}
         inventory["vms"].append(vm_record(
             topology_record,
             matched_instances,
             index,
             vnc_base + index,
-            compute_ips[index % len(compute_ips)],
+            worker_ip_for_instance(instance, index, compute_ips),
             vm_vlans[index],
             vlan_base,
             cidr_base,
@@ -680,6 +687,36 @@ def topology_mgmt_specs(matched: list[dict[str, Any]], node_count: int) -> str:
     return ";".join(specs)
 
 
+def worker_ip_for_instance(
+    instance: dict[str, Any],
+    index: int,
+    compute_ips: list[str] | None = None,
+) -> str:
+    worker_ip = str(instance.get("worker_ip") or instance.get("host") or "").strip()
+    if worker_ip:
+        return worker_ip
+
+    fallback_ips = compute_ips or [ip.strip() for ip in COMPUTE_IPS.split(",") if ip.strip()]
+    if not fallback_ips:
+        return "10.0.10.1"
+    return fallback_ips[index % len(fallback_ips)]
+
+
+def topology_worker_specs(matched: list[dict[str, Any]], node_count: int) -> str:
+    compute_ips = [ip.strip() for ip in COMPUTE_IPS.split(",") if ip.strip()]
+    if not compute_ips:
+        compute_ips = ["10.0.10.1"]
+
+    return ",".join(
+        worker_ip_for_instance(
+            matched[index] if index < len(matched) else {},
+            index,
+            compute_ips,
+        )
+        for index in range(node_count)
+    )
+
+
 def safe_image_name(value: str) -> str:
     value = value.lower().strip()
     value = re.sub(r"[^a-z0-9._-]+", "-", value)
@@ -700,11 +737,7 @@ def bool_to_shell(value: bool) -> str:
 
 
 def cloud_init_mode_from_instance(instance: dict[str, Any]) -> str:
-    raw_mode = str(instance.get("image_cloud_init_mode") or "").strip().lower()
-    if raw_mode in {"full", "ssh-key", "none"}:
-        return raw_mode
-    cloud_init = bool_from_value(instance.get("image_cloud_init", DEFAULT_IMAGE["cloud_init"]))
-    return "full" if cloud_init else "none"
+    return "full"
 
 
 def safe_keypair_name(value: str) -> str:
@@ -719,12 +752,13 @@ def remote_headnode_command(
     keypair_specs: str = "",
     mgmt_specs: str = "",
     link_specs: str = "",
+    compute_ips: str | None = None,
 ) -> list[str]:
     env = (
         "NIMBUSCORE_HEADNODE_LOCAL=true "
         f"NIMBUSCORE_REMOTE_SCRIPTS_DIR={shell_quote(REMOTE_SCRIPT_DIR)} "
         f"NIMBUSCORE_KEYPAIR_DIR={shell_quote(KEYPAIR_DIR)} "
-        f"NIMBUSCORE_COMPUTE_IPS={shell_quote(COMPUTE_IPS)} "
+        f"NIMBUSCORE_COMPUTE_IPS={shell_quote(compute_ips or COMPUTE_IPS)} "
         f"NIMBUSCORE_OVS_NAME={shell_quote(OVS_NAME)} "
         f"NIMBUSCORE_OVS_UPLINKS={shell_quote(OVS_UPLINKS)} "
         f"NIMBUSCORE_SSH_USER={shell_quote(SSH_USER)} "

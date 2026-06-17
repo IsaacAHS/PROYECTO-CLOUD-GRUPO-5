@@ -51,18 +51,8 @@ ENABLE_PASSWORD_LOGIN="${NIMBUSCORE_ENABLE_PASSWORD_LOGIN:-true}"
 if [ "$ENABLE_PASSWORD_LOGIN" != "true" ] && [ "$ENABLE_PASSWORD_LOGIN" != "false" ]; then
     ENABLE_PASSWORD_LOGIN="true"
 fi
-ENABLE_CLOUD_INIT="${NIMBUSCORE_ENABLE_CLOUD_INIT:-true}"
-if [ "$ENABLE_CLOUD_INIT" != "true" ] && [ "$ENABLE_CLOUD_INIT" != "false" ]; then
-    ENABLE_CLOUD_INIT="true"
-fi
-CLOUD_INIT_MODE="${NIMBUSCORE_CLOUD_INIT_MODE:-}"
-if [ -z "$CLOUD_INIT_MODE" ]; then
-    [ "$ENABLE_CLOUD_INIT" = "true" ] && CLOUD_INIT_MODE="full" || CLOUD_INIT_MODE="none"
-fi
-case "$CLOUD_INIT_MODE" in
-    full|ssh-key|none) ;;
-    *) CLOUD_INIT_MODE="full" ;;
-esac
+ENABLE_CLOUD_INIT="true"
+CLOUD_INIT_MODE="full"
 ENABLE_MGMT_NETWORK="${NIMBUSCORE_ENABLE_MGMT_NETWORK:-true}"
 MGMT_VLAN="${NIMBUSCORE_MGMT_VLAN:-99}"
 MGMT_CIDR="${NIMBUSCORE_MGMT_CIDR:-10.60.9.0/24}"
@@ -102,6 +92,26 @@ ensure_ovs_ready() {
     fi
     sudo ovs-vsctl --may-exist add-br "$OVS_NAME"
     sudo ip link set "$OVS_NAME" up
+}
+
+ensure_cloud_init_tools() {
+    if command -v cloud-localds >/dev/null 2>&1 || command -v genisoimage >/dev/null 2>&1; then
+        return 0
+    fi
+
+    echo "[create_vm] Herramientas cloud-init no encontradas. Intentando instalar cloud-image-utils/genisoimage..."
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            cloud-image-utils genisoimage
+    fi
+
+    if command -v cloud-localds >/dev/null 2>&1 || command -v genisoimage >/dev/null 2>&1; then
+        return 0
+    fi
+
+    echo "[create_vm] ERROR: instala cloud-image-utils o genisoimage para inyectar cloud-init."
+    exit 1
 }
 
 create_cloud_init_seed() {
@@ -218,6 +228,7 @@ create_cloud_init_seed() {
 
     SEED_ISO="${CLOUD_INIT_DIR}/${VM_NAME}-seed.iso"
     sudo rm -f "$SEED_ISO"
+    ensure_cloud_init_tools
 
     if command -v cloud-localds >/dev/null 2>&1; then
         if [ "$CLOUD_INIT_MODE" = "full" ]; then
@@ -237,12 +248,8 @@ create_cloud_init_seed() {
         )
     else
         rm -rf "$tmp_seed"
-        echo "[create_vm] WARN: no existe cloud-localds ni genisoimage; la VM se creara sin cloud-init."
-        if [ "$REQUIRE_KEYPAIR" = "true" ] || [ "$CLOUD_INIT_MODE" = "ssh-key" ]; then
-            echo "[create_vm] ERROR: instala cloud-image-utils o genisoimage para inyectar cloud-init."
-            exit 1
-        fi
-        return 0
+        echo "[create_vm] ERROR: no se pudo preparar cloud-init para la VM."
+        exit 1
     fi
 
     sudo chmod 0644 "$SEED_ISO"

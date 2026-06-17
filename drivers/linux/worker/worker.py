@@ -61,16 +61,23 @@ def write_vm_inventory(job: dict, inventory: dict, status: str, message: str = "
     write_json(VM_INVENTORY_PATH, state)
 
 
+def vm_topology_index(vm: dict) -> int:
+    try:
+        return int(vm.get("topology_index"))
+    except (TypeError, ValueError):
+        return -1
+
+
 def mark_topology_vms(inventory: dict, topology_index: int, status: str) -> None:
     for vm in inventory.get("vms", []):
-        if int(vm.get("topology_index") or -1) == topology_index:
+        if vm_topology_index(vm) == topology_index:
             vm["status"] = status
             vm["updated_at"] = now_iso()
 
 
 def mark_pending_topology_vms_failed(inventory: dict, failed_topology_index: int) -> None:
     for vm in inventory.get("vms", []):
-        topology_index = int(vm.get("topology_index") or -1)
+        topology_index = vm_topology_index(vm)
         if topology_index == failed_topology_index or vm.get("status") == "PLANNED":
             vm["status"] = "FAILED"
             vm["updated_at"] = now_iso()

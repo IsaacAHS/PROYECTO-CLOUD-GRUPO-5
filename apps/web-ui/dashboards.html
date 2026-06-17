@@ -761,7 +761,8 @@ function renderHostsTable(hosts) {
 		const available = host.available_by_allocation || {};
 		const assigned = `${allocations.allocated_vcpus || 0} vCPU · ${formatMb(allocations.allocated_ram_mb || 0)}`;
 		const free = `${available.vcpus ?? '—'} vCPU · ${formatMb(available.ram_mb)}`;
-		const vmCount = `${allocations.running_vms || 0} activas · ${allocations.planned_vms || 0} planificadas`;
+		const qemuCount = usage.qemu_processes ?? 0;
+		const vmCount = `${allocations.running_vms || 0} activas · ${allocations.planned_vms || 0} planificadas · ${qemuCount} QEMU`;
 		const errorTitle = Array.isArray(host.errors) && host.errors.length ? ` title="${host.errors.join(' | ').replace(/"/g, '&quot;')}"` : '';
 
 		return `

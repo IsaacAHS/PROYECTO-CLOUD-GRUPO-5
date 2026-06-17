@@ -55,10 +55,7 @@ image_spec_for_index() {
     local spec="${IMAGE_SPECS[$index]:-}"
     local image_name image_url download_method cloud_init cloud_init_mode
     IFS='|' read -r image_name image_url download_method cloud_init cloud_init_mode <<< "$spec"
-    if [ -z "${cloud_init_mode:-}" ]; then
-        [ "${cloud_init:-false}" = "true" ] && cloud_init_mode="full" || cloud_init_mode="none"
-    fi
-    echo "${image_name:-cirros-0-6-2} ${image_url:-https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img} ${download_method:-auto} ${cloud_init:-false} ${cloud_init_mode}"
+    echo "${image_name:-cirros-0-6-2} ${image_url:-https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img} ${download_method:-auto} true full"
 }
 
 keypair_spec_for_index() {

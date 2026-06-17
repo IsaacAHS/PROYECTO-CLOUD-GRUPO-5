@@ -18,7 +18,7 @@ DEFAULT_IMAGES = [
         "label": "Cirros 0.6.2",
         "url": "https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img",
         "download_method": "auto",
-        "cloud_init": False,
+        "cloud_init": True,
         "min_disk_gb": 1,
         "active": True,
     },
@@ -28,7 +28,7 @@ DEFAULT_IMAGES = [
         "label": "Cirros 0.6.2 (Google Drive)",
         "url": "https://drive.usercontent.google.com/download?id=1TzJ7mOs-b-Ggwr9lXvcNbYiMVqfTlKH9&export=download&confirm=t",
         "download_method": "wget-no-check-certificate",
-        "cloud_init": False,
+        "cloud_init": True,
         "min_disk_gb": 1,
         "active": False,
     },
@@ -58,7 +58,7 @@ DEFAULT_IMAGES = [
         "label": "Ubuntu 20.04 Focal (Google Drive)",
         "url": "https://drive.usercontent.google.com/download?id=169719Mq3URSPKf2y6x-uAJ0vluH31i5n&export=download&confirm=t",
         "download_method": "wget-no-check-certificate",
-        "cloud_init": False,
+        "cloud_init": True,
         "min_disk_gb": 3,
         "active": False,
     },
@@ -88,24 +88,11 @@ def bool_from_item(value: Any) -> bool:
 
 
 def infer_cloud_init(item: dict[str, Any], image_id: str, url: str) -> bool:
-    if item.get("cloud_init") is not None:
-        return bool_from_item(item.get("cloud_init"))
-    if image_id == "cirros" or image_id.endswith("-drive"):
-        return False
-    if item.get("source") == "google-drive-rclone":
-        return True
-    if "drive.usercontent.google.com" in url or "drive.google.com" in url:
-        return False
     return True
 
 
 def infer_cloud_init_mode(item: dict[str, Any], image_id: str, url: str) -> str:
-    if item.get("source") == "google-drive-rclone":
-        return "full"
-    raw_mode = str(item.get("cloud_init_mode") or "").strip().lower()
-    if raw_mode in ALLOWED_CLOUD_INIT_MODES:
-        return raw_mode
-    return "full" if infer_cloud_init(item, image_id, url) else "none"
+    return "full"
 
 
 def min_disk_from_item(item: dict[str, Any], image_id: str, name: str, label: str, url: str) -> int:

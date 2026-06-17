@@ -124,8 +124,8 @@ def build_script_variables(
                 "image_name": image["name"],
                 "image_url": image["url"],
                 "image_download_method": image.get("download_method", "auto"),
-                "image_cloud_init": bool(image.get("cloud_init", True)),
-                "image_cloud_init_mode": image.get("cloud_init_mode") or ("full" if image.get("cloud_init") else "none"),
+                "image_cloud_init": True,
+                "image_cloud_init_mode": "full",
                 "flavor": flavor["name"],
                 "vcpus": flavor["vcpus"],
                 "ram_mb": flavor["ram_mb"],
@@ -134,6 +134,7 @@ def build_script_variables(
                 "security_ports": cfg.get("seguridad") or ["22", "443"],
                 "custom_rules": cfg.get("reglas") or [],
                 "management_enabled": node["id"] in management_nodes,
+                "worker_ip": placement.get("host"),
                 "availability_zone": placement.get("availability_zone", "nova:compute-1"),
                 "fixed_ip": f"10.42.0.{10 + index}",
             }
